@@ -1,4 +1,6 @@
-call plug#begin()
+let g:vimspector_enable_mappings='HUMAN'
+
+call plug#begin('~/.vim/plugged')
 Plug 'junegunn/vim-easy-align'
 Plug 'junegunn/fzf', { 'dir': '~/.fzf', 'do': './install --all' }
 Plug 'junegunn/fzf.vim'
@@ -27,6 +29,7 @@ Plug 'tpope/vim-obsession'
 Plug 'Yggdroot/indentLine'
 Plug 'vim-autoformat/vim-autoformat'
 Plug 'neoclide/coc.nvim', {'branch': 'release'}
+Plug 'puremourning/vimspector'
 call plug#end()
 
 " Auto start NERD tree when opening a directory
@@ -40,8 +43,10 @@ autocmd VimEnter * if argc() == 1 && isdirectory(argv()[0]) && !exists("s:std_in
 " Let quit work as expected if after entering :q the only window left open is NERD Tree itself
 " autocmd bufenter * if (winnr("$") == 1 && exists("b:NERDTree") && b:NERDTree.isTabTree()) | q | endif
 
-let g:python3_host_prog = '/usr/bin/python' 
+let g:python3_host_prog = '/usr/bin/python3' 
 let g:python_host_prog = '~/.pyenv/versions/2.7.18/bin/python'
+
+
 
 " Shortcut to edit THIS configuration file: (e)dit (c)onfiguration
 nnoremap <silent> <leader>ec :e $MYVIMRC<CR>
@@ -70,7 +75,7 @@ nnoremap <silent> <Space> :NERDTreeToggle<CR>
 
 " toggle tagbar
 " nnoremap <silent> <leader>tb :TagbarToggle<CR>
-nnoremap <F8> :TagbarToggle<CR>
+nnoremap <F7> :TagbarToggle<CR>
 
 " toggle line numbers
 nnoremap <silent> <leader>n :set number! number?<CR>
@@ -133,7 +138,6 @@ let PythonPath = $PYENV_VIRTUAL_ENV
 let PythonPath .= '/bin/python'
 call coc#config('python', {'pythonPath': PythonPath} )
 
-
 " Coc config
 
 let g:coc_global_extensions = [
@@ -143,12 +147,25 @@ let g:coc_global_extensions = [
       \]
 
 " Use verbose imap <key> to figure out whether key has been set
+" Use tab for trigger completion with characters ahead and navigate.
+" NOTE: Use command ':verbose imap <tab>' to make sure tab is not mapped by
+" other plugin before putting this into your config.
+inoremap <silent><expr> <TAB>
+      \ pumvisible() ? "\<C-n>" :
+      \ <SID>check_back_space() ? "\<TAB>" :
+      \ coc#refresh()
+inoremap <expr><S-TAB> pumvisible() ? "\<C-p>" : "\<C-h>"
+
+function! s:check_back_space() abort
+  let col = col('.') - 1
+  return !col || getline('.')[col - 1]  =~# '\s'
+endfunction
 
 " Use <c-space> to trigger completion.
 if has('nvim')
-  inoremap <silent><expr> <c-space> coc#refresh()
+  nnoremap <silent><expr> <c-space> coc#refresh()
 else
-  inoremap <silent><expr> <c-@> coc#refresh()
+  nnoremap <silent><expr> <c-@> coc#refresh()
 endif
 
 inoremap <silent><expr> <TAB>
@@ -172,6 +189,10 @@ nmap <silent> gy <Plug>(coc-type-definition)
 nmap <silent> gi <Plug>(coc-implementation)
 nmap <silent> gr <Plug>(coc-references)
 
+
+" Add `:Format` command to format current buffer.
+command! -nargs=0 Format :call CocActionAsync('format')
+
 " Use K to show documentation in preview window.
 nnoremap <silent> K :call <SID>show_documentation()<CR>
 
@@ -189,6 +210,6 @@ endfunction
 nmap <leader>rn <Plug>(coc-rename)
 
 " for normal mode - the word under the cursor
-nmap <Leader>di <Plug>VimspectorBalloonEval 
+nmap <Leader>di <Plug>VimspectorBalloonEval
 " for visual mode, the visually selected text
 xmap <Leader>di <Plug>VimspectorBalloonEval
