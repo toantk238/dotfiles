@@ -19,7 +19,7 @@ Plug 'scrooloose/nerdtree', { 'on': 'NERDTreeToggle' }
 " nerdtree-git-plugin - show git status in NERD Tree
 " https://github.com/Xuyuanp/nerdtree-git-plugin
 Plug 'Xuyuanp/nerdtree-git-plugin'
-Plug 'joshdick/onedark.vim'
+" Plug 'joshdick/onedark.vim'
 Plug 'kyazdani42/nvim-web-devicons'
 Plug 'preservim/tagbar'
 Plug 'embear/vim-localvimrc'
@@ -30,6 +30,7 @@ Plug 'Yggdroot/indentLine'
 Plug 'vim-autoformat/vim-autoformat'
 Plug 'neoclide/coc.nvim', {'branch': 'release'}
 Plug 'puremourning/vimspector'
+Plug 'phanviet/vim-monokai-pro'
 call plug#end()
 
 " Auto start NERD tree when opening a directory
@@ -126,8 +127,13 @@ let NERDTreeAutoDeleteBuffer = 1
 let NERDTreeMinimalUI = 1
 let NERDTreeDirArrows = 1
 set number
+set termguicolors
 syntax on
-colorscheme onedark
+" colorscheme onedark
+colorscheme monokai_pro
+let g:lightline = {
+      \ 'colorscheme': 'monokai_pro',
+      \ }
 
 " Disable auto add newline at the end of file
 :set nofixendofline
