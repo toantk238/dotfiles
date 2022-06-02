@@ -10,11 +10,13 @@ fi
 
 (( ${+commands[direnv]} )) && emulate zsh -c "$(direnv hook zsh)"
 
+THIS_USER=$(whoami)
+
 # If you come from bash you might have to change your $PATH.
 # export PATH=$HOME/bin:/usr/local/bin:$PATH
 
 # Path to your oh-my-zsh installation.
-export ZSH="/home/freesky1102/.oh-my-zsh"
+export ZSH="/home/$THIS_USER/.oh-my-zsh"
 
 # Set name of the theme to load --- if set to "random", it will
 # load a random theme each time oh-my-zsh is loaded, in which case,
@@ -122,15 +124,15 @@ eval "$(pyenv init --path)"
 eval "$(pyenv virtualenv-init -)"
 
 # The next line updates PATH for the Google Cloud SDK.
-if [ -f '/home/freesky1102/google-cloud-sdk/path.zsh.inc' ]; then . '/home/freesky1102/google-cloud-sdk/path.zsh.inc'; fi
+if [ -f '/home/$THIS_USER/google-cloud-sdk/path.zsh.inc' ]; then . '/home/$THIS_USER/google-cloud-sdk/path.zsh.inc'; fi
 
 # The next line enables shell command completion for gcloud.
-if [ -f '/home/freesky1102/google-cloud-sdk/completion.zsh.inc' ]; then . '/home/freesky1102/google-cloud-sdk/completion.zsh.inc'; fi
+if [ -f '/home/$THIS_USER/google-cloud-sdk/completion.zsh.inc' ]; then . '/home/$THIS_USER/google-cloud-sdk/completion.zsh.inc'; fi
 
 # source <(kubectl completion zsh)
 
 export ANDROID_SDK=$ANDROID_HOME
-export CLOUDSDK_PYTHON=/home/freesky1102/.pyenv/shims/python
+export CLOUDSDK_PYTHON=/home/$THIS_USER/.pyenv/shims/python
 
 # eval "$(direnv hook zsh)"
 
