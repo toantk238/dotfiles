@@ -31,6 +31,7 @@ Plug 'vim-autoformat/vim-autoformat'
 Plug 'neoclide/coc.nvim', {'branch': 'release'}
 Plug 'puremourning/vimspector'
 Plug 'phanviet/vim-monokai-pro'
+Plug 'romgrk/barbar.nvim'
 call plug#end()
 
 " Auto start NERD tree when opening a directory
@@ -128,6 +129,7 @@ let NERDTreeMinimalUI = 1
 let NERDTreeDirArrows = 1
 set number
 set termguicolors
+set mouse+=a
 syntax on
 " colorscheme onedark
 colorscheme monokai_pro
