@@ -115,9 +115,6 @@ source ~/pet.sh
 # alias zshconfig="mate ~/.zshrc"
 # alias ohmyzsh="mate ~/.oh-my-zsh"
 
-export GRADLE_USER_HOME=/mnt/Data/Android/gradle_repo
-
-
 export PATH=$HOME/.pyenv/bin:$PATH
 eval "$(pyenv init -)"
 eval "$(pyenv init --path)"
@@ -133,6 +130,7 @@ if [ -f "/home/$THIS_USER/google-cloud-sdk/completion.zsh.inc" ]; then . "/home/
 
 export ANDROID_SDK=$ANDROID_HOME
 export CLOUDSDK_PYTHON=/home/$THIS_USER/.pyenv/shims/python
+export ANDROID_CI_TOOLS_JAR="/mnt/Data/Android/jira_tools-1.0-SNAPSHOT.jar"
 
 # eval "$(direnv hook zsh)"
 
@@ -141,4 +139,8 @@ export CLOUDSDK_PYTHON=/home/$THIS_USER/.pyenv/shims/python
 # To customize prompt, run `p10k configure` or edit ~/.p10k.zsh.
 [[ ! -f ~/.p10k.zsh ]] || source ~/.p10k.zsh
 
+export AWS_DEFAULT_PROFILE=manadr_dev
+
 clear
+
+
