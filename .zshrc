@@ -143,4 +143,9 @@ export AWS_DEFAULT_PROFILE=manadr_dev
 
 clear
 
-
+nvim_edit_config ()
+{
+  CONFIG_FOLDER=$HOME/.config/nvim
+  cd $CONFIG_FOLDER
+  nvim .
+}
