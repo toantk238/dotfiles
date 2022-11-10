@@ -12,14 +12,4 @@ appium_start ()
   appium server -p 4723 -a 127.0.0.1 -pa /wd/hub
 }
 
-gt ()
-{
-  git status
-}
-
-gaa ()
-{
-  git add -A
-}
-
 alias gdiff="git difftool --tool=nvimdiff HEAD"
