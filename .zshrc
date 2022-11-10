@@ -131,7 +131,17 @@ if [ -f "/home/$THIS_USER/google-cloud-sdk/completion.zsh.inc" ]; then . "/home/
 
 export ANDROID_SDK=$ANDROID_HOME
 export CLOUDSDK_PYTHON=/home/$THIS_USER/.pyenv/shims/python
-export ANDROID_CI_TOOLS_JAR="/mnt/Data/Android/jira_tools-1.0-SNAPSHOT.jar"
+
+if [ -f "/home/$THIS_USER/.functions.zsh" ]; 
+then
+  source "/home/$THIS_USER/.functions.zsh"
+fi
+
+if [ -f "/home/$THIS_USER/.env.zsh" ]; 
+then
+  source "/home/$THIS_USER/.env.zsh"
+fi
+
 
 # eval "$(direnv hook zsh)"
 
@@ -140,13 +150,4 @@ export ANDROID_CI_TOOLS_JAR="/mnt/Data/Android/jira_tools-1.0-SNAPSHOT.jar"
 # To customize prompt, run `p10k configure` or edit ~/.p10k.zsh.
 [[ ! -f ~/.p10k.zsh ]] || source ~/.p10k.zsh
 
-export AWS_DEFAULT_PROFILE=manadr_dev
-
 clear
-
-nvim_edit_config ()
-{
-  CONFIG_FOLDER=$HOME/.config/nvim
-  cd $CONFIG_FOLDER
-  nvim .
-}
