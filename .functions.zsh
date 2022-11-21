@@ -14,5 +14,5 @@ appium_start ()
   appium server -p 4723 -a 127.0.0.1 -pa /wd/hub
 }
 
-alias gdiff="git difftool --tool=meld HEAD"
+alias gdiff="yes | git difftool --tool=meld HEAD"
 alias ss="sudo systemctl"
