@@ -7,6 +7,13 @@ nvim_edit_config ()
   cd $LAST_FOLDER
 }
 
+nvim_clear_config ()
+{
+  rm -rf ~/.config/nvim/plugin/*
+  rm -rf ~/.local/share/nvim
+  rm -rf ~/.cache/nvim
+}
+
 appium_start ()
 {
   PROJECT_DIR="/mnt/Data/Workspace/2.Personal/appium2"
