@@ -1,10 +1,17 @@
 nvim_edit_config ()
 {
   LAST_FOLDER=$PWD
-  CONFIG_FOLDER=$HOME/.config/nvim
+  CONFIG_FOLDER=$HOME/.config/nvim/lua/custom/
   cd $CONFIG_FOLDER
   nvim .
   cd $LAST_FOLDER
+}
+
+nvim_clear_config ()
+{
+  rm -rf ~/.cache/nvim
+  rm -rf ~/.local/share/nvim
+  rm -rf ~/.config/nvim/plugin/*.*
 }
 
 appium_start ()
