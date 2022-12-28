@@ -86,7 +86,10 @@ ZSH_THEME="powerlevel10k/powerlevel10k"
 # Add wisely, as too many plugins slow down shell startup.
 plugins=(git tmux)
 
-ZSH_TMUX_AUTOSTART=true
+if [ -n "$RUN_BY_ME" ]; then
+  ZSH_TMUX_AUTOSTART=true
+fi
+  
 
 source $ZSH/oh-my-zsh.sh
 source ~/pet.sh
