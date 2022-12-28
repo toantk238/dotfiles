@@ -142,7 +142,10 @@ then
   source "/home/$THIS_USER/.env.zsh"
 fi
 
-
+# ensure compatibility tmux <-> direnv
+if [ -n "$TMUX" ] && [ -n "$DIRENV_DIR" ]; then
+    direnv reload
+fi
 # eval "$(direnv hook zsh)"
 
 [ -f ~/.fzf.zsh ] && source ~/.fzf.zsh
