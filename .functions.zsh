@@ -9,8 +9,23 @@ nvim_edit_config ()
 
 nvim_clear_config ()
 {
+  read yn"?Are you sure that you wanna clear ALL neovim configs ? (y/n): "
+  case $yn in
+    [Yy]* )
+      force_clear_nvim_config
+      echo "Clear done !"
+      ;;
+    [Nn]* )
+      echo "Cancel !"
+      ;;
+    *) echo "Please answer yes or no.";;
+  esac
+}
+
+function force_clear_nvim_config(){
   rm -rf ~/.cache/nvim
   rm -rf ~/.local/share/nvim
+  rm -rf ~/.local/state/nvim
   rm -rf ~/.config/nvim/plugin/*.*
 }
 
