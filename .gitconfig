@@ -28,4 +28,4 @@ lg2 = log --graph --abbrev-commit --decorate --format=format:'%C(bold blue)%h%C(
 lg = !"git lg1"
 dt = difftool --dir-diff
 [safe]
-    directory = *
+  directory = *

@@ -38,7 +38,10 @@ appium_start ()
 
 alias gdiff="yes | git difftool --tool=intelliJ HEAD"
 alias ss="sudo systemctl"
+alias lg="lazygit"
+alias n="nvim ."
 
 cdl () {
     cd "$(dirname "$(readlink "$1")")"; 
 }
+
