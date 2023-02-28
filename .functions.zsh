@@ -40,6 +40,8 @@ alias gdiff="yes | git difftool --tool=intelliJ HEAD"
 alias ss="sudo systemctl"
 alias lg="lazygit"
 alias n="nvim ."
+alias cat="bat"
+alias n="nnn"
 
 cdl () {
     cd "$(dirname "$(readlink "$1")")"; 
