@@ -158,9 +158,4 @@ fi
 # To customize prompt, run `p10k configure` or edit ~/.p10k.zsh.
 [[ ! -f ~/.p10k.zsh ]] || source ~/.p10k.zsh
 
-if [ -f /usr/share/nnn/quitcd/quitcd.bash_zsh ]; then
-    source /usr/share/nnn/quitcd/quitcd.bash_zsh
-fi
-
-[ -n "$NNNLVL" ] && PS1="N$NNNLVL $PS1"
-[ -f /etc/profile.d/autojump.zsh ] && source /etc/profile.d/autojump.zsh
+[ -f ~/.nnn.zsh ] && source ~/.nnn.zsh
