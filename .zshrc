@@ -84,7 +84,7 @@ ZSH_THEME="powerlevel10k/powerlevel10k"
 # Custom plugins may be added to $ZSH_CUSTOM/plugins/
 # Example format: plugins=(rails git textmate ruby lighthouse)
 # Add wisely, as too many plugins slow down shell startup.
-plugins=(git tmux)
+plugins=(git tmux autojump)
 
 if [ -n "$RUN_BY_ME" ]; then
   ZSH_TMUX_AUTOSTART=true
@@ -157,3 +157,10 @@ fi
 
 # To customize prompt, run `p10k configure` or edit ~/.p10k.zsh.
 [[ ! -f ~/.p10k.zsh ]] || source ~/.p10k.zsh
+
+if [ -f /usr/share/nnn/quitcd/quitcd.bash_zsh ]; then
+    source /usr/share/nnn/quitcd/quitcd.bash_zsh
+fi
+
+[ -n "$NNNLVL" ] && PS1="N$NNNLVL $PS1"
+[ -f /etc/profile.d/autojump.zsh ] && source /etc/profile.d/autojump.zsh
