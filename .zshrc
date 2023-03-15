@@ -159,3 +159,5 @@ fi
 [[ ! -f ~/.p10k.zsh ]] || source ~/.p10k.zsh
 
 [ -f ~/.nnn.zsh ] && source ~/.nnn.zsh
+
+export DISABLE_AUTO_TITLE='true'
