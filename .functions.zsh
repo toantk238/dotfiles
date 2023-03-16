@@ -42,9 +42,11 @@ alias lg="lazygit"
 alias cat="bat"
 # alias n="nnn"
 alias ncp="cat ${NNN_SEL:-${XDG_CONFIG_HOME:-$HOME/.config}/nnn/.selection} | tr '\0' '\n'"
+alias kts="kitty +kitten"
 
 
 cdl () {
     cd "$(dirname "$(readlink "$1")")"; 
 }
+
 
