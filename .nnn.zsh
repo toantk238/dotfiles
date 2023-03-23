@@ -21,3 +21,4 @@ NNN_PLUG_DEFAULT='1:ipinfo;p:preview-tui;o:fzz;b:nbak;f:fzcd'
 NNN_PLUG="$NNN_PLUG_DEFAULT;$NNN_PLUG_INLINE"
 export NNN_PLUG
 export PAGER='less -R'
+export EDITOR=nvim
