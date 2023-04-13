@@ -37,7 +37,7 @@ appium_start ()
 }
 
 alias gdiff="yes | git difftool --tool=intelliJ HEAD"
-alias ss="sudo systemctl"
+alias ssys="sudo systemctl"
 alias lg="lazygit"
 alias cat="bat"
 # alias n="nnn"
