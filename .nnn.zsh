@@ -1,5 +1,5 @@
-if [ -f /usr/share/nnn/quitcd/quitcd.bash_zsh ]; then
-    source /usr/share/nnn/quitcd/quitcd.bash_zsh
+if [ -f /usr/share/nnn/quitcd/quitcd.bash_sh_zsh ]; then
+    source /usr/share/nnn/quitcd/quitcd.bash_sh_zsh
 fi
 
 [ -n "$NNNLVL" ] && PS1="N$NNNLVL $PS1"

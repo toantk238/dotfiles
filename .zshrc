@@ -120,6 +120,7 @@ source ~/pet.sh
 # alias zshconfig="mate ~/.zshrc"
 # alias ohmyzsh="mate ~/.oh-my-zsh"
 
+source /etc/environment
 export PATH=$HOME/.pyenv/bin:$PATH
 export PYENV_ROOT=$HOME/.pyenv
 eval "$(pyenv init -)"
