@@ -36,7 +36,7 @@ appium_start ()
   appium server -p 4723 -a 127.0.0.1 -pa /wd/hub
 }
 
-alias gdiff="yes | git difftool --tool=meld HEAD"
+alias gdiff="yes | git difftool --tool=intelliJ HEAD"
 alias ssys="sudo systemctl"
 alias lg="lazygit"
 alias cat="bat"
