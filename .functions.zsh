@@ -50,3 +50,10 @@ cdl () {
 }
 
 
+kubectl_logs () {
+  kubectl logs -n $1 -f $(kubectl get pod -n $1 | grep $2 | awk '{print $1}')
+}
+
+kubectl_bash () {
+  kubectl exec -n $1 -ti $(kubectl get pod -n $1 | grep $2 | awk '{print $1}')  -- bash
+}
