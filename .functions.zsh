@@ -57,3 +57,13 @@ kubectl_logs () {
 kubectl_bash () {
   kubectl exec -n $1 -ti $(kubectl get pod -n $1 | grep $2 | awk '{print $1}')  -- bash
 }
+
+docker_bash() {
+  docker exec -it "$(docker ps -qf "name=$1")" bash
+}
+
+kubectl_select_logs () {
+  name_space=$(kubectl get ns | fzf | awk '{print $1}')
+  pod=$(kubectl get pod -n $name_space | fzf | awk '{print $1}')
+  kubectl logs -n $name_space -f $pod
+}
