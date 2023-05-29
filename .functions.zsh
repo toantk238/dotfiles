@@ -50,11 +50,11 @@ cdl () {
 }
 
 
-kubectl_logs () {
+k8s_logs () {
   kubectl logs -n $1 -f $(kubectl get pod -n $1 | grep $2 | awk '{print $1}')
 }
 
-kubectl_bash () {
+k8s_bash () {
   kubectl exec -n $1 -ti $(kubectl get pod -n $1 | grep $2 | awk '{print $1}')  -- bash
 }
 
@@ -62,8 +62,34 @@ docker_bash() {
   docker exec -it "$(docker ps -qf "name=$1")" bash
 }
 
-kubectl_select_logs () {
+k8s_fzf_logs () {
+  
   name_space=$(kubectl get ns | fzf | awk '{print $1}')
+  if [ $? -ne 0 ]
+  then
+    echo "Canceled"
+    return 1
+  fi
+  
   pod=$(kubectl get pod -n $name_space | fzf | awk '{print $1}')
-  kubectl logs -n $name_space -f $pod
+  if [ $? -ne 0 ]
+  then
+    echo "Canceled"
+    return 1
+  fi
+  
+  all_actions="log\nbash"
+  
+  action=$(echo $all_actions | fzf)
+  if [ $? -ne 0 ]
+  then
+    echo "Canceled"
+    return 1
+  fi
+
+  if [ $action = "log" ] ; then
+    kubectl logs -n $name_space -f $pod
+  elif [ $action = "bash" ] ; then
+    kubectl exec -n $name_space -ti $pod -- bash
+  fi
 }
