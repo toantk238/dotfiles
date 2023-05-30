@@ -62,7 +62,7 @@ docker_bash() {
   docker exec -it "$(docker ps -qf "name=$1")" bash
 }
 
-k8s_fzf_logs () {
+k8s_fzf_actions () {
   
   name_space=$(kubectl get ns | fzf | awk '{print $1}')
   if [ $? -ne 0 ]

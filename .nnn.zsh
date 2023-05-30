@@ -17,7 +17,7 @@ trap nnn_cd EXIT
 
 
 NNN_PLUG_INLINE='e:!go run "$nnn"*'
-NNN_PLUG_DEFAULT='1:ipinfo;p:preview-tui;o:fzz;b:nbak;f:fzcd'
+NNN_PLUG_DEFAULT='1:gitroot;p:preview-tui;o:fzz;b:nbak;f:fzcd;2:xdgdefault'
 NNN_PLUG="$NNN_PLUG_DEFAULT;$NNN_PLUG_INLINE"
 export NNN_ICONLOOKUP=1
 export NNN_PLUG
