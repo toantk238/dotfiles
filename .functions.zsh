@@ -64,19 +64,21 @@ docker_bash() {
 
 k8s_fzf_actions () {
   
-  name_space=$(kubectl get ns | fzf | awk '{print $1}')
+  name_space=$(kubectl get ns | fzf)
   if [ $? -ne 0 ]
   then
     echo "Canceled"
     return 1
   fi
+  name_space=$(echo $name_space | awk '{print $1}')
   
-  pod=$(kubectl get pod -n $name_space | fzf | awk '{print $1}')
+  pod=$(kubectl get pod -n $name_space | fzf)
   if [ $? -ne 0 ]
   then
     echo "Canceled"
     return 1
   fi
+  pod=$(echo $pod | awk '{print $1}')
   
   all_actions="log\nbash"
   
