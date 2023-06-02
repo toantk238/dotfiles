@@ -168,3 +168,4 @@ fi
 export DISABLE_AUTO_TITLE='true'
 export PATH=$HOME/bin:$PATH
 export JAVA_HOME=/usr/lib/jvm/jdk-17.0.7
+export PATH=$JAVA_HOME/bin:$PATH
