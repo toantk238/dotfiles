@@ -2,6 +2,10 @@ if [ -f /usr/share/nnn/quitcd/quitcd.bash_sh_zsh ]; then
     source /usr/share/nnn/quitcd/quitcd.bash_sh_zsh
 fi
 
+if [ -f ~/.config/nnn/quitcd/quitcd.bash_sh_zsh ]; then
+    source ~/.config/nnn/quitcd/quitcd.bash_sh_zsh
+fi
+
 [ -n "$NNNLVL" ] && PS1="N$NNNLVL $PS1"
 [ -f /etc/profile.d/autojump.zsh ] && source /etc/profile.d/autojump.zsh
 export NNN_FIFO=/tmp/nnn.fifo
