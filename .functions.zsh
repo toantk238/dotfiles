@@ -101,3 +101,7 @@ k8s_fzf_actions () {
     kubectl exec -n $name_space -ti $pod -- bash
   fi
 }
+
+nginx_sites () {
+  cd /etc/nginx/sites-available/
+}
