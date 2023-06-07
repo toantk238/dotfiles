@@ -46,7 +46,13 @@ alias kts="kitty +kitten"
 
 
 cdl () {
-    cd "$(dirname "$(readlink "$1")")"; 
+    exe_path=$(which "$1")
+    if [[ "$exe_path" == *"not found"* ]]; then
+      cd "$(dirname "$(readlink "$1")")"
+      return 0
+    fi
+
+    cd "$(dirname "$(readlink -f "$exe_path")")"; 
 }
 
 
