@@ -106,9 +106,9 @@ nginx_sites () {
   cd /etc/nginx/sites-available/
 }
 
-adb_filter () {
+adb_log_filter () {
   echo '--- Start capture ADB log ---'
-  adb logcat -v color | grep -i $1
+  adb logcat -v color | grep $@
 }
 
 run_in_parent () {
