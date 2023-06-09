@@ -105,3 +105,25 @@ k8s_fzf_actions () {
 nginx_sites () {
   cd /etc/nginx/sites-available/
 }
+
+adb_filter () {
+  echo '--- Start capture ADB log ---'
+  adb logcat -v color | grep -i $1
+}
+
+run_in_parent () {
+  command="$@"
+  exe_file="$1"
+  current_d=$PWD
+  temp=$PWD
+
+  while [[ true ]]; do
+    if [ -f "$temp/$1" ] ; then
+      $@
+      break
+    fi
+    cd $temp/..
+    temp=$PWD
+  done
+  cd $current_d
+}
