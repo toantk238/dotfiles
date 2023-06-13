@@ -55,7 +55,7 @@ cdl () {
     cd "$(dirname "$(readlink -f "$exe_path")")"; 
 }
 
-docker_fzf_actions () {
+fzf_docker_actions () {
   
   container=$(docker ps | fzf)
   if [ $? -ne 0 ]
@@ -81,7 +81,7 @@ docker_fzf_actions () {
   fi
 }
 
-k8s_fzf_actions () {
+fzf_k8s_actions () {
   
   name_space=$(kubectl get ns | fzf)
   if [ $? -ne 0 ]
