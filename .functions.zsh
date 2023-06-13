@@ -55,17 +55,30 @@ cdl () {
     cd "$(dirname "$(readlink -f "$exe_path")")"; 
 }
 
+docker_fzf_actions () {
+  
+  container=$(docker ps | fzf)
+  if [ $? -ne 0 ]
+  then
+    echo "Canceled"
+    return 1
+  fi
+  container_id=$(echo $container | awk '{print $1}')
+  
+  all_actions="log\nbash"
+  
+  action=$(echo $all_actions | fzf)
+  if [ $? -ne 0 ]
+  then
+    echo "Canceled"
+    return 1
+  fi
 
-k8s_logs () {
-  kubectl logs -n $1 -f $(kubectl get pod -n $1 | grep $2 | awk '{print $1}')
-}
-
-k8s_bash () {
-  kubectl exec -n $1 -ti $(kubectl get pod -n $1 | grep $2 | awk '{print $1}')  -- bash
-}
-
-docker_bash() {
-  docker exec -it "$(docker ps -qf "name=$1")" bash
+  if [ $action = "log" ] ; then
+    docker logs -f $container_id
+  elif [ $action = "bash" ] ; then
+    docker exec -it $container_id bash
+  fi
 }
 
 k8s_fzf_actions () {
@@ -108,7 +121,14 @@ nginx_sites () {
 
 adb_log_filter () {
   echo '--- Start capture ADB log ---'
-  adb logcat -v color | grep $@
+  temp="$@"
+  command=$(echo "$temp" | sed 's/ *$//g')
+  
+  if [ -z "$command" ]; then
+    adb logcat -v color
+  else
+    adb logcat -v color | grep $@
+  fi
 }
 
 run_in_parent () {
