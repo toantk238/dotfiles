@@ -3,7 +3,7 @@ nvim_edit_config ()
   LAST_FOLDER=$PWD
   CONFIG_FOLDER=$HOME/.config/nvim/lua/custom/
   cd $CONFIG_FOLDER
-  nvim .
+  nvim
   cd $LAST_FOLDER
 }
 
@@ -43,6 +43,7 @@ alias cat="bat"
 # alias n="nnn"
 alias ncp="cat ${NNN_SEL:-${XDG_CONFIG_HOME:-$HOME/.config}/nnn/.selection} | tr '\0' '\n'"
 alias kts="kitty +kitten"
+alias nv="nvim"
 
 
 cdl () {
