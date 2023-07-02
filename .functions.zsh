@@ -148,3 +148,5 @@ run_in_parent () {
   done
   cd $current_d
 }
+
+export FZF_DEFAULT_COMMAND="rg --no-ignore --hidden --files -g '!.git/' "
