@@ -149,4 +149,5 @@ run_in_parent () {
   cd $current_d
 }
 
-export FZF_DEFAULT_COMMAND="rg --no-ignore --hidden --files -g '!.git/' "
+export FZF_DEFAULT_COMMAND="fd --type f -HI --exclude .git"
+#export FZF_DEFAULT_COMMAND="rg --no-ignore --hidden --files -g '!.git/' "
