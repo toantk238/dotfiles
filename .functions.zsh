@@ -149,5 +149,5 @@ run_in_parent () {
   cd $current_d
 }
 
-export FZF_DEFAULT_COMMAND="fd --type f -HI --exclude .git"
+export FZF_DEFAULT_COMMAND="fd --type f -HI --exclude .git --exclude .gradle --exclude .transforms --exclude .idea"
 #export FZF_DEFAULT_COMMAND="rg --no-ignore --hidden --files -g '!.git/' "
