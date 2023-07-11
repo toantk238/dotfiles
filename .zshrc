@@ -135,13 +135,6 @@ if [ -f "/home/$THIS_USER/google-cloud-sdk/completion.zsh.inc" ]; then . "/home/
 
 # source <(kubectl completion zsh)
 
-export ANDROID_HOME=/mnt/Data/Android/sdk
-export ANDROID_SDK=$ANDROID_HOME
-export CLOUDSDK_PYTHON=/home/$THIS_USER/.pyenv/shims/python
-
-export PATH=$ANDROID_HOME/platform-tools:$PATH
-export PATH=$ANDROID_HOME/tools:$PATH
-
 if [ -f "/home/$THIS_USER/.functions.zsh" ]; 
 then
   source "/home/$THIS_USER/.functions.zsh"
@@ -151,6 +144,12 @@ if [ -f "/home/$THIS_USER/.env.zsh" ];
 then
   source "/home/$THIS_USER/.env.zsh"
 fi
+
+export ANDROID_SDK=$ANDROID_HOME
+export CLOUDSDK_PYTHON=/home/$THIS_USER/.pyenv/shims/python
+
+export PATH=$ANDROID_HOME/platform-tools:$PATH
+export PATH=$ANDROID_HOME/tools:$PATH
 
 # ensure compatibility tmux <-> direnv
 if [ -n "$TMUX" ] && [ -n "$DIRENV_DIR" ]; then
