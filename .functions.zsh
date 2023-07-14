@@ -141,12 +141,17 @@ run_in_parent () {
   while [[ true ]]; do
     if [ -f "$temp/$1" ] ; then
       $@
-      break
+      cd $current_d
+      return 0
     fi
     cd $temp/..
     temp=$PWD
+    if [ "$temp" = "/" ]; then
+      echo "Cannot find any place to run this command"
+      cd $current_d
+      return 1
+    fi
   done
-  cd $current_d
 }
 
 export FZF_DEFAULT_COMMAND="fd --type f -HI --exclude .git --exclude .gradle --exclude .transforms --exclude .idea"

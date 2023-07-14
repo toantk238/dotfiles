@@ -27,3 +27,4 @@ export NNN_ICONLOOKUP=1
 export NNN_PLUG
 export PAGER='less -R'
 export EDITOR=nvim
+#alias n="n -deH"
