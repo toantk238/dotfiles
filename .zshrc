@@ -24,6 +24,12 @@ export ZSH="/home/$THIS_USER/.oh-my-zsh"
 # See https://github.com/ohmyzsh/ohmyzsh/wiki/Themes
 ZSH_THEME="powerlevel10k/powerlevel10k"
 
+if [ -f "/home/$THIS_USER/.env.zsh" ]; 
+then
+  source "/home/$THIS_USER/.env.zsh"
+fi
+
+
 # Set list of themes to pick from when loading at random
 # Setting this variable when ZSH_THEME=random will cause zsh to load
 # a theme from this variable instead of looking in $ZSH/themes/
@@ -84,13 +90,12 @@ ZSH_THEME="powerlevel10k/powerlevel10k"
 # Custom plugins may be added to $ZSH_CUSTOM/plugins/
 # Example format: plugins=(rails git textmate ruby lighthouse)
 # Add wisely, as too many plugins slow down shell startup.
-plugins=(git tmux autojump fzf adb direnv flutter)
+plugins=(git tmux autojump fzf adb direnv flutter zsh-autosuggestions zsh-syntax-highlighting)
 
 if [ -n "$RUN_BY_ME" ]; then
   ZSH_TMUX_AUTOSTART=true
 fi
   
-
 source $ZSH/oh-my-zsh.sh
 source ~/pet.sh
 
@@ -138,11 +143,6 @@ if [ -f "/home/$THIS_USER/google-cloud-sdk/completion.zsh.inc" ]; then . "/home/
 if [ -f "/home/$THIS_USER/.functions.zsh" ]; 
 then
   source "/home/$THIS_USER/.functions.zsh"
-fi
-
-if [ -f "/home/$THIS_USER/.env.zsh" ]; 
-then
-  source "/home/$THIS_USER/.env.zsh"
 fi
 
 export ANDROID_SDK=$ANDROID_HOME
