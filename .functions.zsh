@@ -44,6 +44,7 @@ alias cat="bat"
 alias ncp="cat ${NNN_SEL:-${XDG_CONFIG_HOME:-$HOME/.config}/nnn/.selection} | tr '\0' '\n'"
 alias kts="kitty +kitten"
 alias nv="nvim"
+alias icat="kitty +kitten icat"
 
 
 cdl () {
