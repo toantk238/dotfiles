@@ -95,8 +95,10 @@ plugins=(git tmux autojump fzf adb direnv flutter zsh-autosuggestions zsh-syntax
 if [ -n "$RUN_BY_ME" ]; then
   ZSH_TMUX_AUTOSTART=true
 fi
-  
+
+fpath+=${ZSH_CUSTOM:-${ZSH:-~/.oh-my-zsh}/custom}/plugins/zsh-completions/src
 source $ZSH/oh-my-zsh.sh
+compdef _gnu_generic flutter
 source ~/pet.sh
 
 # User configuration
