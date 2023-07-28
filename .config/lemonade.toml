@@ -1,0 +1,4 @@
+port = 1234
+trans-loopback = true
+trans-localfile = true
+line-ending = 'crlf'
