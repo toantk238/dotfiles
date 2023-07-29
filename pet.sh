@@ -9,5 +9,9 @@ function pet-select() {
   zle redisplay
 }
 zle -N pet-select
-stty -ixon
+
+if [[ $(uname) != "Darwin" ]]; then
+  stty -ixon
+fi
+
 bindkey '^s' pet-select

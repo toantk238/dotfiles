@@ -99,7 +99,6 @@ fi
 fpath+=${ZSH_CUSTOM:-${ZSH:-~/.oh-my-zsh}/custom}/plugins/zsh-completions/src
 source $ZSH/oh-my-zsh.sh
 compdef _gnu_generic flutter
-source ~/pet.sh
 
 # User configuration
 
@@ -141,11 +140,16 @@ if [ -f "/$HOME/google-cloud-sdk/path.zsh.inc" ]; then . "/$HOME/google-cloud-sd
 if [ -f "/$HOME/google-cloud-sdk/completion.zsh.inc" ]; then . "/$HOME/google-cloud-sdk/completion.zsh.inc"; fi
 
 # source <(kubectl completion zsh)
+this_path="$HOME/.zshrc"
+real_path=$(realpath "$this_path")
+dot_dir=$(dirname "$real_path")
 
-if [ -f "/$HOME/.functions.zsh" ]; 
-then
-  source "/$HOME/.functions.zsh"
-fi
+source "$dot_dir/.functions.zsh"
+source "$dot_dir/.p10k.zsh"
+source "$dot_dir/.nnn.zsh"
+source "$dot_dir/pet.sh"
+source "$dot_dir/scrcpy.zsh"
+
 
 export ANDROID_SDK=$ANDROID_HOME
 export CLOUDSDK_PYTHON=/$HOME/.pyenv/shims/python
@@ -160,11 +164,6 @@ fi
 # eval "$(direnv hook zsh)"
 
 [ -f ~/.fzf.zsh ] && source ~/.fzf.zsh
-
-# To customize prompt, run `p10k configure` or edit ~/.p10k.zsh.
-[[ ! -f ~/.p10k.zsh ]] || source ~/.p10k.zsh
-
-[ -f ~/.nnn.zsh ] && source ~/.nnn.zsh
 
 export DISABLE_AUTO_TITLE='true'
 export PATH=$HOME/bin:$PATH
