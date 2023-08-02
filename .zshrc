@@ -127,11 +127,6 @@ compdef _gnu_generic flutter
 # alias ohmyzsh="mate ~/.oh-my-zsh"
 
 #source /etc/environment
-export PATH=$HOME/.pyenv/bin:$PATH
-export PYENV_ROOT=$HOME/.pyenv
-eval "$(pyenv init -)"
-eval "$(pyenv init --path)"
-eval "$(pyenv virtualenv-init -)"
 
 # The next line updates PATH for the Google Cloud SDK.
 if [ -f "/$HOME/google-cloud-sdk/path.zsh.inc" ]; then . "/$HOME/google-cloud-sdk/path.zsh.inc"; fi
@@ -168,3 +163,9 @@ fi
 export DISABLE_AUTO_TITLE='true'
 export PATH=$HOME/bin:$PATH
 export PATH=$JAVA_HOME/bin:$PATH
+
+export PATH=$HOME/.pyenv/bin:$PATH
+export PYENV_ROOT=$HOME/.pyenv
+eval "$(pyenv init -)"
+eval "$(pyenv init --path)"
+eval "$(pyenv virtualenv-init -)"
