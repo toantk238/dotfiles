@@ -138,12 +138,14 @@ if [ -f "/$HOME/google-cloud-sdk/completion.zsh.inc" ]; then . "/$HOME/google-cl
 this_path="$HOME/.zshrc"
 real_path=$(realpath "$this_path")
 dot_dir=$(dirname "$real_path")
+export DOT_DIR="$dot_dir"
 
 source "$dot_dir/.functions.zsh"
 source "$dot_dir/.p10k.zsh"
 source "$dot_dir/.nnn.zsh"
 source "$dot_dir/pet.sh"
 source "$dot_dir/scrcpy.zsh"
+source "$dot_dir/.fzf.zsh"
 
 
 export ANDROID_SDK=$ANDROID_HOME
