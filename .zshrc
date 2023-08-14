@@ -146,6 +146,7 @@ source "$dot_dir/.nnn.zsh"
 source "$dot_dir/pet.sh"
 source "$dot_dir/scrcpy.zsh"
 source "$dot_dir/.fzf.zsh"
+source "$dot_dir/.git.zsh"
 
 
 export ANDROID_SDK=$ANDROID_HOME
