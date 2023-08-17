@@ -1,7 +1,7 @@
 nvim_edit_config ()
 {
   LAST_FOLDER=$PWD
-  CONFIG_FOLDER=$HOME/.config/nvim/lua/custom/
+  CONFIG_FOLDER=$HOME/.config/nvim
   cd $CONFIG_FOLDER
   nvim
   cd $LAST_FOLDER
