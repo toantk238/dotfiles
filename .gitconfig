@@ -5,7 +5,8 @@
 [core]
   editor = nvim
 	autocrlf = input
-  pager = delta --side-by-side -w ${FZF_PREVIEW_COLUMNS:-$COLUMNS}
+  ; pager = delta --side-by-side -w ${FZF_PREVIEW_COLUMNS:-$COLUMNS}
+  pager = delta --dark
 
 [merge]
 	tool = intelliJ
