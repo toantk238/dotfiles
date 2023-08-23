@@ -1,1 +1,1 @@
-export GIT_PAGER="delta --dark"
+export GIT_PAGER="delta --show-syntax-themes --dark"
