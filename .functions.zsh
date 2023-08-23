@@ -50,7 +50,7 @@ alias icat="kitty +kitten icat"
 cdl () {
     exe_path=$(which "$1")
     if [[ "$exe_path" == *"not found"* ]]; then
-      cd "$(dirname "$(readlink "$1")")"
+      cd "$(dirname "$(readlink -f "$1")")"
       return 0
     fi
 
