@@ -33,7 +33,7 @@
 
 [[snippets]]
   description = "ssh MacPro"
-  command = "kts ssh mobilehealth@192.168.100.7 -p 22"
+  command = "kts ssh -R 1234:127.0.0.1:1234 mobilehealth@192.168.100.7 -p 22"
   output = ""
 
 [[snippets]]
@@ -103,7 +103,7 @@
 
 [[snippets]]
   description = "SSH to Marco Mac M1"
-  command = "ssh -i ~/.ssh/toantk238_rsa marco@192.168.1.100"
+  command = "kts ssh -i ~/.ssh/toantk238_rsa -R 1234:127.0.0.1:1234 marco@192.168.100.46"
   output = ""
 
 [[snippets]]
@@ -179,4 +179,9 @@
 [[snippets]]
   description = "Start lemonade in tmux"
   command = "(tmux kill-session -t lemonade-session | true) && tmux new-session -d -s lemonade-session 'lemonade server'"
+  output = ""
+
+[[snippets]]
+  description = "Create compress file which follow symlinks"
+  command = "tar -chjvf nvim.tar.gz ./nvim"
   output = ""
