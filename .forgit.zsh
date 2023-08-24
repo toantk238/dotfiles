@@ -5,7 +5,9 @@ export FORGIT_FZF_DEFAULT_OPTS="
 --reverse
 --height '80%'
 "
-if exists wl-copy; then
+if exists pbcopy; then
+  export FORGIT_COPY_CMD="pbcopy"
+elif exists wl-copy; then
   export FORGIT_COPY_CMD='wl-copy'
 elif exists lemonade; then
   export FORGIT_COPY_CMD='lemonade copy'
