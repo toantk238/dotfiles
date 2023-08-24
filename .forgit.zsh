@@ -10,4 +10,7 @@ if exists wl-copy; then
 elif exists lemonade; then
   export FORGIT_COPY_CMD='lemonade copy'
 fi
-
+export FORGIT_LOG_FZF_OPTS='
+--bind="ctrl-e:execute(echo {} |grep -Eo [a-f0-9]+ |head -1 |xargs git show |nvim -)"
+'
+export FORGIT_CHECKOUT_BRANCH_BRANCH_GIT_OPTS='--sort=-committerdate'
