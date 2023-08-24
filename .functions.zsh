@@ -155,5 +155,10 @@ run_in_parent () {
   done
 }
 
+exists()
+{
+  command -v "$1" >/dev/null 2>&1
+}
+
 export FZF_DEFAULT_COMMAND="fd --type f -HI --exclude .git --exclude .gradle --exclude .transforms --exclude .idea"
 #export FZF_DEFAULT_COMMAND="rg --no-ignore --hidden --files -g '!.git/' "
