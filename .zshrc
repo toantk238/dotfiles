@@ -147,6 +147,7 @@ source "$dot_dir/pet.sh"
 source "$dot_dir/scrcpy.zsh"
 source "$dot_dir/.fzf.zsh"
 source "$dot_dir/.git.zsh"
+source "$dot_dir/.forgit.zsh"
 
 
 export ANDROID_SDK=$ANDROID_HOME
