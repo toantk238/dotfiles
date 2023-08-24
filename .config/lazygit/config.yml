@@ -1,0 +1,7 @@
+git:
+  paging:
+    colorArg: always
+    useConfig: false
+os:
+  copyToClipboardCmd: printf "\033]5522;c;$(printf {{text}} | base64)\a" > /dev/tty
+  editPreset: 'nvim'
