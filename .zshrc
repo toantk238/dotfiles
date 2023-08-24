@@ -146,7 +146,8 @@ source "$dot_dir/.nnn.zsh"
 source "$dot_dir/pet.sh"
 source "$dot_dir/scrcpy.zsh"
 source "$dot_dir/.fzf.zsh"
-
+source "$dot_dir/.git.zsh"
+source "$dot_dir/.forgit.zsh"
 
 export ANDROID_SDK=$ANDROID_HOME
 export CLOUDSDK_PYTHON=/$HOME/.pyenv/shims/python
@@ -158,9 +159,6 @@ export PATH=$ANDROID_HOME/tools:$PATH
 if [ -n "$TMUX" ] && [ -n "$DIRENV_DIR" ]; then
     direnv reload
 fi
-# eval "$(direnv hook zsh)"
-
-[ -f ~/.fzf.zsh ] && source ~/.fzf.zsh
 
 export DISABLE_AUTO_TITLE='true'
 export PATH=$HOME/bin:$PATH
