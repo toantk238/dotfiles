@@ -33,7 +33,7 @@
 
 [[snippets]]
   description = "ssh MacPro"
-  command = "kts ssh -R 1234:127.0.0.1:1234 mobilehealth@192.168.100.7 -p 22"
+  command = "kts ssh -i ~/.ssh/toantk238_rsa -R 1234:127.0.0.1:1234 mobilehealth@192.168.100.7 -p 22"
   output = ""
 
 [[snippets]]
@@ -103,7 +103,7 @@
 
 [[snippets]]
   description = "SSH to Marco Mac M1"
-  command = "kts ssh -i ~/.ssh/toantk238_rsa -R 1234:127.0.0.1:1234 marco@192.168.100.46"
+  command = "kts ssh -i ~/.ssh/toantk238_rsa -R 1234:127.0.0.1:1234 marco@192.168.100.74"
   output = ""
 
 [[snippets]]

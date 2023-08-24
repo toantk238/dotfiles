@@ -5,15 +5,26 @@
 [core]
   editor = nvim
 	autocrlf = input
-  pager = $GIT_PAGER
+  ; pager = delta
+  pager = delta
   ; pager = delta --side-by-side -w ${FZF_PREVIEW_COLUMNS:-$COLUMNS}
   ; pager = delta --dark
+[delta]
+  line-numbers = true
+  zero-style = dim syntax
+  syntax-theme = Dracula
+  plus-style = bold syntax "#002800"
+  navigate = true
+
+[interactive]
+  diffFilter = delta --color-only
 
 [merge]
 	tool = intelliJ
 
 [diff]
 	tool = intelliJ
+  colorMoved = default
   prompt = false
 
 [mergetool]
