@@ -1,0 +1,17 @@
+gui:
+  branchColors:
+    'develop': '#11aaff' # use a light blue for branches beginning with 'docs/'
+  nerdFontsVersion: "3"
+  scrollHeight: 5 # how many lines you scroll by
+git:
+  paging:
+    colorArg: always
+    useConfig: false
+  commitPrefixes:
+    appointment-droid: # This is repository folder name
+      pattern: "^\\w+\\/(\\w+-\\w+).*"
+      replace: '[$1] '
+os:
+  copyToClipboardCmd: printf "\033]5522;c;$(printf {{text}} | base64)\a" > /dev/tty
+  editPreset: 'nvim'
+notARepository: 'skip'
