@@ -15,3 +15,4 @@ os:
   copyToClipboardCmd: printf "\033]5522;c;$(printf {{text}} | base64)\a" > /dev/tty
   editPreset: 'nvim'
 notARepository: 'skip'
+promptToReturnFromSubprocess: false # display confirmation when subprocess terminates
