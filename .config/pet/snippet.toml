@@ -185,3 +185,8 @@
   description = "Create compress file which follow symlinks"
   command = "tar -chjvf nvim.tar.gz ./nvim"
   output = ""
+
+[[snippets]]
+  description = "Reset ssh state (MacOS)"
+  command = "ssh-add -D"
+  output = ""
