@@ -1,6 +1,7 @@
 gui:
   branchColors:
     'develop': '#11aaff' # use a light blue for branches beginning with 'docs/'
+    'master': '#24b372'
   nerdFontsVersion: "3"
   scrollHeight: 5 # how many lines you scroll by
 git:
