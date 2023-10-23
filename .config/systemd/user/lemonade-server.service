@@ -1,0 +1,12 @@
+[Unit]
+Description=Lemonade
+After=network.target
+
+[Service]
+ExecStart=zsh -c "source $HOME/.zshrc && /usr/bin/lemonade server"
+ExecStop=bash -c "killall -q lemonade"
+Type=simple
+Restart=on-failure
+
+[Install]
+WantedBy=default.target
