@@ -1,7 +1,7 @@
 #!/bin/zsh
 #
 function search_fzf(){
-  rg --color=always --line-number -i --no-heading "${*:-}" |
+  rg --hidden --color=always --line-number -i --no-heading "${*:-}" |
   fzf --ansi \
       --color "hl:-1:underline,hl+:-1:underline:reverse" \
       --delimiter : \
