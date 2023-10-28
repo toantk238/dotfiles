@@ -149,6 +149,8 @@ source "$dot_dir/.fzf.zsh"
 source "$dot_dir/.git.zsh"
 source "$dot_dir/.forgit.zsh"
 source "$dot_dir/.lspconfig.zsh"
+source "$dot_dir/.nvm.zsh"
+source "$dot_dir/.nvim.zsh"
 
 export ANDROID_SDK=$ANDROID_HOME
 export CLOUDSDK_PYTHON=/$HOME/.pyenv/shims/python
