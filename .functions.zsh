@@ -45,6 +45,7 @@ alias ncp="cat ${NNN_SEL:-${XDG_CONFIG_HOME:-$HOME/.config}/nnn/.selection} | tr
 alias kts="kitty +kitten"
 alias nv="nvim"
 alias icat="kitty +kitten icat"
+alias docker-compose="handle_docker_compose"
 
 
 cdl () {
@@ -153,6 +154,27 @@ run_in_parent () {
       return 1
     fi
   done
+}
+
+handle_docker_compose () {
+  action="$1"
+
+  if [ "$action" = "down" ]; then
+    read yn"?Are you sure that you run DOCKER-COMPOSE DOWN ? (y/n): "
+    case $yn in
+      [Yy]* )
+       /usr/bin/docker-compose $@
+        echo "Running docker-compose down DONE !"
+        ;;
+      [Nn]* )
+        echo "Cancel !"
+        ;;
+      *) echo "Please answer yes or no.";;
+    esac
+    return 0
+  fi
+
+ /usr/bin/docker-compose $@
 }
 
 exists()
