@@ -10,7 +10,7 @@ if exists pbcopy; then
 elif exists wl-copy; then
   export FORGIT_COPY_CMD='wl-copy'
 elif exists lemonade; then
-  export FORGIT_COPY_CMD='lemonade copy'
+	export FORGIT_COPY_CMD='lemonade copy'
 fi
 export FORGIT_LOG_FZF_OPTS='
 --bind="ctrl-e:execute(echo {} |grep -Eo [a-f0-9]+ |head -1 |xargs git show |nvim -)"
