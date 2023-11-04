@@ -151,6 +151,7 @@ source "$dot_dir/.forgit.zsh"
 source "$dot_dir/.lspconfig.zsh"
 source "$dot_dir/.nvm.zsh"
 source "$dot_dir/.nvim.zsh"
+source "$dot_dir/.tmux.zsh"
 
 export ANDROID_SDK=$ANDROID_HOME
 export CLOUDSDK_PYTHON=/$HOME/.pyenv/shims/python
@@ -174,3 +175,7 @@ export PYENV_ROOT=$HOME/.pyenv
 eval "$(pyenv init -)"
 eval "$(pyenv init --path)"
 eval "$(pyenv virtualenv-init -)"
+
+# Add RVM to PATH for scripting. Make sure this is the last PATH variable change.
+[ -f $HOME/.rvm/bin ] && export PATH="$PATH:$HOME/.rvm/bin"
+autoload -U compinit && compinit
