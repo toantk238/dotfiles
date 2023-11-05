@@ -1,6 +1,13 @@
 #!/bin/zsh
 #
-function search_fzf() {
+#export FZF_DEFAULT_COMMAND="rg --no-ignore --hidden --files -g '!.git/' "
+export FZF_DEFAULT_COMMAND="fd --type f -HI --exclude .git --exclude .gradle --exclude .transforms --exclude .idea"
+
+export FZF_DEFAULT_OPTS='--height 70% --layout=reverse --border'
+
+export FZF_ALT_C_COMMAND='fd --type directory'
+
+function rg_fzf() {
 	rg --hidden --color=always --line-number -i --no-heading "${*:-}" |
 		fzf --ansi \
 			--color "hl:-1:underline,hl+:-1:underline:reverse" \
