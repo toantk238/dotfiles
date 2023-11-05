@@ -1,4 +1,4 @@
 port = 1234
-trans-loopback = true
-trans-localfile = true
+host = "127.0.0.1"
+allow = "127.0.0.1"
 line-ending = 'lf'
