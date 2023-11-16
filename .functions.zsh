@@ -25,6 +25,7 @@ function force_clear_nvim_config() {
 	rm -rf ~/.local/share/nvim
 	rm -rf ~/.local/state/nvim
 	rm -rf ~/.config/nvim/plugin/*.*
+  rm -rf ~/.config/nvim/lazy-lock.json
 }
 
 appium_start() {
