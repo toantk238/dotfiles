@@ -16,5 +16,6 @@ function rg_fzf() {
 			--preview-window 'up,60%,border-bottom,+{2}+3/3,~3' \
 			--bind 'ctrl-w:unix-word-rubout+top,ctrl-u:unix-line-discard+top' \
 			--bind 'change:top' \
-			--bind 'enter:become(nvim {1} +{2})'
+			--bind 'enter:execute(kitty @ launch --cwd=current nvim {1} +{2})'
+	# 	--bind 'enter:become(nvim {1} +{2})'
 }
