@@ -176,6 +176,6 @@ eval "$(pyenv init -)"
 eval "$(pyenv init --path)"
 eval "$(pyenv virtualenv-init -)"
 
-# Add RVM to PATH for scripting. Make sure this is the last PATH variable change.
-[ -f $HOME/.rvm/bin ] && export PATH="$PATH:$HOME/.rvm/bin"
 autoload -U compinit && compinit
+# # Add RVM to PATH for scripting. Make sure this is the last PATH variable change.
+[ -f $HOME/.rvm/bin ] && export PATH=$HOME/.rvm/bin:$PATH
