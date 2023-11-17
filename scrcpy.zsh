@@ -2,7 +2,7 @@
 
 function start_new_device() {
 	device_serial="$1"
-	(tmux kill-session -t "scrcpy-$device_serial" | true) && tmux new-session -d -s "scrcpy-$device_serial" "scrcpy -s $device_serial -m 800 --no-audio"
+	(tmux kill-session -t "scrcpy-$device_serial" | true) && tmux new-session -d -s "scrcpy-$device_serial" "scrcpy -s $device_serial -m 800 --no-audio" && echo "Start scrcpy with device $device_serial"
 }
 
 function scrcpy_all() {
