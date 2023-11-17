@@ -154,7 +154,7 @@ handle_docker_compose() {
 		read yn"?Are you sure that you run DOCKER-COMPOSE DOWN ? (y/n): "
 		case $yn in
 		[Yy]*)
-			/usr/bin/docker-compose $@
+			/usr/local/bin/docker-compose $@
 			echo "Running docker-compose down DONE !"
 			;;
 		[Nn]*)
@@ -165,7 +165,7 @@ handle_docker_compose() {
 		return 0
 	fi
 
-	/usr/bin/docker-compose $@
+	/usr/local/bin/docker-compose $@
 }
 
 exists() {
