@@ -12,7 +12,7 @@
 [delta]
   line-numbers = true
   zero-style = dim syntax
-  syntax-theme = Dracula
+  syntax-theme = Monokai Extended
   plus-style = bold syntax "#002800"
   navigate = true
 
