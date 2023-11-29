@@ -143,8 +143,8 @@ export DOT_DIR="$dot_dir"
 source "$dot_dir/.functions.zsh"
 source "$dot_dir/.p10k.zsh"
 source "$dot_dir/.nnn.zsh"
-source "$dot_dir/pet.sh"
-source "$dot_dir/scrcpy.zsh"
+source "$dot_dir/.pet.sh"
+source "$dot_dir/.scrcpy.zsh"
 source "$dot_dir/.fzf.zsh"
 source "$dot_dir/.git.zsh"
 source "$dot_dir/.forgit.zsh"
@@ -152,14 +152,8 @@ source "$dot_dir/.lspconfig.zsh"
 source "$dot_dir/.nvm.zsh"
 source "$dot_dir/.nvim.zsh"
 source "$dot_dir/.tmux.zsh"
-
-export ANDROID_SDK=$ANDROID_HOME
-export CLOUDSDK_PYTHON=/$HOME/.pyenv/shims/python
-
-export PATH=$ANDROID_HOME/platform-tools:$PATH
-export PATH=$ANDROID_HOME/tools:$PATH
-export PATH=$ANDROID_HOME/cmdline-tools/latest/bin:$PATH
-export PATH=$ANDROID_HOME/emulator:$PATH
+source "$dot_dir/.android.zsh"
+source "$dot_dir/.luaenv.zsh"
 
 # ensure compatibility tmux <-> direnv
 if [ -n "$TMUX" ] && [ -n "$DIRENV_DIR" ]; then
@@ -169,12 +163,6 @@ fi
 export DISABLE_AUTO_TITLE='true'
 export PATH=$HOME/bin:$PATH
 export PATH=$JAVA_HOME/bin:$PATH
-
-export PATH=$HOME/.pyenv/bin:$PATH
-export PYENV_ROOT=$HOME/.pyenv
-eval "$(pyenv init -)"
-eval "$(pyenv init --path)"
-eval "$(pyenv virtualenv-init -)"
 
 autoload -U compinit && compinit
 # # Add RVM to PATH for scripting. Make sure this is the last PATH variable change.
