@@ -146,7 +146,6 @@ source "$dot_dir/.nnn.zsh"
 source "$dot_dir/.pet.sh"
 source "$dot_dir/.scrcpy.zsh"
 source "$dot_dir/.fzf.zsh"
-source "$dot_dir/.pyenv.zsh"
 source "$dot_dir/.git.zsh"
 source "$dot_dir/.forgit.zsh"
 source "$dot_dir/.lspconfig.zsh"
@@ -168,3 +167,5 @@ export PATH=$JAVA_HOME/bin:$PATH
 autoload -U compinit && compinit
 # # Add RVM to PATH for scripting. Make sure this is the last PATH variable change.
 [ -f $HOME/.rvm/bin ] && export PATH=$HOME/.rvm/bin:$PATH
+
+source "$dot_dir/.pyenv.zsh"
