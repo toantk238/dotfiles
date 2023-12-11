@@ -45,6 +45,7 @@ alias nv="nvim"
 alias icat="kitty +kitten icat"
 alias docker-compose="handle_docker_compose"
 alias lc="lemonade copy"
+alias top="btop"
 
 cdl() {
 	exe_path=$(which "$1")
@@ -173,3 +174,5 @@ handle_docker_compose() {
 exists() {
 	command -v "$1" >/dev/null 2>&1
 }
+
+export LC_ALL="en_US.UTF-8"
