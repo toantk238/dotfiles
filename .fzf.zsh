@@ -8,7 +8,7 @@ export FZF_DEFAULT_OPTS='--height 70% --layout=reverse --border'
 export FZF_ALT_C_COMMAND='fd --type directory'
 
 function rg_fzf() {
-	rg --hidden --color=always --line-number -i --no-heading "${*:-}" |
+	rg --no-ignore --hidden --color=always --line-number -i --no-heading "${*:-}" |
 		fzf --ansi \
 			--color "hl:-1:underline,hl+:-1:underline:reverse" \
 			--delimiter : \
