@@ -75,10 +75,12 @@ fzf_docker_actions() {
 	fi
 
 	if [ $action = "log" ]; then
-		docker logs -f $container_id
+		exe_cmd="docker logs -f $container_id"
 	elif [ $action = "bash" ]; then
-		docker exec -it $container_id bash
+		exe_cmd="docker exec -it $container_id bash"
 	fi
+  echo "$exe_cmd"
+  eval "$exe_cmd"
 }
 
 fzf_k8s_actions() {
@@ -106,10 +108,12 @@ fzf_k8s_actions() {
 	fi
 
 	if [ $action = "log" ]; then
-		kubectl logs -n $name_space -f $pod
+		exe_cmd="kubectl logs -n $name_space -f $pod"
 	elif [ $action = "bash" ]; then
-		kubectl exec -n $name_space -ti $pod -- bash
+		exe_cmd="kubectl exec -n $name_space -ti $pod -- bash"
 	fi
+  echo "$exe_cmd"
+  eval "$exe_cmd"
 }
 
 nginx_sites() {
