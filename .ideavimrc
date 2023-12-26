@@ -1,11 +1,14 @@
 let mapleader=" "
 
 """ Plugins  --------------------------------
-" set surround
+set surround
 " set multiple-cursors
 " set commentary
-" set argtextobj
-" set easymotion
+set argtextobj
+set easymotion
+set notimeout
+set highlightedyank
+set NERDTree
 " set textobj-entire
 " set ReplaceWithRegister
 " set exchange
@@ -76,4 +79,6 @@ map K <Action>(QuickJavaDoc)
 nnoremap <Leader>ff :action GotoFile<CR>
 nnoremap <Leader>fw :action FindInPath<CR>
 map <leader>lg <Action>(CheckinProject)
-
+map <leader>f <Plug>(easymotion-s)
+map <leader>/ <action>(CommentByLineComment)
+nnoremap <C-n> :NERDTreeToggle<CR>
