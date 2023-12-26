@@ -33,6 +33,7 @@ set nu
 " set ideastatusicon=gray
 
 """ My Mappings -----------------------------
+" Reload config
 nnoremap <leader>si :source ~/.ideavimrc<CR>
 
 " map <leader>d <Action>(Debug)
@@ -43,10 +44,11 @@ nnoremap <leader>si :source ~/.ideavimrc<CR>
 " map <leader>s <Action>(SelectInProjectView)
 " map <leader>a <Action>(Annotate)
 " map <leader>h <Action>(Vcs.ShowTabbedFileHistory)
-map <S-Space> <Action>(GotoNextError)
 
-" Reformat the current line only
-map <leader>fm <Action>(ReformatCode)
+" Navigation
+map <S-Space> <Action>(GotoNextError)
+nnoremap <s-TAB> :action PreviousTab<CR>
+nnoremap <TAB> :action NextTab<CR>
 
 map <leader>b <Action>(ToggleLineBreakpoint)
 " map <leader>o <Action>(Open)
@@ -63,3 +65,15 @@ nnoremap <M-h> :action Terminal.OpenInTerminal<CR>
 
 " I think it's a better solution
 " map U <C-R>
+
+
+" Searching and Source Code Navigation
+nnoremap gr :action FindUsages<CR>
+nnoremap gd :action GotToDeclaration<CR>
+" Reformat the current line only
+map <leader>fm <Action>(ReformatCode)
+map K <Action>(QuickJavaDoc)
+nnoremap <Leader>ff :action GotoFile<CR>
+nnoremap <Leader>fw :action FindInPath<CR>
+map <leader>lg <Action>(CheckinProject)
+
