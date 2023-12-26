@@ -82,3 +82,4 @@ map <leader>lg <Action>(CheckinProject)
 map <leader>f <Plug>(easymotion-s)
 map <leader>/ <action>(CommentByLineComment)
 nnoremap <C-n> :NERDTreeToggle<CR>
+nnoremap <leader>x :q<CR>
