@@ -24,7 +24,8 @@ set NERDTree
 
 """ Common settings -------------------------
 set clipboard+=unnamed
-set clipboard+=ideaput
+set clipboard^=unnamedplus
+" set clipboard+=ideaput
 set scrolloff=5
 set showmode
 " set so=5
@@ -76,6 +77,7 @@ nnoremap gd :action GotoDeclarationOnly<CR>
 nnoremap gD :action GotoSuperMethod<CR>
 " Reformat the current line only
 map <leader>fm <Action>(ReformatCode)
+nnoremap <leader>fi :action OptimizeImports<CR>
 map K <Action>(QuickJavaDoc)
 nnoremap <Leader>ff :action GotoFile<CR>
 nnoremap <Leader>fw :action FindInPath<CR>
@@ -85,3 +87,4 @@ map <leader>f <Plug>(easymotion-s)
 map <leader>/ <action>(CommentByLineComment)
 nnoremap <C-n> :NERDTreeToggle<CR>
 nnoremap <leader>x :q<CR>
+nnoremap <leader>ca :action ShowIntentionActions<CR>
