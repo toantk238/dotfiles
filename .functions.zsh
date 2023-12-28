@@ -57,6 +57,13 @@ cdl() {
 	cd "$(dirname "$(readlink -f "$exe_path")")"
 }
 
+nvo() {
+	LAST_FOLDER=$PWD
+	cd $DOT_DIR
+	nvim
+	cd $LAST_FOLDER
+}
+
 fzf_docker_actions() {
 
 	container=$(docker ps | fzf)
