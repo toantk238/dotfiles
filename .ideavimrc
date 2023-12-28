@@ -88,3 +88,4 @@ map <leader>/ <action>(CommentByLineComment)
 nnoremap <C-n> :NERDTreeToggle<CR>
 nnoremap <leader>x :q<CR>
 nnoremap <leader>ca :action ShowIntentionActions<CR>
+nnoremap <leader>eu :action EvaluateExpression<CR>
