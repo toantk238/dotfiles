@@ -40,7 +40,7 @@ alias lg="lazygit"
 alias cat="bat --paging=never"
 # alias n="nnn"
 alias ncp="cat ${NNN_SEL:-${XDG_CONFIG_HOME:-$HOME/.config}/nnn/.selection} | tr '\0' '\n'"
-alias kts="kitty +kitten"
+alias ssh="kitty +kitten ssh"
 alias nv="nvim"
 alias icat="kitty +kitten icat"
 alias docker-compose="handle_docker_compose"
@@ -55,6 +55,13 @@ cdl() {
 	fi
 
 	cd "$(dirname "$(readlink -f "$exe_path")")"
+}
+
+nvo() {
+	LAST_FOLDER=$PWD
+	cd $DOT_DIR
+	nvim
+	cd $LAST_FOLDER
 }
 
 fzf_docker_actions() {
@@ -75,10 +82,12 @@ fzf_docker_actions() {
 	fi
 
 	if [ $action = "log" ]; then
-		docker logs -f $container_id
+		exe_cmd="docker logs -f $container_id"
 	elif [ $action = "bash" ]; then
-		docker exec -it $container_id bash
+		exe_cmd="docker exec -it $container_id bash"
 	fi
+  echo "$exe_cmd"
+  eval "$exe_cmd"
 }
 
 fzf_k8s_actions() {
@@ -106,10 +115,12 @@ fzf_k8s_actions() {
 	fi
 
 	if [ $action = "log" ]; then
-		kubectl logs -n $name_space -f $pod
+		exe_cmd="kubectl logs -n $name_space -f $pod"
 	elif [ $action = "bash" ]; then
-		kubectl exec -n $name_space -ti $pod -- bash
+		exe_cmd="kubectl exec -n $name_space -ti $pod -- bash"
 	fi
+  echo "$exe_cmd"
+  eval "$exe_cmd"
 }
 
 nginx_sites() {

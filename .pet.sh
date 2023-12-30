@@ -10,8 +10,8 @@ function pet-select() {
 }
 zle -N pet-select
 
-if [[ $(uname) != "Darwin" ]]; then
-	stty -ixon
-fi
+# if [[ $(uname) != "Darwin" ]]; then
+#   stty -ixon
+# fi
 
 bindkey '^s' pet-select
