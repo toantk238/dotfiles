@@ -83,9 +83,10 @@ nnoremap <Leader>ff :action GotoFile<CR>
 nnoremap <Leader>fw :action FindInPath<CR>
 map <leader>lg <Action>(CheckinProject)
 map <leader>fc <Action>(FileStructurePopup)
-map <leader>f <Plug>(easymotion-s)
+map <leader>ho <Plug>(easymotion-s)
 map <leader>/ <action>(CommentByLineComment)
 nnoremap <C-n> :NERDTreeToggle<CR>
 nnoremap <leader>x :q<CR>
 nnoremap <leader>ca :action ShowIntentionActions<CR>
 nnoremap <leader>eu :action EvaluateExpression<CR>
+nnoremap <leader>ra :action RenameElement<CR>
