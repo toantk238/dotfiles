@@ -1,3 +1,10 @@
+function join_by {
+  local d=${1-} f=${2-}
+  if shift 2; then
+    printf %s "$f" "${@/#/$d}"
+  fi
+}
+
 nvim_edit_config() {
 	LAST_FOLDER=$PWD
 	CONFIG_FOLDER=$HOME/.config/nvim
@@ -186,4 +193,7 @@ exists() {
 	command -v "$1" >/dev/null 2>&1
 }
 
+cdo() {
+  cd $DOT_DIR
+}
 export LC_ALL="en_US.UTF-8"
