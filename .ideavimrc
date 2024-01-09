@@ -75,6 +75,7 @@ nnoremap <M-h> :action Terminal.OpenInTerminal<CR>
 nnoremap gr :action FindUsages<CR>
 nnoremap gd :action GotoDeclarationOnly<CR>
 nnoremap gD :action GotoSuperMethod<CR>
+nnoremap gt :action GotoImplementation<CR>
 " Reformat the current line only
 map <leader>fm <Action>(ReformatCode)
 nnoremap <leader>fi :action OptimizeImports<CR>

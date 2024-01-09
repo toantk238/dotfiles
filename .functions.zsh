@@ -196,4 +196,21 @@ exists() {
 cdo() {
   cd $DOT_DIR
 }
+
+cptp() {
+  output=$(echo "$1")
+
+  (($#)) || set -- -
+  while (($#)); do
+     # { [[ $1 = - ]] || exec < "$1"; } &&
+     while read -r; do
+        input_file=$(echo "$REPLY")
+        output_file="$output/$input_file"
+        output_file_dir=$(dirname $output_file)
+        mkdir -p $output_file_dir && cp -r $input_file "$output_file_dir/."
+     done
+     shift
+  done
+}
+
 export LC_ALL="en_US.UTF-8"
