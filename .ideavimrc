@@ -30,6 +30,7 @@ set scrolloff=5
 set showmode
 " set so=5
 set incsearch
+set ignorecase smartcase
 set nu
 
 """ Idea specific settings ------------------
