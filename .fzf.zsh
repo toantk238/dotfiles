@@ -8,7 +8,13 @@ export FZF_DEFAULT_OPTS='--height 70% --layout=reverse --border'
 export FZF_ALT_C_COMMAND='fd --type directory'
 
 function rg_fzf() {
-	rg --no-ignore --hidden --color=always --line-number -i --no-heading "${*:-}" |
+	rg --no-ignore --hidden --color=always --line-number \
+    -i \
+    --no-heading "${*:-}" \
+    -g '!Pods/' \
+    -g '!Text.swift' \
+    -g '!*.pbxproj' \
+    -g '!DerivedData/'|
 		fzf --ansi \
 			--color "hl:-1:underline,hl+:-1:underline:reverse" \
 			--delimiter : \
@@ -16,6 +22,7 @@ function rg_fzf() {
 			--preview-window 'up,60%,border-bottom,+{2}+3/3,~3' \
 			--bind 'ctrl-w:unix-word-rubout+top,ctrl-u:unix-line-discard+top' \
 			--bind 'change:top' \
-			--bind 'enter:execute(kitty @ launch --cwd=current nvim {1} +{2})'
-	# 	--bind 'enter:become(nvim {1} +{2})'
+      --bind 'enter:become(nvim {1} +{2})'
+			# --bind 'enter:execute(kitty @ launch --cwd=current nvim {1} +{2})'
 }
+
