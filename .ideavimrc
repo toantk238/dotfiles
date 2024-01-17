@@ -8,6 +8,7 @@ set argtextobj
 set easymotion
 set notimeout
 set highlightedyank
+set which-key
 set NERDTree
 " set textobj-entire
 " set ReplaceWithRegister
@@ -57,7 +58,8 @@ nnoremap <TAB> :action NextTab<CR>
 
 map <leader>b <Action>(ToggleLineBreakpoint)
 " map <leader>o <Action>(Open)
-nnoremap <M-h> :action Terminal.OpenInTerminal<CR>
+" nnoremap <M-h> :action Terminal.OpenInTerminal<CR>
+nnoremap <M-h> :action ActivateTerminalToolWindow<CR>
 " map <leader>J Ji <ESC>
 
 " Just makes me nervous
@@ -77,18 +79,24 @@ nnoremap gr :action FindUsages<CR>
 nnoremap gd :action GotoDeclarationOnly<CR>
 nnoremap gD :action GotoSuperMethod<CR>
 nnoremap gt :action GotoImplementation<CR>
+
+nnoremap <leader>ra :action RenameElement<CR>
 " Reformat the current line only
 map <leader>fm <Action>(ReformatCode)
 nnoremap <leader>fi :action OptimizeImports<CR>
 map K <Action>(QuickJavaDoc)
+
 nnoremap <Leader>ff :action GotoFile<CR>
 nnoremap <Leader>fw :action FindInPath<CR>
 map <leader>lg <Action>(CheckinProject)
 map <leader>fc <Action>(FileStructurePopup)
 map <leader>ho <Plug>(easymotion-s)
 map <leader>/ <action>(CommentByLineComment)
+
+" Editor action
 nnoremap <C-n> :NERDTreeToggle<CR>
 nnoremap <leader>x :q<CR>
 nnoremap <leader>ca :action ShowIntentionActions<CR>
 nnoremap <leader>eu :action EvaluateExpression<CR>
-nnoremap <leader>ra :action RenameElement<CR>
+nnoremap <leader>me :action CloseAllEditorsButActive<CR>
+nnoremap <leader>fq :action RecentFiles<CR>
