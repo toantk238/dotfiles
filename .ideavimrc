@@ -8,6 +8,7 @@ set argtextobj
 set easymotion
 set notimeout
 set highlightedyank
+set which-key
 set NERDTree
 " set textobj-entire
 " set ReplaceWithRegister
@@ -57,7 +58,8 @@ nnoremap <TAB> :action NextTab<CR>
 
 map <leader>b <Action>(ToggleLineBreakpoint)
 " map <leader>o <Action>(Open)
-nnoremap <M-h> :action Terminal.OpenInTerminal<CR>
+" nnoremap <M-h> :action Terminal.OpenInTerminal<CR>
+nnoremap <M-h> :action ActivateTerminalToolWindow<CR>
 " map <leader>J Ji <ESC>
 
 " Just makes me nervous
