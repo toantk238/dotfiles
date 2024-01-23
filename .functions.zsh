@@ -93,7 +93,7 @@ fzf_docker_actions() {
 	elif [ $action = "bash" ]; then
 		exe_cmd="docker exec -it $container_id bash"
 	fi
-  echo "$exe_cmd"
+  print -s "$exe_cmd"
   eval "$exe_cmd"
 }
 
@@ -126,7 +126,7 @@ fzf_k8s_actions() {
 	elif [ $action = "bash" ]; then
 		exe_cmd="kubectl exec -n $name_space -ti $pod -- bash"
 	fi
-  echo "$exe_cmd"
+  print -s "$exe_cmd"
   eval "$exe_cmd"
 }
 
