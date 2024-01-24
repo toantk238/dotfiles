@@ -1,8 +1,8 @@
 function join_by {
-  local d=${1-} f=${2-}
-  if shift 2; then
-    printf %s "$f" "${@/#/$d}"
-  fi
+	local d=${1-} f=${2-}
+	if shift 2; then
+		printf %s "$f" "${@/#/$d}"
+	fi
 }
 
 nvim_edit_config() {
@@ -32,7 +32,7 @@ function force_clear_nvim_config() {
 	rm -rf ~/.local/share/nvim
 	rm -rf ~/.local/state/nvim
 	rm -rf ~/.config/nvim/plugin/*.*
-  rm -rf ~/.config/nvim/lazy-lock.json
+	rm -rf ~/.config/nvim/lazy-lock.json
 }
 
 appium_start() {
@@ -93,8 +93,8 @@ fzf_docker_actions() {
 	elif [ $action = "bash" ]; then
 		exe_cmd="docker exec -it $container_id bash"
 	fi
-  print -s "$exe_cmd"
-  eval "$exe_cmd"
+	print -s "$exe_cmd"
+	eval "$exe_cmd"
 }
 
 fzf_k8s_actions() {
@@ -113,6 +113,9 @@ fzf_k8s_actions() {
 	fi
 	pod=$(echo $pod | awk '{print $1}')
 
+	containers=$(kubectl get pod $pod -n $name_space -o jsonpath='{.spec.containers[*].name}')
+	container=$(awk 'NR>0' RS='[[:space:]]' <<<"$containers" | fzf)
+
 	all_actions="log\nbash"
 
 	action=$(echo $all_actions | fzf)
@@ -122,12 +125,12 @@ fzf_k8s_actions() {
 	fi
 
 	if [ $action = "log" ]; then
-		exe_cmd="kubectl logs -n $name_space -f $pod"
+		exe_cmd="kubectl logs -n $name_space -f $pod -c $container"
 	elif [ $action = "bash" ]; then
-		exe_cmd="kubectl exec -n $name_space -ti $pod -- bash"
+		exe_cmd="kubectl exec -n $name_space -ti $pod -c $container -- bash"
 	fi
-  print -s "$exe_cmd"
-  eval "$exe_cmd"
+	print -s "$exe_cmd"
+	eval "$exe_cmd"
 }
 
 nginx_sites() {
@@ -194,23 +197,23 @@ exists() {
 }
 
 cdo() {
-  cd $DOT_DIR
+	cd $DOT_DIR
 }
 
 cptp() {
-  output=$(echo "$1")
+	output=$(echo "$1")
 
-  (($#)) || set -- -
-  while (($#)); do
-     # { [[ $1 = - ]] || exec < "$1"; } &&
-     while read -r; do
-        input_file=$(echo "$REPLY")
-        output_file="$output/$input_file"
-        output_file_dir=$(dirname $output_file)
-        mkdir -p $output_file_dir && cp -r $input_file "$output_file_dir/."
-     done
-     shift
-  done
+	(($#)) || set -- -
+	while (($#)); do
+		# { [[ $1 = - ]] || exec < "$1"; } &&
+		while read -r; do
+			input_file=$(echo "$REPLY")
+			output_file="$output/$input_file"
+			output_file_dir=$(dirname $output_file)
+			mkdir -p $output_file_dir && cp -r $input_file "$output_file_dir/."
+		done
+		shift
+	done
 }
 
 export LC_ALL="en_US.UTF-8"

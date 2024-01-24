@@ -100,3 +100,4 @@ nnoremap <leader>ca :action ShowIntentionActions<CR>
 nnoremap <leader>eu :action EvaluateExpression<CR>
 nnoremap <leader>me :action CloseAllEditorsButActive<CR>
 nnoremap <leader>fq :action RecentFiles<CR>
+nnoremap <leader>gb :action Annotate<CR>
