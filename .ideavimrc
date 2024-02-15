@@ -90,7 +90,7 @@ nnoremap <Leader>ff :action GotoFile<CR>
 nnoremap <Leader>fw :action FindInPath<CR>
 map <leader>lg <Action>(CheckinProject)
 map <leader>fc <Action>(FileStructurePopup)
-map <leader>qo <Plug>(easymotion-s)
+map <leader>fj <Plug>(easymotion-s)
 map <leader>/ <action>(CommentByLineComment)
 
 " Editor action
