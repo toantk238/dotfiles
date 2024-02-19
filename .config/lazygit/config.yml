@@ -13,15 +13,18 @@ git:
     colorArg: always
     useConfig: false
   commitPrefixes:
+    android-doctor-app: # This is repository folder name
+      pattern: "^\\w+\\/(\\w+-\\w+).*"
+      replace: 'feat($1): '
     appointment-droid: # This is repository folder name
       pattern: "^\\w+\\/(\\w+-\\w+).*"
-      replace: '[$1] '
+      replace: 'feat($1): '
     cms-mohconnect-backend: # This is repository folder name
       pattern: "^\\w+\\/(\\w+-\\w+).*"
-      replace: '[$1] '
+      replace: 'feat($1): '
     cms-search:
       pattern: "^\\w+\\/(\\w+-\\w+).*"
-      replace: '[$1] '
+      replace: 'feat($1): '
 os:
   copyToClipboardCmd: echo {{text}} | lemonade copy
   editPreset: 'nvim'
