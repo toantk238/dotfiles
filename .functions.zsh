@@ -53,6 +53,8 @@ alias icat="kitty +kitten icat"
 alias docker-compose="handle_docker_compose"
 alias lc="lemonade copy"
 alias top="btop"
+alias glow="glow --pager"
+alias open="xdg-open"
 
 cdl() {
 	exe_path=$(which "$1")
