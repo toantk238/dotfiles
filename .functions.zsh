@@ -35,12 +35,6 @@ function force_clear_nvim_config() {
 	rm -rf ~/.config/nvim/lazy-lock.json
 }
 
-appium_start() {
-	PROJECT_DIR="/mnt/Data/Workspace/2.Personal/appium2"
-	cd $PROJECT_DIR
-	appium server -p 4723 -a 127.0.0.1 -pa /wd/hub
-}
-
 alias gdiff="yes | git difftool --tool=intelliJ HEAD"
 alias ssys="sudo systemctl"
 alias lg="lazygit"
