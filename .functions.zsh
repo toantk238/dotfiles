@@ -49,6 +49,7 @@ alias lc="lemonade copy"
 alias top="btop"
 # alias glow="glow --pager"
 alias open="xdg-open"
+alias enw="emacs -nw"
 
 cdl() {
 	exe_path=$(which "$1")
