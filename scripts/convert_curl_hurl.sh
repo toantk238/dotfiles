@@ -10,3 +10,8 @@ case $clp_content in curl*)
   echo "$hurl_converted" | lemonade copy
   return 0
 esac
+
+# curl_converted=$(echo "$clp_content" | hurlfmt --in hurl --out json)
+# echo "\n$curl_converted"
+# echo "$curl_converted" | lemonade copy
+# return 0
