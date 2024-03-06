@@ -25,6 +25,7 @@ git:
     cms-search:
       pattern: "^\\w+\\/(\\w+-\\w+).*"
       replace: 'feat($1): '
+  mainBranches: [master, develop]
 os:
   copyToClipboardCmd: echo {{text}} | lemonade copy
   editPreset: 'nvim'

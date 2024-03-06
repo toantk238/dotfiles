@@ -35,12 +35,6 @@ function force_clear_nvim_config() {
 	rm -rf ~/.config/nvim/lazy-lock.json
 }
 
-appium_start() {
-	PROJECT_DIR="/mnt/Data/Workspace/2.Personal/appium2"
-	cd $PROJECT_DIR
-	appium server -p 4723 -a 127.0.0.1 -pa /wd/hub
-}
-
 alias gdiff="yes | git difftool --tool=intelliJ HEAD"
 alias ssys="sudo systemctl"
 alias lg="lazygit"
@@ -51,10 +45,12 @@ alias ssh="kitty +kitten ssh"
 alias nv="nvim"
 alias icat="kitty +kitten icat"
 alias docker-compose="handle_docker_compose"
-alias lc="lemonade copy"
+alias lc="lemonade copy --host=127.0.0.1"
 alias top="btop"
-alias glow="glow --pager"
 alias open="xdg-open"
+alias enw="emacs -nw"
+alias glow="glow --pager"
+# alias open="xdg-open"
 
 cdl() {
 	exe_path=$(which "$1")
