@@ -154,6 +154,7 @@ source "$dot_dir/.nvim.zsh"
 source "$dot_dir/.tmux.zsh"
 source "$dot_dir/.android.zsh"
 source "$dot_dir/.luaenv.zsh"
+source "$dot_dir/.ranger.zsh"
 
 # ensure compatibility tmux <-> direnv
 if [ -n "$TMUX" ] && [ -n "$DIRENV_DIR" ]; then
