@@ -7,7 +7,6 @@ if [ -f ~/.config/nnn/quitcd/quitcd.bash_sh_zsh ]; then
 fi
 
 [ -n "$NNNLVL" ] && PS1="N$NNNLVL $PS1"
-[ -f /etc/profile.d/autojump.zsh ] && source /etc/profile.d/autojump.zsh
 export NNN_FIFO=/tmp/nnn.fifo
 NNN_FCOLORS='c1e2272e006033f7c6d6abc4'
 nnn_cd() {
@@ -25,4 +24,4 @@ export NNN_ICONLOOKUP=0
 export NNN_PLUG
 export PAGER='less -R'
 export EDITOR=nvim
-alias n="n -deH"
+# alias n="n -deH"

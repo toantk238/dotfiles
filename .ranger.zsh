@@ -8,3 +8,4 @@ function ranger_wrapper {
 }
 
 alias rng='ranger_wrapper'
+alias n='ranger_wrapper'
