@@ -171,3 +171,5 @@ autoload -U compinit && compinit
 [ -f $HOME/.rvm/bin ] && export PATH=$HOME/.rvm/bin:$PATH
 
 source "$dot_dir/.pyenv.zsh"
+
+source $HOME/.config/broot/launcher/bash/br
