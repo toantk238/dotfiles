@@ -172,4 +172,4 @@ autoload -U compinit && compinit
 
 source "$dot_dir/.pyenv.zsh"
 
-source $HOME/.config/broot/launcher/bash/br
+[ -f $HOME/.config/broot/launcher/bash/br ] && source $HOME/.config/broot/launcher/bash/br
