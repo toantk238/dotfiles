@@ -35,22 +35,6 @@ function force_clear_nvim_config() {
 	rm -rf ~/.config/nvim/lazy-lock.json
 }
 
-alias gdiff="yes | git difftool --tool=intelliJ HEAD"
-alias ssys="sudo systemctl"
-alias lg="lazygit"
-alias cat="bat --paging=never"
-# alias n="nnn"
-alias ncp="cat ${NNN_SEL:-${XDG_CONFIG_HOME:-$HOME/.config}/nnn/.selection} | tr '\0' '\n'"
-alias ssh="kitty +kitten ssh"
-alias nv="nvim"
-alias icat="kitty +kitten icat"
-alias docker-compose="handle_docker_compose"
-alias lc="lemonade copy --host=127.0.0.1"
-alias top="btop"
-alias enw="emacs -nw"
-alias glow="glow --pager"
-# alias open="xdg-open"
-
 cdl() {
 	exe_path=$(which "$1")
 	if [[ "$exe_path" == *"not found"* ]]; then
@@ -214,3 +198,42 @@ cptp() {
 }
 
 export LC_ALL="en_US.UTF-8"
+
+if exists eza; then
+  alias l="eza -lah"
+fi
+
+if exists fuck; then
+  eval $(thefuck --alias)
+fi
+
+if exists kitty; then
+  alias ssh="kitty +kitten ssh"
+  alias icat="kitty +kitten icat"
+fi
+
+if exists bat; then
+  alias cat="bat --paging=never"
+fi
+
+if exists btop; then
+  alias top="btop"
+fi
+
+if exists zoxide; then
+  eval "$(zoxide init zsh)"
+fi
+
+alias gdiff="yes | git difftool --tool=intelliJ HEAD"
+alias ssys="sudo systemctl"
+alias lg="lazygit"
+# alias n="nnn"
+alias ncp="cat ${NNN_SEL:-${XDG_CONFIG_HOME:-$HOME/.config}/nnn/.selection} | tr '\0' '\n'"
+alias nv="nvim"
+alias docker-compose="handle_docker_compose"
+alias lc="lemonade copy --host=127.0.0.1"
+# alias glow="glow --pager"
+if exists xdg-open; then
+  alias open="xdg-open"
+fi
+alias enw="emacs -nw"
