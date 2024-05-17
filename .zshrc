@@ -164,13 +164,18 @@ if [ -n "$TMUX" ] && [ -n "$DIRENV_DIR" ]; then
 fi
 
 export DISABLE_AUTO_TITLE='true'
-export PATH=$HOME/bin:$PATH
-export PATH=$JAVA_HOME/bin:$PATH
 
-autoload -U compinit && compinit
-# # Add RVM to PATH for scripting. Make sure this is the last PATH variable change.
-[ -f $HOME/.rvm/bin ] && export PATH=$HOME/.rvm/bin:$PATH
+if [ -f $HOME/bin ]; then
+  export PATH=$HOME/bin:$PATH
+fi
+
+export PATH=$JAVA_HOME/bin:$PATH
 
 source "$dot_dir/.pyenv.zsh"
 
 [ -f $HOME/.config/broot/launcher/bash/br ] && source $HOME/.config/broot/launcher/bash/br
+
+# # Add RVM to PATH for scripting. Make sure this is the last PATH variable change.
+[ -f $HOME/.rvm/bin ] && export PATH=$HOME/.rvm/bin:$PATH
+
+autoload -U compinit && compinit
