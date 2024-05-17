@@ -4,9 +4,9 @@
 
 # (( ${+commands[direnv]} )) && emulate zsh -c "$(direnv export zsh)"
 
-if [[ -r "${XDG_CACHE_HOME:-$HOME/.cache}/p10k-instant-prompt-${(%):-%n}.zsh" ]]; then
-  source "${XDG_CACHE_HOME:-$HOME/.cache}/p10k-instant-prompt-${(%):-%n}.zsh"
-fi
+# if [[ -r "${XDG_CACHE_HOME:-$HOME/.cache}/p10k-instant-prompt-${(%):-%n}.zsh" ]]; then
+#   source "${XDG_CACHE_HOME:-$HOME/.cache}/p10k-instant-prompt-${(%):-%n}.zsh"
+# fi
 
 (( ${+commands[direnv]} )) && emulate zsh -c "$(direnv hook zsh)"
 
@@ -22,8 +22,8 @@ export ZSH="/$HOME/.oh-my-zsh"
 # load a random theme each time oh-my-zsh is loaded, in which case,
 # to know which specific one was loaded, run: echo $RANDOM_THEME
 # See https://github.com/ohmyzsh/ohmyzsh/wiki/Themes
-ZSH_THEME="powerlevel10k/powerlevel10k"
-# ZSH_THEME="apple"
+# ZSH_THEME="powerlevel10k/powerlevel10k"
+ZSH_THEME="robbyrussell"
 
 if [ -f "/$HOME/.env.zsh" ]; 
 then
@@ -142,7 +142,7 @@ dot_dir=$(dirname "$real_path")
 export DOT_DIR="$dot_dir"
 
 source "$dot_dir/.functions.zsh"
-source "$dot_dir/.p10k.zsh"
+# source "$dot_dir/.p10k.zsh"
 source "$dot_dir/.nnn.zsh"
 source "$dot_dir/.autojump.zsh"
 source "$dot_dir/.pet.sh"
