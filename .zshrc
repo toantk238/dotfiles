@@ -91,7 +91,8 @@ fi
 # Custom plugins may be added to $ZSH_CUSTOM/plugins/
 # Example format: plugins=(rails git textmate ruby lighthouse)
 # Add wisely, as too many plugins slow down shell startup.
-plugins=(git tmux autojump fzf adb direnv flutter zsh-autosuggestions zsh-syntax-highlighting forgit)
+plugins=(git tmux autojump fzf adb direnv zsh-autosuggestions zsh-syntax-highlighting forgit)
+# plugins=(git tmux autojump fzf adb direnv flutter zsh-autosuggestions zsh-syntax-highlighting forgit)
 
 if [ -n "$RUN_BY_ME" ]; then
   ZSH_TMUX_AUTOSTART=true
@@ -99,7 +100,7 @@ fi
 
 fpath+=${ZSH_CUSTOM:-${ZSH:-~/.oh-my-zsh}/custom}/plugins/zsh-completions/src
 source $ZSH/oh-my-zsh.sh
-compdef _gnu_generic flutter
+# compdef _gnu_generic flutter
 
 # User configuration
 
