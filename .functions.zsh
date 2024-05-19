@@ -224,6 +224,11 @@ if exists zoxide; then
   eval "$(zoxide init zsh)"
 fi
 
+if exists glow; then
+  eval "$(glow completion zsh)"
+  alias glow="glow --pager"
+fi
+
 alias gdiff="yes | git difftool --tool=intelliJ HEAD"
 alias ssys="sudo systemctl"
 alias lg="lazygit"

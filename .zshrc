@@ -4,9 +4,9 @@
 
 # (( ${+commands[direnv]} )) && emulate zsh -c "$(direnv export zsh)"
 
-if [[ -r "${XDG_CACHE_HOME:-$HOME/.cache}/p10k-instant-prompt-${(%):-%n}.zsh" ]]; then
-  source "${XDG_CACHE_HOME:-$HOME/.cache}/p10k-instant-prompt-${(%):-%n}.zsh"
-fi
+# if [[ -r "${XDG_CACHE_HOME:-$HOME/.cache}/p10k-instant-prompt-${(%):-%n}.zsh" ]]; then
+#   source "${XDG_CACHE_HOME:-$HOME/.cache}/p10k-instant-prompt-${(%):-%n}.zsh"
+# fi
 
 (( ${+commands[direnv]} )) && emulate zsh -c "$(direnv hook zsh)"
 
@@ -22,8 +22,8 @@ export ZSH="/$HOME/.oh-my-zsh"
 # load a random theme each time oh-my-zsh is loaded, in which case,
 # to know which specific one was loaded, run: echo $RANDOM_THEME
 # See https://github.com/ohmyzsh/ohmyzsh/wiki/Themes
-ZSH_THEME="powerlevel10k/powerlevel10k"
-# ZSH_THEME="apple"
+# ZSH_THEME="powerlevel10k/powerlevel10k"
+ZSH_THEME="robbyrussell"
 
 if [ -f "/$HOME/.env.zsh" ]; 
 then
@@ -91,7 +91,8 @@ fi
 # Custom plugins may be added to $ZSH_CUSTOM/plugins/
 # Example format: plugins=(rails git textmate ruby lighthouse)
 # Add wisely, as too many plugins slow down shell startup.
-plugins=(git tmux autojump fzf adb direnv flutter zsh-autosuggestions zsh-syntax-highlighting forgit)
+plugins=(git tmux autojump fzf adb direnv zsh-autosuggestions zsh-syntax-highlighting forgit)
+# plugins=(git tmux autojump fzf adb direnv flutter zsh-autosuggestions zsh-syntax-highlighting forgit)
 
 if [ -n "$RUN_BY_ME" ]; then
   ZSH_TMUX_AUTOSTART=true
@@ -99,7 +100,7 @@ fi
 
 fpath+=${ZSH_CUSTOM:-${ZSH:-~/.oh-my-zsh}/custom}/plugins/zsh-completions/src
 source $ZSH/oh-my-zsh.sh
-compdef _gnu_generic flutter
+# compdef _gnu_generic flutter
 
 # User configuration
 
@@ -142,7 +143,7 @@ dot_dir=$(dirname "$real_path")
 export DOT_DIR="$dot_dir"
 
 source "$dot_dir/.functions.zsh"
-source "$dot_dir/.p10k.zsh"
+# source "$dot_dir/.p10k.zsh"
 source "$dot_dir/.nnn.zsh"
 source "$dot_dir/.autojump.zsh"
 source "$dot_dir/.pet.sh"
@@ -164,13 +165,18 @@ if [ -n "$TMUX" ] && [ -n "$DIRENV_DIR" ]; then
 fi
 
 export DISABLE_AUTO_TITLE='true'
-export PATH=$HOME/bin:$PATH
-export PATH=$JAVA_HOME/bin:$PATH
 
-autoload -U compinit && compinit
-# # Add RVM to PATH for scripting. Make sure this is the last PATH variable change.
-[ -f $HOME/.rvm/bin ] && export PATH=$HOME/.rvm/bin:$PATH
+if [ -f $HOME/bin ]; then
+  export PATH=$HOME/bin:$PATH
+fi
+
+export PATH=$JAVA_HOME/bin:$PATH
 
 source "$dot_dir/.pyenv.zsh"
 
 [ -f $HOME/.config/broot/launcher/bash/br ] && source $HOME/.config/broot/launcher/bash/br
+
+# # Add RVM to PATH for scripting. Make sure this is the last PATH variable change.
+[ -f $HOME/.rvm/bin ] && export PATH=$HOME/.rvm/bin:$PATH
+
+autoload -U compinit && compinit
