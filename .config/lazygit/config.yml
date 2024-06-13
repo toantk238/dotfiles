@@ -27,7 +27,7 @@ git:
       replace: 'feat($1): '
   mainBranches: [master, develop]
 os:
-  copyToClipboardCmd: echo {{text}} | lemonade copy
+  copyToClipboardCmd: echo {{text}} | lemonade copy --host=127.0.0.1
   editPreset: 'nvim'
 notARepository: 'skip'
 promptToReturnFromSubprocess: false
