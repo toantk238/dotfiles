@@ -1,13 +1,13 @@
-#! /usr/bin/env zsh
+#!/usr/bin/env zsh
 
-clp_content=$(lemonade paste)
+clp_content=$(lemonade paste --host=127.0.0.1)
 # echo "clp=$clp_content"
 
 case $clp_content in curl*)
   clp_content=${clp_content/'curl -v'/'curl'}
-  hurl_converted=$(echo $clp_content | hurlfmt --in curl --out hurl)
-  echo "\n$hurl_converted"
-  echo "$hurl_converted" | lemonade copy
+  hurl_converted=$(printf '%s' "$clp_content" | hurlfmt --in curl --out hurl)
+  # echo "\n$hurl_converted"
+  printf '%s' "$hurl_converted" | lemonade copy --host=127.0.0.1
   return 0
 esac
 
