@@ -158,6 +158,7 @@ source "$dot_dir/.tmux.zsh"
 source "$dot_dir/.android.zsh"
 source "$dot_dir/.luaenv.zsh"
 source "$dot_dir/.ranger.zsh"
+source "$dot_dir/.goenv.zsh"
 
 # ensure compatibility tmux <-> direnv
 if [ -n "$TMUX" ] && [ -n "$DIRENV_DIR" ]; then
@@ -172,8 +173,6 @@ fi
 
 export PATH=$JAVA_HOME/bin:$PATH
 
-source "$dot_dir/.pyenv.zsh"
-
 [ -f $HOME/.config/broot/launcher/bash/br ] && source $HOME/.config/broot/launcher/bash/br
 
 # # Add RVM to PATH for scripting. Make sure this is the last PATH variable change.
@@ -182,3 +181,5 @@ source "$dot_dir/.pyenv.zsh"
 [ -f $HOME/.cargo/env ] && source $HOME/.cargo/env
 
 autoload -U compinit && compinit
+
+source "$dot_dir/.pyenv.zsh"
