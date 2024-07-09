@@ -8,7 +8,7 @@ export FORGIT_FZF_DEFAULT_OPTS="
 if exists wl-copy; then
 	export FORGIT_COPY_CMD='wl-copy'
 elif exists lemonade; then
-	export FORGIT_COPY_CMD='lemonade copy'
+	export FORGIT_COPY_CMD='lemonade copy --host=127.0.0.1'
 fi
 export FORGIT_LOG_FZF_OPTS='
 --bind="ctrl-e:execute(echo {} |grep -Eo [a-f0-9]+ |head -1 |xargs git show |nvim -)"
