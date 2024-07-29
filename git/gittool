@@ -19,6 +19,7 @@ def get_sub_modules():
         description='What the program does',
         epilog='Text at the bottom of help')
 
+    parser.add_argument('action')           # positional argument
     parser.add_argument('path')           # positional argument
 
     args = parser.parse_args()
@@ -27,6 +28,11 @@ def get_sub_modules():
     abs_pwd = Path(working_path).resolve()
     big_repo = BigRepo(abs_pwd)
     big_repo.verify_local_state()
+
+    action = args.action
+
+    if action == "sync_branch":
+        big_repo.sync_branch()
     # active_branch = repo.active_branch
     # print(f"Root repo : {big_repo.get_main_branch()}")
     #
