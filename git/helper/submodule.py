@@ -1,5 +1,6 @@
 from git import Submodule, Repo
 from .utils import get_active_branch, is_any_changes
+from .log import logger
 
 
 class MySubmodule(object):
@@ -20,7 +21,11 @@ class MySubmodule(object):
     def __repr__(self):
         return f"{self._submodule.name}"
 
-    def checkout_branch(self, branch):
-        self._repo.git.fetch()
-        self._repo.checkout(branch)
-        self._repo.git.pull()
+    def pull_branch(self, branch):
+        logger.info(f"module = {self._submodule}")
+        try:
+            self._repo.git.checkout(branch)
+            self._repo.git.pull()
+            logger.info(f"Pull code in {branch} done")
+        except Exception as e:
+            logger.error(e)
