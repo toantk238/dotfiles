@@ -2,3 +2,4 @@
 .config/pet/snippet.toml
 .python-version
 __pycache__
+.envrc

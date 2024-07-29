@@ -36,3 +36,19 @@ class BigRepo(object):
         main_repo_brach = self.get_main_repo_branch()
         for module in self.sub_module_repos():
             module.pull_branch(main_repo_brach)
+
+    def is_any_changes(self) -> bool:
+        return is_any_changes(self._repo)
+
+    def verify_before_push(self):
+        for module in self.sub_module_repos():
+            if not module.is_any_changes():
+                continue
+            logger.error(f"Module *{module}* have changes !")
+            exit(1)
+
+        if self.is_any_changes():
+            logger.error(f"Main repo have changes !")
+            exit(1)
+
+        logger.info("All repos are ready to push !")
