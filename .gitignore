@@ -1,2 +1,4 @@
 .config/lazygit/state.yml
 .config/pet/snippet.toml
+.python-version
+__pycache__
