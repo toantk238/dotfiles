@@ -1,0 +1,46 @@
+#!/usr/bin/env python
+
+from pathlib import Path
+import argparse
+import subprocess
+
+from helper.repo import BigRepo
+
+
+def run_command(**kwargs):
+    result = subprocess.run(args=kwargs["args"], stdout=subprocess.PIPE, stderr=subprocess.PIPE, cwd=kwargs["cwd"])
+    # result.wait()
+    return result
+
+
+def get_sub_modules():
+    parser = argparse.ArgumentParser(
+        prog='ProgramName',
+        description='What the program does',
+        epilog='Text at the bottom of help')
+
+    parser.add_argument('path')           # positional argument
+
+    args = parser.parse_args()
+
+    working_path = args.path
+    abs_pwd = Path(working_path).resolve()
+    big_repo = BigRepo(abs_pwd)
+    big_repo.verify_local_state()
+    # active_branch = repo.active_branch
+    # print(f"Root repo : {big_repo.get_main_branch()}")
+    #
+    # for module in repo.submodules:
+    #     module_repo = Repo(module.path)
+    #     print(f"\n")
+    #     print(f"Module : {module}")
+    #     print(f"branch : {get_active_branch(module_repo)}")
+    #     print(f"If changes : {is_any_changes(module_repo)}")
+    # result = run_command(args=['ls', '-al'], cwd=abs_pwd)
+
+    # print(f"Working path: {result.stdout.decode()}")
+
+
+if (__name__ == "__main__"):
+    get_sub_modules()
+    pass
