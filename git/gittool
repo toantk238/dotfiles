@@ -16,9 +16,9 @@ def run_command(**kwargs):
 
 if __name__ == "__main__":
     parser = argparse.ArgumentParser(
-        prog='ProgramName',
-        description='What the program does',
-        epilog='Text at the bottom of help')
+        prog='Git Helper',
+        description='Help devs to work easily with submodules',
+        epilog='toantk238@gmail.com')
 
     parser.add_argument('action')           # positional argument
     parser.add_argument('path')           # positional argument
