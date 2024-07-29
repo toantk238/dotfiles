@@ -1,54 +1,33 @@
 from git import Repo
 from .utils import get_active_branch, is_any_changes
-from .submodule import MySubmodule
 from .log import logger
 
 
-class BigRepo(object):
+class MyRepo(object):
 
     _repo: Repo
 
-    def __init__(self, path) -> None:
+    def __init__(self, path: str) -> None:
         self._repo = Repo(path)
 
-    def get_main_repo_branch(self) -> str:
+    def get_active_branch(self) -> str:
         return get_active_branch(self._repo)
-
-    def verify_local_state(self):
-        main_repo_brach = self.get_main_repo_branch()
-        for module in self.sub_module_repos():
-            if not module.is_any_changes():
-                continue
-
-            module_branch = module.get_active_branch()
-
-            if main_repo_brach != module_branch:
-                logger.error(f"Repo {module} branch is not same as {main_repo_brach}. now is {module_branch}")
-                logger.error(f"You should checkout/create a branch with name {main_repo_brach}")
-                choice = input("Do you want to checkout remote branch? [y/n]: ")
-                if (choice == 'y'):
-                    module.pull_branch(main_repo_brach)
-
-    def sub_module_repos(self) -> list[MySubmodule]:
-        return list(map(lambda it: MySubmodule(it), self._repo.submodules))
-
-    def sync_branch(self):
-        main_repo_brach = self.get_main_repo_branch()
-        for module in self.sub_module_repos():
-            module.pull_branch(main_repo_brach)
 
     def is_any_changes(self) -> bool:
         return is_any_changes(self._repo)
 
-    def verify_before_push(self):
-        for module in self.sub_module_repos():
-            if not module.is_any_changes():
-                continue
-            logger.error(f"Module *{module}* have changes !")
-            exit(1)
+    def __repr__(self):
+        return f"{self._repo}"
 
-        if self.is_any_changes():
-            logger.error(f"Main repo have changes !")
-            exit(1)
+    @property
+    def submodules(self):
+        return self._repo.submodules
 
-        logger.info("All repos are ready to push !")
+    def pull_branch(self, branch):
+        logger.info(f"module = {self._repo}")
+        try:
+            self._repo.git.checkout(branch)
+            self._repo.git.pull()
+            logger.info(f"Pull code in {branch} done")
+        except Exception as e:
+            logger.error(e)
