@@ -23,6 +23,10 @@ class MyRepo(object):
     def submodules(self):
         return self._repo.submodules
 
+    def sync_submodules(self):
+        logger.info(f"syncing submodules in {self._repo}")
+        self._repo.git.submodule('update', '--init', '-j', '8')
+
     def pull_branch(self, branch):
         logger.info(f"module = {self._repo}")
         try:
@@ -30,4 +34,5 @@ class MyRepo(object):
             self._repo.git.pull()
             logger.info(f"Pull code in {branch} done")
         except Exception as e:
-            logger.error(e)
+            logger.debug(e)
+            logger.info(f"There is no remote *{branch}")
