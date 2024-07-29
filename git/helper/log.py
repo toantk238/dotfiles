@@ -35,7 +35,7 @@ logger.setLevel(logging.DEBUG)
 
 # Define format for logs
 # fmt = '%(asctime)s | %(levelname)8s | %(message)s'
-fmt = '%(levelname)8s | %(message)s'
+fmt = '%(levelname)8s | %(filename)s:%(lineno)d | %(message)s'
 
 # Create stdout handler for logging to the console (logs all five levels)
 stdout_handler = logging.StreamHandler()
