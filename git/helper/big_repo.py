@@ -1,5 +1,3 @@
-from git import Repo
-from .utils import get_active_branch, is_any_changes
 from .submodule import MySubmodule
 from .log import logger
 from .repo import MyRepo
@@ -34,6 +32,7 @@ class BigRepo(object):
         return list(map(lambda it: MySubmodule(it), self._repo.submodules))
 
     def sync_branch(self):
+        self._repo.sync_submodules()
         main_repo_brach = self.get_main_repo_branch()
         for module in self.sub_module_repos():
             module.pull_branch(main_repo_brach)
