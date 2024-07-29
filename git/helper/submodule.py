@@ -1,6 +1,4 @@
-from git import Submodule, Repo
-from .utils import get_active_branch, is_any_changes
-from .log import logger
+from git import Submodule
 from .repo import MyRepo
 
 
