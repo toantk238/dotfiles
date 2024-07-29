@@ -39,7 +39,7 @@ fmt = '%(levelname)8s | %(message)s'
 
 # Create stdout handler for logging to the console (logs all five levels)
 stdout_handler = logging.StreamHandler()
-stdout_handler.setLevel(logging.DEBUG)
+stdout_handler.setLevel(logging.INFO)
 stdout_handler.setFormatter(CustomFormatter(fmt))
 
 # Create file handler for logging to a file (logs all five levels)

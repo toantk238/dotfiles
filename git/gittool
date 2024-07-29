@@ -5,6 +5,7 @@ import argparse
 import subprocess
 
 from helper.repo import BigRepo
+from helper import logger
 
 
 def run_command(**kwargs):
@@ -13,7 +14,7 @@ def run_command(**kwargs):
     return result
 
 
-def get_sub_modules():
+if __name__ == "__main__":
     parser = argparse.ArgumentParser(
         prog='ProgramName',
         description='What the program does',
@@ -27,26 +28,13 @@ def get_sub_modules():
     working_path = args.path
     abs_pwd = Path(working_path).resolve()
     big_repo = BigRepo(abs_pwd)
-    big_repo.verify_local_state()
+    # big_repo.verify_local_state()
 
     action = args.action
 
     if action == "sync_branch":
         big_repo.sync_branch()
-    # active_branch = repo.active_branch
-    # print(f"Root repo : {big_repo.get_main_branch()}")
-    #
-    # for module in repo.submodules:
-    #     module_repo = Repo(module.path)
-    #     print(f"\n")
-    #     print(f"Module : {module}")
-    #     print(f"branch : {get_active_branch(module_repo)}")
-    #     print(f"If changes : {is_any_changes(module_repo)}")
-    # result = run_command(args=['ls', '-al'], cwd=abs_pwd)
-
-    # print(f"Working path: {result.stdout.decode()}")
-
-
-if (__name__ == "__main__"):
-    get_sub_modules()
-    pass
+    elif action == "verify_before_push":
+        big_repo.verify_before_push()
+    else:
+        logger.error(f"Invalid action : {action}")
