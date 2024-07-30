@@ -1,6 +1,7 @@
 import datetime
 import logging
 
+console_log_level = logging.WARN
 
 class CustomFormatter(logging.Formatter):
     """Logging colored formatter, adapted from https://stackoverflow.com/a/56944256/3638629"""
@@ -39,7 +40,7 @@ fmt = '%(levelname)8s | %(filename)s:%(lineno)d | %(message)s'
 
 # Create stdout handler for logging to the console (logs all five levels)
 stdout_handler = logging.StreamHandler()
-stdout_handler.setLevel(logging.INFO)
+stdout_handler.setLevel(console_log_level)
 stdout_handler.setFormatter(CustomFormatter(fmt))
 
 # Create file handler for logging to a file (logs all five levels)

@@ -4,7 +4,7 @@ from .log import logger
 
 def get_active_branch(repo: Repo):
     try:
-        return repo.active_branch
+        return str(repo.active_branch).strip()
     except:
         return None
 
