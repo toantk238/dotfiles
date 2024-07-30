@@ -1,7 +1,20 @@
 import datetime
 import logging
+import os
+
+env_log_level = os.environ.get('LOG_LEVEL', 'WARN').upper()
 
 console_log_level = logging.WARN
+
+if env_log_level == 'WARN':
+    console_log_level = logging.WARN
+elif env_log_level == 'INFO':
+    console_log_level = logging.INFO
+elif env_log_level == 'DEBUG':
+    console_log_level = logging.DEBUG
+elif env_log_level == 'ERROR':
+    console_log_level = logging.ERROR
+
 
 class CustomFormatter(logging.Formatter):
     """Logging colored formatter, adapted from https://stackoverflow.com/a/56944256/3638629"""
