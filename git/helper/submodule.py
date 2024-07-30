@@ -1,5 +1,6 @@
 from git import Submodule
 from .repo import MyRepo
+from .utils import logger
 
 
 class MySubmodule(object):
@@ -22,3 +23,13 @@ class MySubmodule(object):
 
     def pull_branch(self, branch):
         self._repo.pull_branch(branch)
+
+    def sync_branch(self, branch, is_remote: bool):
+        logger.info(f"Module {self._submodule}")
+        active_branch = self.get_active_branch()
+        logger.info(f"Active branch is {active_branch}")
+
+        if active_branch:
+            return
+
+        self._repo.checkout_branch(branch, is_remote)

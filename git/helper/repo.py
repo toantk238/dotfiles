@@ -27,6 +27,48 @@ class MyRepo(object):
         logger.info(f"syncing submodules in {self._repo}")
         self._repo.git.submodule('update', '--init', '-j', '8')
 
+    def branches_contains_head(self, is_remote: bool) -> list[str]:
+        logger.info(f"module = {self._repo}")
+
+        params = ["--contains", "HEAD"]
+        if is_remote:
+            params = ["-r"] + params
+
+        branches = self._repo.git.branch(*params)
+        branches = branches.split("\n")
+        branches = list(filter(lambda x: "HEAD" not in x, branches))
+        branches = list(map(lambda x: x.strip(), branches))
+        return branches
+
+    def checkout_branch(self, branch, is_remote: bool):
+        branches = self.branches_contains_head(is_remote)
+
+        if not branches:
+            logger.info(f"Not found branch in {self._repo}")
+            return
+
+        if branch in branches:
+            logger.info(f"Repo {self._repo} Checkout to {branch}")
+            self._repo.git.checkout(branch)
+            return
+
+        branch_lines = [f"[{i}] - {x}" for i, x in enumerate(branches)]
+        prompt = f"In module {self._repo}\nSelect branch or *n* if you don't want to checkout\n"
+        prompt += "\n".join(branch_lines) + "\n"
+        choice = input(prompt).strip()
+
+        if choice == "n":
+            return
+
+        choice = int(choice)
+        selected_branch = branches[choice]
+
+        if is_remote:
+            selected_branch = selected_branch.replace("origin/", "")
+        
+        self._repo.git.checkout("-f", selected_branch)
+        logger.info(f"Repo {self._repo} Checkout to {selected_branch}")
+
     def pull_branch(self, branch):
         logger.info(f"module = {self._repo}")
         try:
