@@ -2,6 +2,9 @@ import datetime
 import logging
 import os
 
+# Uncomment the below line to show log of Git cmd from gitPython
+# logging.basicConfig(level=logging.INFO)
+
 env_log_level = os.environ.get('LOG_LEVEL', 'WARN').upper()
 
 console_log_level = logging.WARN
