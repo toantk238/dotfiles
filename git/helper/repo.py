@@ -29,9 +29,9 @@ class MyRepo(object):
             logger.info(f"syncing submodule {module.name}")
 
     def _checkout_branch_at_commit(self, branch, commit):
-        self._repo.git.checkout("-f", branch)
-        self._repo.git.reset("--hard", commit)
-        logger.info(f"Repo {self._repo} Checkout to {branch}")
+        commit_obj = self._repo.get(commit)
+        new_branch = self._repo.branches.create(branch, commit_obj, force=True)
+        self._repo.checkout(new_branch)
 
     def branches_contains_commit(self, commit: str) -> list[str]:
         logger.info(f"module = {self._repo.path}")
@@ -47,13 +47,13 @@ class MyRepo(object):
         # branches = list(filter(lambda x: "HEAD" not in x, branches))
         # logger.info(f"branches = {branches}")
         # branches = list(filter(lambda x: self._repo.git.rev_parse(x) == commit, branches))
-        # return branches
+        return branches
 
-    def checkout_branch(self, branch):
-        commit = str(self._repo.head.target)
+    def checkout_branch(self, branch: str):
+        commit = self._repo.head.target
         branches = self.branches_contains_commit(commit)
 
-        branches = list(map(lambda x: x.replace("remotes/origin/", "").strip(), branches))
+        branches = list(map(lambda x: x.replace("origin/", "").strip(), branches))
         branches = list(set(branches))
 
         if not branches:
@@ -61,8 +61,8 @@ class MyRepo(object):
             return
 
         if branch in branches:
-            logger.info(f"Repo {self._repo} Checkout to {branch}")
-            self._repo.git.checkout(branch)
+            logger.info(f"Repo {self._repo.path} --- checkout to {branch}")
+            self._checkout_branch_at_commit(branch, commit)
             return
 
         if len(branches) == 1:
