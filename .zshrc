@@ -160,6 +160,8 @@ source "$dot_dir/.luaenv.zsh"
 source "$dot_dir/.ranger.zsh"
 source "$dot_dir/.goenv.zsh"
 
+export PATH=$DOT_DIR/git:$PATH
+
 # ensure compatibility tmux <-> direnv
 if [ -n "$TMUX" ] && [ -n "$DIRENV_DIR" ]; then
     direnv reload
