@@ -25,11 +25,10 @@ class MySubmodule(object):
         self._repo.pull_branch(branch)
 
     def sync_branch(self, branch):
-        logger.info(f"Module {self._submodule}")
+        logger.info(f"Module {self._submodule.name}")
         active_branch = self.get_active_branch()
-        logger.info(f"Active branch is {active_branch}")
 
-        if active_branch:
+        if active_branch != "HEAD":
             return
 
         self._repo.checkout_branch(branch)
