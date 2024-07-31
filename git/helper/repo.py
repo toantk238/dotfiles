@@ -1,5 +1,5 @@
-from pygit2 import Repository
-from .utils import get_active_branch, is_any_changes, branches_containing_commit
+from pygit2 import Branch, Repository
+from .utils import get_active_branch, iMap, is_any_changes, branches_containing_commit
 from .log import logger
 
 
@@ -33,13 +33,13 @@ class MyRepo(object):
         new_branch = self._repo.branches.create(branch, commit_obj, force=True)
         self._repo.checkout(new_branch)
 
-    def branches_contains_commit(self, commit: str) -> list[str]:
+    def branches_contains_commit(self, commit: str) -> list[Branch]:
         logger.info(f"module = {self._repo.path}")
         logger.info(f"commit = {commit}")
 
         # params = ["-a", "--contains", commit]
         branches = branches_containing_commit(self._repo, commit)
-        logger.info(f"branches = {branches}")
+        logger.info(f"branches = {iMap(branches, lambda _, x: str(x.shorthand))}")
 
         # branches: list[str] = self._repo.branches.remote.branche
         # branches = branches.split("\n")

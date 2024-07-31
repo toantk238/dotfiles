@@ -1,5 +1,9 @@
-from pygit2 import Repository
+from pygit2 import Branch, Repository
 from .log import logger
+
+
+def iMap(data: list, mapper) -> str:
+    return ", ".join([mapper(key, value) for key, value in enumerate(data)])
 
 
 def get_active_branch(repo: Repository):
@@ -19,7 +23,7 @@ def is_any_changes(repo: Repository):
     return bool(unstagedFiles or stagedFiles)
 
 
-def branches_containing_commit(repo: Repository, commit_sha: str):
+def branches_containing_commit(repo: Repository, commit_sha: str) -> list[Branch]:
     # Get the commit object for the given SHA
     commit = repo.get(commit_sha)
 
@@ -29,28 +33,28 @@ def branches_containing_commit(repo: Repository, commit_sha: str):
     # Check local branches
     for branch in repo.branches.local:
         branch_ref = repo.branches.local[branch]
-        logger.info(f"local target = {branch_ref.target}")
+        logger.debug(f"local target = {branch_ref.target}")
         branch_commit = repo.get(branch_ref.target)
 
         if contains_commit(repo, branch_commit, commit):
-            branches_with_commit.append(branch)
+            branches_with_commit.append(branch_ref)
 
     # Check remote branches
     for remote in repo.branches.remote:
-        logger.info(f"remote = {remote}")
+        logger.debug(f"remote = {remote}")
         if "HEAD" in remote:
             continue
         branch = repo.branches.remote[remote]
         target = branch.target
-        logger.info(f"remote_taget = {target}")
+        logger.debug(f"remote_taget = {target}")
         branch_commit = repo.get(branch.target)
     #
         if contains_commit(repo, branch_commit, commit):
-            branches_with_commit.append(remote)
+            branches_with_commit.append(branch)
 
     return branches_with_commit
 
 
-def contains_commit(repo, branch_commit, target_commit):
+def contains_commit(repo: Repository, branch_commit, target_commit):
     # Check if the branch contains the commit
     return repo.merge_base(branch_commit.id, target_commit.id) == target_commit.id
