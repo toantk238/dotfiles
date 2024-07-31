@@ -1,3 +1,2 @@
-GitPython==3.1.43
 PyInstaller
 pygit2==1.15.1

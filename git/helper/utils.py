@@ -33,7 +33,7 @@ def branches_containing_commit(repo: Repository, commit_sha: str):
         branch_commit = repo.get(branch_ref.target)
 
         if contains_commit(repo, branch_commit, commit):
-            branches_with_commit.append(f"local/{branch}")
+            branches_with_commit.append(branch)
 
     # Check remote branches
     for remote in repo.branches.remote:
@@ -46,7 +46,7 @@ def branches_containing_commit(repo: Repository, commit_sha: str):
         branch_commit = repo.get(branch.target)
     #
         if contains_commit(repo, branch_commit, commit):
-            branches_with_commit.append(f"remotes/{remote}")
+            branches_with_commit.append(remote)
 
     return branches_with_commit
 
