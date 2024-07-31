@@ -1,5 +1,8 @@
+from collections.abc import Callable
 from pygit2 import Branch, Object, Repository
 from .log import logger
+from typing import TypeVar, Optional
+T = TypeVar('T')
 
 
 def iMap(data: list, mapper) -> str:
@@ -62,3 +65,20 @@ def contains_commit(repo: Repository, branch_commit: Object, target_commit: Obje
 
 def equals_commit(repo: Repository, branch_commit: Object, target_commit: Object):
     return branch_commit.id == target_commit.id
+
+
+def remove_duplicate(data: list[T], key_maker: Callable[[T], any], key_weight=Optional[Callable[[any, T], int]]) -> list[T]:
+    output = dict()
+
+    for item in data:
+        key = key_maker(item)
+        if key not in output:
+            output[key] = item
+        elif key_weight:
+            old_item = output[key]
+            old_weight = key_weight(key, old_item)
+            new_weight = key_weight(key, item)
+            if (new_weight > old_weight):
+                output[key] = item
+
+    return list(output.values())
