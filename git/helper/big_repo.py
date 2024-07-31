@@ -34,8 +34,8 @@ class BigRepo(object):
     def sync_branch(self ):
         self._repo.sync_submodules()
         main_repo_brach = self.get_main_repo_branch()
-        # for module in self.sub_module_repos():
-        #     module.sync_branch(main_repo_brach)
+        for module in self.sub_module_repos():
+            module.sync_branch(main_repo_brach)
             # module.pull_branch(main_repo_brach)
 
     def is_any_changes(self) -> bool:

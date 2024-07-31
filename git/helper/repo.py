@@ -1,5 +1,5 @@
 from pygit2 import Repository
-from .utils import get_active_branch, is_any_changes
+from .utils import get_active_branch, is_any_changes, branches_containing_commit
 from .log import logger
 
 
@@ -34,21 +34,23 @@ class MyRepo(object):
         logger.info(f"Repo {self._repo} Checkout to {branch}")
 
     def branches_contains_commit(self, commit: str) -> list[str]:
-        logger.info(f"module = {self._repo}")
+        logger.info(f"module = {self._repo.path}")
         logger.info(f"commit = {commit}")
 
-        params = ["-a", "--contains", commit]
-
-        branches: list[str] = self._repo.git.branch(*params)
-        branches = branches.split("\n")
-        branches = list(map(lambda x: x.strip(), branches))
-        branches = list(filter(lambda x: "HEAD" not in x, branches))
+        # params = ["-a", "--contains", commit]
+        branches = branches_containing_commit(self._repo, commit)
         logger.info(f"branches = {branches}")
-        branches = list(filter(lambda x: self._repo.git.rev_parse(x) == commit, branches))
-        return branches
+
+        # branches: list[str] = self._repo.branches.remote.branche
+        # branches = branches.split("\n")
+        # branches = list(map(lambda x: x.strip(), branches))
+        # branches = list(filter(lambda x: "HEAD" not in x, branches))
+        # logger.info(f"branches = {branches}")
+        # branches = list(filter(lambda x: self._repo.git.rev_parse(x) == commit, branches))
+        # return branches
 
     def checkout_branch(self, branch):
-        commit = self._repo.git.rev_parse("HEAD")
+        commit = str(self._repo.head.target)
         branches = self.branches_contains_commit(commit)
 
         branches = list(map(lambda x: x.replace("remotes/origin/", "").strip(), branches))
