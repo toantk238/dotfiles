@@ -1,4 +1,4 @@
-from pygit2 import Branch, Repository
+from pygit2 import Branch, Object, Repository
 from .log import logger
 
 
@@ -23,7 +23,7 @@ def is_any_changes(repo: Repository):
     return bool(unstagedFiles or stagedFiles)
 
 
-def branches_containing_commit(repo: Repository, commit_sha: str) -> list[Branch]:
+def branches_containing_commit(repo: Repository, commit_sha: str, comparator) -> list[Branch]:
     # Get the commit object for the given SHA
     commit = repo.get(commit_sha)
 
@@ -36,7 +36,7 @@ def branches_containing_commit(repo: Repository, commit_sha: str) -> list[Branch
         logger.debug(f"local target = {branch_ref.target}")
         branch_commit = repo.get(branch_ref.target)
 
-        if contains_commit(repo, branch_commit, commit):
+        if comparator(repo, branch_commit, commit):
             branches_with_commit.append(branch_ref)
 
     # Check remote branches
@@ -49,12 +49,16 @@ def branches_containing_commit(repo: Repository, commit_sha: str) -> list[Branch
         logger.debug(f"remote_taget = {target}")
         branch_commit = repo.get(branch.target)
     #
-        if contains_commit(repo, branch_commit, commit):
+        if comparator(repo, branch_commit, commit):
             branches_with_commit.append(branch)
 
     return branches_with_commit
 
 
-def contains_commit(repo: Repository, branch_commit, target_commit):
+def contains_commit(repo: Repository, branch_commit: Object, target_commit: Object):
     # Check if the branch contains the commit
     return repo.merge_base(branch_commit.id, target_commit.id) == target_commit.id
+
+
+def equals_commit(repo: Repository, branch_commit: Object, target_commit: Object):
+    return branch_commit.id == target_commit.id
