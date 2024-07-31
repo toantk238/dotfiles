@@ -22,23 +22,18 @@ if __name__ == "__main__":
 
     parser.add_argument('action')           # positional argument
     parser.add_argument('path')           # positional argument
-    parser.add_argument('--remote', required=False)
     args = parser.parse_args()
 
     working_path = args.path
-    is_remote: Optional[str] = args.remote
-    is_remote = is_remote.lower() if is_remote else "false"
-    is_remote = True if is_remote == "true" else False
 
     abs_pwd = Path(working_path).resolve()
     big_repo = BigRepo(abs_pwd)
-    logger.info(f"isRemote = {is_remote}")
     # big_repo.verify_local_state()
 
     action = args.action
 
     if action == "sync":
-        big_repo.sync_branch(is_remote)
+        big_repo.sync_branch()
     elif action == "verify_before_push":
         big_repo.verify_before_push()
     else:

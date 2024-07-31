@@ -27,21 +27,31 @@ class MyRepo(object):
         logger.info(f"syncing submodules in {self._repo}")
         self._repo.git.submodule('update', '--init', '-j', '8')
 
-    def branches_contains_head(self, is_remote: bool) -> list[str]:
+    def _checkout_branch_at_commit(self, branch, commit):
+        self._repo.git.checkout("-f", branch)
+        self._repo.git.reset("--hard", commit)
+        logger.info(f"Repo {self._repo} Checkout to {branch}")
+
+    def branches_contains_commit(self, commit: str) -> list[str]:
         logger.info(f"module = {self._repo}")
+        logger.info(f"commit = {commit}")
 
-        params = ["--contains", "HEAD"]
-        if is_remote:
-            params = ["-r"] + params
+        params = ["-a", "--contains", commit]
 
-        branches = self._repo.git.branch(*params)
+        branches: list[str] = self._repo.git.branch(*params)
         branches = branches.split("\n")
-        branches = list(filter(lambda x: "HEAD" not in x, branches))
         branches = list(map(lambda x: x.strip(), branches))
+        branches = list(filter(lambda x: "HEAD" not in x, branches))
+        logger.info(f"branches = {branches}")
+        branches = list(filter(lambda x: self._repo.git.rev_parse(x) == commit, branches))
         return branches
 
-    def checkout_branch(self, branch, is_remote: bool):
-        branches = self.branches_contains_head(is_remote)
+    def checkout_branch(self, branch):
+        commit = self._repo.git.rev_parse("HEAD")
+        branches = self.branches_contains_commit(commit)
+
+        branches = list(map(lambda x: x.replace("remotes/origin/", "").strip(), branches))
+        branches = list(set(branches))
 
         if not branches:
             logger.info(f"Not found branch in {self._repo}")
@@ -50,6 +60,10 @@ class MyRepo(object):
         if branch in branches:
             logger.info(f"Repo {self._repo} Checkout to {branch}")
             self._repo.git.checkout(branch)
+            return
+
+        if len(branches) == 1:
+            self._checkout_branch_at_commit(branches[0], commit)
             return
 
         branch_lines = [f"[{i}] - {x}" for i, x in enumerate(branches)]
@@ -62,12 +76,7 @@ class MyRepo(object):
 
         choice = int(choice)
         selected_branch = branches[choice]
-
-        if is_remote:
-            selected_branch = selected_branch.replace("origin/", "")
-        
-        self._repo.git.checkout("-f", selected_branch)
-        logger.info(f"Repo {self._repo} Checkout to {selected_branch}")
+        self._checkout_branch_at_commit(selected_branch, commit)
 
     def pull_branch(self, branch):
         logger.info(f"module = {self._repo}")

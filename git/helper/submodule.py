@@ -24,7 +24,7 @@ class MySubmodule(object):
     def pull_branch(self, branch):
         self._repo.pull_branch(branch)
 
-    def sync_branch(self, branch, is_remote: bool):
+    def sync_branch(self, branch):
         logger.info(f"Module {self._submodule}")
         active_branch = self.get_active_branch()
         logger.info(f"Active branch is {active_branch}")
@@ -32,4 +32,4 @@ class MySubmodule(object):
         if active_branch:
             return
 
-        self._repo.checkout_branch(branch, is_remote)
+        self._repo.checkout_branch(branch)
