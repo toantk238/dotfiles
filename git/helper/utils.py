@@ -1,15 +1,14 @@
-from git import Repo
+from pygit2 import Repository
 from .log import logger
 
 
-def get_active_branch(repo: Repo):
-    try:
-        return str(repo.active_branch).strip()
-    except:
-        return None
+def get_active_branch(repo: Repository):
+    result = str(repo.head.shorthand).strip()
+    logger.info("Active branch is : " + result)
+    return result
 
 
-def is_any_changes(repo: Repo):
+def is_any_changes(repo: Repository):
     unstagedFiles = [item.a_path for item in repo.index.diff(None)]
     stagedFiles = [item.a_path for item in repo.index.diff("HEAD")]
 

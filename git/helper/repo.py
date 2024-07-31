@@ -1,14 +1,14 @@
-from git import Repo
+from pygit2 import Repository
 from .utils import get_active_branch, is_any_changes
 from .log import logger
 
 
 class MyRepo(object):
 
-    _repo: Repo
+    _repo: Repository
 
     def __init__(self, path: str) -> None:
-        self._repo = Repo(path)
+        self._repo = Repository(path)
 
     def get_active_branch(self) -> str:
         return get_active_branch(self._repo)
@@ -24,8 +24,9 @@ class MyRepo(object):
         return self._repo.submodules
 
     def sync_submodules(self):
-        logger.info(f"syncing submodules in {self._repo}")
-        self._repo.git.submodule('update', '--init', '-j', '8')
+        for module in self._repo.submodules:
+            module.update(init=True)
+            logger.info(f"syncing submodule {module.name}")
 
     def _checkout_branch_at_commit(self, branch, commit):
         self._repo.git.checkout("-f", branch)
