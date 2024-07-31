@@ -1,4 +1,4 @@
-from git import Submodule
+from pygit2 import Submodule
 from .repo import MyRepo
 from .utils import logger
 
