@@ -2,7 +2,14 @@ from collections.abc import Callable
 from pygit2 import Branch, Object, Repository
 from .log import logger
 from typing import TypeVar, Optional
+import subprocess
 T = TypeVar('T')
+
+
+def run_command(**kwargs):
+    result = subprocess.run(args=kwargs["args"], stdout=subprocess.PIPE, stderr=subprocess.PIPE, cwd=kwargs["cwd"])
+    # result.wait()
+    return result
 
 
 def iMap(data: list, mapper) -> str:

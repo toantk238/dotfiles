@@ -2,16 +2,11 @@
 
 from pathlib import Path
 import argparse
-import subprocess
 from typing import Optional
 
 from helper import BigRepo, logger
 
 
-def run_command(**kwargs):
-    result = subprocess.run(args=kwargs["args"], stdout=subprocess.PIPE, stderr=subprocess.PIPE, cwd=kwargs["cwd"])
-    # result.wait()
-    return result
 
 
 if __name__ == "__main__":
@@ -43,5 +38,7 @@ if __name__ == "__main__":
         big_repo.merge(branch)
     elif action == "resolve_conflicts":
         big_repo.resolve_conflicts()
+    elif action == "remove_submodules":
+        big_repo.remove_submodules()
     else:
         logger.error(f"Invalid action : {action}")

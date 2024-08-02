@@ -59,3 +59,6 @@ class BigRepo(object):
 
     def resolve_conflicts(self):
         self._repo.resolve_conflicts()
+
+    def remove_submodules(self):
+        self._repo.remove_all_submodules()
