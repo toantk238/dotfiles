@@ -129,7 +129,7 @@ class MyRepo(object):
         if not conflicts:
             logger.info(f"No conflicts in {self._repo.path}")
             author = self._repo.default_signature
-            self._repo.index.write()
+            # self._repo.index.write()
             tree = self._repo.index.write_tree()
             new_commit = self._repo.create_commit(
                 'HEAD',
@@ -138,6 +138,8 @@ class MyRepo(object):
                 "Merge message",
                 tree,
                 [self._repo.head.target, commit_id])
+            self._repo.state_cleanup()
+            # self._repo.head.set_target(new_commit)
             return True
         else:
             logger.warn(f"Conflicts in {self._repo.path}")
