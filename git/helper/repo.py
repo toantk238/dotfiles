@@ -27,8 +27,11 @@ class MyRepo(object):
 
     def sync_submodules(self):
         for module in self._repo.submodules:
-            module.update(init=True)
             logger.info(f"syncing submodule {module.name}")
+            try:
+                module.update(init=True)
+            except Exception as e:
+                logger.error(e)
 
     def _checkout_branch_at_commit(self, branch: Branch, commit):
         commit_obj = self._repo.get(commit)
@@ -118,9 +121,10 @@ class MyRepo(object):
 
         self._merge_commit(commit.id)
 
-    def _merge_commit(self, commit_id: Oid | str):
+    def _merge_commit(self, commit_id: Oid | str) -> bool:
         # self._repo.merge_commits( self._repo.head.target , commit_id)
         self._repo.merge(commit_id)
+        self.sync_submodules()
         conflicts = self._repo.index.conflicts
         if not conflicts:
             logger.info(f"No conflicts in {self._repo.path}")
@@ -134,8 +138,10 @@ class MyRepo(object):
                 "Merge message",
                 tree,
                 [self._repo.head.target, commit_id])
+            return True
         else:
             logger.warn(f"Conflicts in {self._repo.path}")
+            return False
 
     def resolve_conflicts(self):
         conflicts = self._repo.index.conflicts
@@ -147,16 +153,22 @@ class MyRepo(object):
 
         for conflict in conflicts:
             (ancestor, our, their) = conflict
+            if not ancestor:
+                continue
+            logger.info(f"ancestor = {ancestor}")
+            logger.info(f"our = {our}")
+            logger.info(f"their = {their}")
             if ancestor.path in submodules:
                 submodule = submodules[ancestor.path]
                 sub_repo = MyRepo(submodule.path)
                 logger.info(f"submodule = {sub_repo}")
                 logger.info(f"commitId = {their.oid}")
-                sub_repo._merge_commit(their.oid)
+                merged_done = sub_repo._merge_commit(their.oid)
+                if merged_done:
+                    self._repo.index.add(ancestor.path)
                 # Skip to merge sub_module. We can continue later
                 continue
 
-            logger.debug(f"ancestor = {ancestor}")
 
             # result = self._repo.merge_file_from_index(ancestor, our, their)
             # logger.debug(f"result = {result}")
