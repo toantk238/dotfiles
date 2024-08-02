@@ -122,7 +122,6 @@ class MyRepo(object):
         self._merge_commit(commit.id)
 
     def _merge_commit(self, commit_id: Oid | str) -> bool:
-        # self._repo.merge_commits( self._repo.head.target , commit_id)
         self._repo.merge(commit_id)
         self.sync_submodules()
         conflicts = self._repo.index.conflicts
@@ -158,6 +157,7 @@ class MyRepo(object):
             logger.info(f"ancestor = {ancestor}")
             logger.info(f"our = {our}")
             logger.info(f"their = {their}")
+            item_path = str(ancestor.path)
             if ancestor.path in submodules:
                 submodule = submodules[ancestor.path]
                 sub_repo = MyRepo(submodule.path)
@@ -165,10 +165,11 @@ class MyRepo(object):
                 logger.info(f"commitId = {their.oid}")
                 merged_done = sub_repo._merge_commit(their.oid)
                 if merged_done:
-                    self._repo.index.add(ancestor.path)
+                    self._repo.index.add(item_path)
+                    self._repo.index.write()
+                    logger.info(f"Resolve submodule {sub_repo} done")
                 # Skip to merge sub_module. We can continue later
                 continue
-
 
             # result = self._repo.merge_file_from_index(ancestor, our, their)
             # logger.debug(f"result = {result}")
