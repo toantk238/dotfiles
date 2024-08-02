@@ -178,3 +178,10 @@ class MyRepo(object):
 
             # result = self._repo.merge_file_from_index(ancestor, our, their)
             # logger.debug(f"result = {result}")
+        # head_commit: Commit = self._repo.head.peel(Commit)
+        # head_tree = head_commit.tree
+        # head_tree.diff_to_index()
+        # self._repo.index.read_tree(head_tree)
+        # self._repo.index.add_all()
+        # self._repo.index.write()
+        # logger.info(f"head_commit = {head_tree}")
