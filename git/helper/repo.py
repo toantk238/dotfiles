@@ -119,10 +119,21 @@ class MyRepo(object):
         self._merge_commit(commit.id)
 
     def _merge_commit(self, commit_id: Oid | str):
+        # self._repo.merge_commits( self._repo.head.target , commit_id)
         self._repo.merge(commit_id)
         conflicts = self._repo.index.conflicts
         if not conflicts:
             logger.info(f"No conflicts in {self._repo.path}")
+            author = self._repo.default_signature
+            self._repo.index.write()
+            tree = self._repo.index.write_tree()
+            new_commit = self._repo.create_commit(
+                'HEAD',
+                author,
+                author,
+                "Merge message",
+                tree,
+                [self._repo.head.target, commit_id])
         else:
             logger.warn(f"Conflicts in {self._repo.path}")
 
@@ -147,5 +158,5 @@ class MyRepo(object):
 
             logger.debug(f"ancestor = {ancestor}")
 
-            result = self._repo.merge_file_from_index(ancestor, our, their)
+            # result = self._repo.merge_file_from_index(ancestor, our, their)
             # logger.debug(f"result = {result}")
