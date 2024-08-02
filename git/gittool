@@ -22,6 +22,7 @@ if __name__ == "__main__":
 
     parser.add_argument('action')           # positional argument
     parser.add_argument('path')           # positional argument
+    parser.add_argument('-b', '--branch', required=False)
     args = parser.parse_args()
 
     working_path = args.path
@@ -36,5 +37,11 @@ if __name__ == "__main__":
         big_repo.sync_branch()
     elif action == "verify_before_push":
         big_repo.verify_before_push()
+    elif action == "merge":
+        branch = args.branch
+        logger.info(f"Merge branch: {branch}")
+        big_repo.merge(branch)
+    elif action == "resolve_conflicts":
+        big_repo.resolve_conflicts()
     else:
         logger.error(f"Invalid action : {action}")
