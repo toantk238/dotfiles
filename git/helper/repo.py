@@ -1,4 +1,6 @@
 from pygit2 import Branch, Commit, Repository
+from pygit2.index import ConflictCollection
+from pygit2.repository import BranchType
 from .utils import equals_commit, get_active_branch, iMap, is_any_changes, branches_containing_commit, remove_duplicate
 from .log import logger
 
@@ -102,3 +104,37 @@ class MyRepo(object):
         commit_time = commit.commit_time
         logger.debug(f"commit_time of branch {branch.name} = {commit_time}")
         return commit_time
+
+    def merge(self, branch):
+        branch_type = BranchType.REMOTE if "origin" in branch else BranchType.LOCAL
+        branch_ref = self._repo.lookup_branch(branch, branch_type)
+        logger.debug(f"branch_ref = {branch_ref}")
+        if not branch_ref:
+            logger.error(f"Branch {branch} not found")
+            exit(126)
+
+        commit: Commit = self._repo.get(branch_ref.target)
+        logger.debug(f"branch_target = {commit}")
+
+        self._repo.merge(commit.id)
+        conflicts = self._repo.index.conflicts
+        if not conflicts:
+            logger.info(f"No conflicts in {self._repo}")
+        else:
+            logger.warn(f"Conflicts in {self._repo}")
+
+    def resolve_conflicts(self):
+        conflicts = self._repo.index.conflicts
+        if not conflicts:
+            return
+
+        sub_module_paths = set(list(map(lambda it: it.path, self._repo.submodules)))
+        logger.debug(f"sub_module_paths = {sub_module_paths}")
+
+        for conflict in conflicts:
+            (ancestor, our, their) = conflict
+            if ancestor.path in sub_module_paths:
+                # Skip to merge sub_module. We can continue later
+                continue
+
+            logger.debug(f"ancestor = {ancestor}")

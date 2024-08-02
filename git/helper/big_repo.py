@@ -31,7 +31,7 @@ class BigRepo(object):
     def sub_module_repos(self) -> list[MySubmodule]:
         return list(map(lambda it: MySubmodule(it), self._repo.submodules))
 
-    def sync_branch(self ):
+    def sync_branch(self):
         self._repo.sync_submodules()
         main_repo_brach = self.get_main_repo_branch()
         for module in self.sub_module_repos():
@@ -53,3 +53,9 @@ class BigRepo(object):
             exit(1)
 
         logger.info("All repos are ready to push !")
+
+    def merge(self, branch: str):
+        self._repo.merge(branch)
+
+    def resolve_conflicts(self):
+        self._repo.resolve_conflicts()
