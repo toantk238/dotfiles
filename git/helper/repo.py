@@ -1,4 +1,4 @@
-from pygit2 import Branch, Commit, Repository
+from pygit2 import Branch, Commit, Repository, Oid
 from pygit2.index import ConflictCollection
 from pygit2.repository import BranchType
 from .utils import equals_commit, get_active_branch, iMap, is_any_changes, branches_containing_commit, remove_duplicate
@@ -116,25 +116,36 @@ class MyRepo(object):
         commit: Commit = self._repo.get(branch_ref.target)
         logger.debug(f"branch_target = {commit}")
 
-        self._repo.merge(commit.id)
+        self._merge_commit(commit.id)
+
+    def _merge_commit(self, commit_id: Oid | str):
+        self._repo.merge(commit_id)
         conflicts = self._repo.index.conflicts
         if not conflicts:
-            logger.info(f"No conflicts in {self._repo}")
+            logger.info(f"No conflicts in {self._repo.path}")
         else:
-            logger.warn(f"Conflicts in {self._repo}")
+            logger.warn(f"Conflicts in {self._repo.path}")
 
     def resolve_conflicts(self):
         conflicts = self._repo.index.conflicts
         if not conflicts:
             return
 
-        sub_module_paths = set(list(map(lambda it: it.path, self._repo.submodules)))
-        logger.debug(f"sub_module_paths = {sub_module_paths}")
+        submodules = {x.path: x for x in self.submodules}
+        # logger.debug(f"sub_module_paths = {submodules}")
 
         for conflict in conflicts:
             (ancestor, our, their) = conflict
-            if ancestor.path in sub_module_paths:
+            if ancestor.path in submodules:
+                submodule = submodules[ancestor.path]
+                sub_repo = MyRepo(submodule.path)
+                logger.info(f"submodule = {sub_repo}")
+                logger.info(f"commitId = {their.oid}")
+                sub_repo._merge_commit(their.oid)
                 # Skip to merge sub_module. We can continue later
                 continue
 
             logger.debug(f"ancestor = {ancestor}")
+
+            result = self._repo.merge_file_from_index(ancestor, our, their)
+            # logger.debug(f"result = {result}")
