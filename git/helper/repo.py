@@ -1,7 +1,8 @@
 from pygit2 import Branch, Commit, Repository, Oid
 from pygit2.index import ConflictCollection
 from pygit2.repository import BranchType
-from .utils import equals_commit, get_active_branch, iMap, is_any_changes, branches_containing_commit, remove_duplicate
+
+from .utils import equals_commit, get_active_branch, iMap, is_any_changes, branches_containing_commit, remove_duplicate, run_command
 from .log import logger
 
 
@@ -141,6 +142,10 @@ class MyRepo(object):
         else:
             logger.warn(f"Conflicts in {self._repo.path}")
             return False
+
+    def remove_all_submodules(self):
+        for module in self.submodules:
+            run_command(args=["rm", "-r", module.path], cwd=".")
 
     def resolve_conflicts(self):
         conflicts = self._repo.index.conflicts
