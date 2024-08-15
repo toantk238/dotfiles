@@ -2,11 +2,9 @@
 
 from pathlib import Path
 import argparse
-from typing import Optional
+from helper import logger
 
 from helper import BigRepo, logger
-
-
 
 
 if __name__ == "__main__":
@@ -19,21 +17,23 @@ if __name__ == "__main__":
     parser.add_argument('path')           # positional argument
     parser.add_argument('-b', '--branch', required=False)
     args = parser.parse_args()
+    args = vars(args)
+    logger.info(f"args={args}")
 
-    working_path = args.path
+    working_path = args["path"]
 
     abs_pwd = Path(working_path).resolve()
     big_repo = BigRepo(abs_pwd)
     # big_repo.verify_local_state()
 
-    action = args.action
+    action = args["action"]
 
     if action == "sync":
         big_repo.sync_branch()
     elif action == "verify_before_push":
         big_repo.verify_before_push()
     elif action == "merge":
-        branch = args.branch
+        branch = args["branch"]
         logger.info(f"Merge branch: {branch}")
         big_repo.merge(branch)
     elif action == "resolve_conflicts":
