@@ -3,7 +3,7 @@ Description=Lemonade
 After=network.target
 
 [Service]
-ExecStart=zsh -c "source $HOME/.zshrc && /usr/bin/lemonade server"
+ExecStart=zsh -c "source $HOME/.zshrc ; /usr/local/bin/lemonade server"
 ExecStop=bash -c "killall -q lemonade"
 Type=simple
 Restart=on-failure
