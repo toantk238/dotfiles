@@ -229,6 +229,10 @@ if exists glow; then
   alias glow="glow --pager"
 fi
 
+if exists cloudlens; then
+  alias cloudlens="cloudlens aws"
+fi
+
 alias gdiff="yes | git difftool --tool=intelliJ HEAD"
 alias ssys="sudo systemctl"
 alias lg="lazygit"
