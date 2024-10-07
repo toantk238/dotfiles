@@ -197,6 +197,10 @@ cptp() {
 	done
 }
 
+lnr() {
+  ln -s "$(realpath $1)" $2
+}
+
 export LC_ALL="en_US.UTF-8"
 
 if exists eza; then
