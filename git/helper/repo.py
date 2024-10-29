@@ -93,16 +93,6 @@ class MyRepo(object):
         selected_branch = branches[choice]
         self._checkout_branch_at_commit(selected_branch, commit)
 
-    def pull_branch(self, branch):
-        logger.info(f"module = {self._repo}")
-        try:
-            self._repo.git.checkout(branch)
-            self._repo.git.pull()
-            logger.info(f"Pull code in {branch} done")
-        except Exception as e:
-            logger.debug(e)
-            logger.info(f"There is no remote *{branch}")
-
     def get_commit_date_of_branch(self, branch: Branch):
         commit: Commit = self._repo.get(branch.target)
         commit_time = commit.commit_time
@@ -142,7 +132,7 @@ class MyRepo(object):
             # self._repo.head.set_target(new_commit)
             return True
         else:
-            logger.warn(f"Conflicts in {self._repo.path}")
+            logger.warning(f"Conflicts in {self._repo.path}")
             return False
 
     def remove_all_submodules(self):
