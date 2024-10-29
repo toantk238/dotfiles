@@ -1,5 +1,22 @@
 import datetime
 import logging
+import os
+
+# Uncomment the below line to show log of Git cmd from gitPython
+# logging.basicConfig(level=logging.INFO)
+
+env_log_level = os.environ.get('LOG_LEVEL', 'WARN').upper()
+
+console_log_level = logging.WARN
+
+if env_log_level == 'WARN':
+    console_log_level = logging.WARN
+elif env_log_level == 'INFO':
+    console_log_level = logging.INFO
+elif env_log_level == 'DEBUG':
+    console_log_level = logging.DEBUG
+elif env_log_level == 'ERROR':
+    console_log_level = logging.ERROR
 
 
 class CustomFormatter(logging.Formatter):
@@ -39,7 +56,7 @@ fmt = '%(levelname)8s | %(filename)s:%(lineno)d | %(message)s'
 
 # Create stdout handler for logging to the console (logs all five levels)
 stdout_handler = logging.StreamHandler()
-stdout_handler.setLevel(logging.INFO)
+stdout_handler.setLevel(console_log_level)
 stdout_handler.setFormatter(CustomFormatter(fmt))
 
 # Create file handler for logging to a file (logs all five levels)
