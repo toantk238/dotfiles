@@ -35,7 +35,8 @@ class BigRepo(object):
         self._repo.sync_submodules()
         main_repo_brach = self.get_main_repo_branch()
         for module in self.sub_module_repos():
-            module.pull_branch(main_repo_brach)
+            module.sync_branch(main_repo_brach)
+            # module.pull_branch(main_repo_brach)
 
     def is_any_changes(self) -> bool:
         return self._repo.is_any_changes()
@@ -52,3 +53,12 @@ class BigRepo(object):
             exit(1)
 
         logger.info("All repos are ready to push !")
+
+    def merge(self, branch: str):
+        self._repo.merge(branch)
+
+    def resolve_conflicts(self):
+        self._repo.resolve_conflicts()
+
+    def remove_submodules(self):
+        self._repo.remove_all_submodules()
