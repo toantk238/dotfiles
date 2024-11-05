@@ -1,0 +1,26 @@
+# organize configuration file
+# https://organize.readthedocs.io
+
+rules:
+  - name: "Find PDFs"
+    enabled: false
+    locations:
+      - ~/Downloads
+    subfolders: true
+    filters:
+      - extension: pdf
+    actions:
+      - echo: "Found PDF!"
+  - name: "Move images to folder"
+    enabled: false
+    locations:
+      - ~/Downloads
+    subfolders: true
+    filters:
+      - extension:
+        - jpg
+        - jpeg
+        - png
+        - svg
+    actions:
+      - move: ~/Pictures/Temp
