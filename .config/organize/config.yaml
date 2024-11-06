@@ -11,6 +11,17 @@ rules:
       - extension: pdf
     actions:
       - echo: "Found PDF!"
+  - name: "Group by year"
+    enabled: true
+    locations:
+      - ~/Downloads
+    subfolders: false
+    filters:
+      - created
+    actions:
+      - move:
+          dest: "~/Downloads/{created.year}"
+
   - name: "Move images to folder"
     enabled: false
     locations:
