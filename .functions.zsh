@@ -217,7 +217,7 @@ if exists kitty; then
 fi
 
 if exists bat; then
-  alias cat="bat --paging=never"
+  alias cat="bat --paging=never -p"
 fi
 
 if exists btop; then
