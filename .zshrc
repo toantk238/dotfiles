@@ -185,3 +185,5 @@ export PATH=$JAVA_HOME/bin:$PATH
 autoload -U compinit && compinit
 
 source "$dot_dir/.pyenv.zsh"
+source "$dot_dir/.kompose.zsh"
+source "$dot_dir/.kubectl.zsh"
