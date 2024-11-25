@@ -217,7 +217,7 @@ if exists kitty; then
 fi
 
 if exists bat; then
-  alias cat="bat --paging=never"
+  alias cat="bat --paging=never -p"
 fi
 
 if exists btop; then
@@ -233,6 +233,10 @@ if exists glow; then
   alias glow="glow --pager"
 fi
 
+if exists cloudlens; then
+  alias cloudlens="cloudlens aws"
+fi
+
 alias gdiff="yes | git difftool --tool=intelliJ HEAD"
 alias ssys="sudo systemctl"
 alias lg="lazygit"
@@ -244,3 +248,4 @@ alias lc="lemonade copy --host=127.0.0.1"
 # alias glow="glow --pager"
 alias open="xdg-open"
 alias enw="emacs -nw"
+alias duhs="du -hs"

@@ -1,0 +1,44 @@
+#!/usr/bin/env python
+
+from pathlib import Path
+import argparse
+from helper import logger
+
+from helper import BigRepo, logger
+
+
+if __name__ == "__main__":
+    parser = argparse.ArgumentParser(
+        prog='Git Helper',
+        description='Help devs to work easily with submodules',
+        epilog='toantk238@gmail.com')
+
+    parser.add_argument('action')           # positional argument
+    parser.add_argument('path')           # positional argument
+    parser.add_argument('-b', '--branch', required=False)
+    args = parser.parse_args()
+    args = vars(args)
+    logger.info(f"args={args}")
+
+    working_path = args["path"]
+
+    abs_pwd = Path(working_path).resolve()
+    big_repo = BigRepo(abs_pwd)
+    # big_repo.verify_local_state()
+
+    action = args["action"]
+
+    if action == "sync":
+        big_repo.sync_branch()
+    elif action == "verify_before_push":
+        big_repo.verify_before_push()
+    elif action == "merge":
+        branch = args["branch"]
+        logger.info(f"Merge branch: {branch}")
+        big_repo.merge(branch)
+    elif action == "resolve_conflicts":
+        big_repo.resolve_conflicts()
+    elif action == "remove_submodules":
+        big_repo.remove_submodules()
+    else:
+        logger.error(f"Invalid action : {action}")
