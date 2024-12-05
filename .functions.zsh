@@ -249,3 +249,8 @@ alias lc="lemonade copy --host=127.0.0.1"
 alias open="xdg-open"
 alias enw="emacs -nw"
 alias duhs="du -hs"
+
+# Use du only with top level, and size is sorted as increasing
+dur() {
+  du -ah $@ --max-depth=0 | sort -h
+}
