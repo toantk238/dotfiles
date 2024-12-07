@@ -251,3 +251,8 @@ if exists xdg-open; then
 fi
 alias enw="emacs -nw"
 alias duhs="du -hs"
+
+# Use du only with top level, and size is sorted as increasing
+dur() {
+  du -ah $@ --max-depth=0 | sort -h
+}
