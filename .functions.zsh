@@ -5,6 +5,17 @@ function join_by {
 	fi
 }
 
+osis()
+{
+    local n=0
+    if [[ "$1" = "-n" ]]; then n=1;shift; fi
+
+    # echo $OS|grep $1 -i >/dev/null
+    uname -s |grep -i "$1" >/dev/null
+
+    return $(( $n ^ $? ))
+}
+
 nvim_edit_config() {
 	LAST_FOLDER=$PWD
 	CONFIG_FOLDER=$HOME/.config/nvim
@@ -253,4 +264,10 @@ alias duhs="du -hs"
 # Use du only with top level, and size is sorted as increasing
 dur() {
   du -ah $@ --max-depth=0 | sort -h
+}
+
+osis Darwin && {
+  dur() {
+    du -h -d 0 $@ | sort -h
+  }
 }
