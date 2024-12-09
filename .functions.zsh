@@ -229,6 +229,8 @@ fi
 
 if exists bat; then
   alias cat="bat --paging=never -p"
+  export MANPAGER="sh -c 'col -bx | bat -l man -p'"
+  export MANROFFOPT="-c"
 fi
 
 if exists btop; then
@@ -271,3 +273,12 @@ osis Darwin && {
     du -h -d 0 $@ | sort -h
   }
 }
+alias gcurl='curl -H "Authorization: Bearer $(gcloud auth print-access-token)" -H "Content-Type: application/json"'
+
+if exists moar; then
+  export PAGER=$(which moar)
+  export MOAR='--statusbar=bold --no-linenumbers'
+  alias less="$PAGER"
+else
+  export PAGER='less -R'
+fi
