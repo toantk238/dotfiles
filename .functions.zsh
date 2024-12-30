@@ -254,7 +254,6 @@ fi
 
 alias gdiff="yes | git difftool --tool=intelliJ HEAD"
 alias ssys="sudo systemctl"
-alias lg="lazygit"
 # alias n="nnn"
 alias ncp="cat ${NNN_SEL:-${XDG_CONFIG_HOME:-$HOME/.config}/nnn/.selection} | tr '\0' '\n'"
 alias nv="nvim"
