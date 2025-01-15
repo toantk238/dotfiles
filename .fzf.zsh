@@ -7,17 +7,20 @@ export FZF_DEFAULT_OPTS='--height 70% --layout=reverse --border'
 
 export FZF_ALT_C_COMMAND='fd --type directory'
 
-export RG_FZF_OPTS='--no-ignore --hidden'
+export RG_FZF_OPTS=$(cat <<END
+-i \\
+--no-ignore --hidden \\
+-g '!Pods/' \\
+-g '!Text.swift' \\
+-g '!*.pbxproj' \\
+-g '!DerivedData/'
+END
+)
 
 function rg_fzf() {
   rg_cmd=$(cat <<END
-rg $RG_FZF_OPTS --color=always --line-number \\
-    -i \\
-    --no-heading "${*:-}" \\
-    -g '!Pods/' \\
-    -g '!Text.swift' \\
-    -g '!*.pbxproj' \\
-    -g '!DerivedData/'
+rg --color=always --line-number \\
+--no-heading "${*:-}" $RG_FZF_OPTS
 END
   )
   fzf_cmd=$(cat <<END
