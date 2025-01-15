@@ -1,155 +1,168 @@
 function join_by {
-	local d=${1-} f=${2-}
-	if shift 2; then
-		printf %s "$f" "${@/#/$d}"
-	fi
+  local d=${1-} f=${2-}
+  if shift 2; then
+    printf %s "$f" "${@/#/$d}"
+  fi
+}
+
+osis() {
+  local n=0
+  if [[ "$1" = "-n" ]]; then
+    n=1
+    shift
+  fi
+
+  # echo $OS|grep $1 -i >/dev/null
+  uname -s | grep -i "$1" >/dev/null
+
+  return $(($n ^ $?))
 }
 
 nvim_edit_config() {
-	LAST_FOLDER=$PWD
-	CONFIG_FOLDER=$HOME/.config/nvim
-	cd $CONFIG_FOLDER
-	nvim
-	cd $LAST_FOLDER
+  LAST_FOLDER=$PWD
+  CONFIG_FOLDER=$HOME/.config/nvim
+  cd $CONFIG_FOLDER
+  nvim
+  cd $LAST_FOLDER
 }
 
 nvim_clear_config() {
-	read yn"?Are you sure that you wanna clear ALL neovim configs ? (y/n): "
-	case $yn in
-	[Yy]*)
-		force_clear_nvim_config
-		echo "Clear done !"
-		;;
-	[Nn]*)
-		echo "Cancel !"
-		;;
-	*) echo "Please answer yes or no." ;;
-	esac
+  read yn"?Are you sure that you wanna clear ALL neovim configs ? (y/n): "
+  case $yn in
+  [Yy]*)
+    force_clear_nvim_config
+    echo "Clear done !"
+    ;;
+  [Nn]*)
+    echo "Cancel !"
+    ;;
+  *) echo "Please answer yes or no." ;;
+  esac
 }
 
 function force_clear_nvim_config() {
-	rm -rf ~/.cache/nvim
-	rm -rf ~/.local/share/nvim
-	rm -rf ~/.local/state/nvim
-	rm -rf ~/.config/nvim/plugin/*.*
-	rm -rf ~/.config/nvim/lazy-lock.json
+  rm -rf ~/.cache/nvim
+  rm -rf ~/.local/share/nvim
+  rm -rf ~/.local/state/nvim
+  rm -rf ~/.config/nvim/plugin/*.*
+  rm -rf ~/.config/nvim/lazy-lock.json
 }
 
 cdl() {
-	exe_path=$(which "$1")
-	if [[ "$exe_path" == *"not found"* ]]; then
-		cd "$(dirname "$(readlink -f "$1")")"
-		return 0
-	fi
+  exe_path=$(which "$1")
+  if [[ "$exe_path" == *"not found"* ]]; then
+    cd "$(dirname "$(readlink -f "$1")")"
+    return 0
+  fi
 
-	cd "$(dirname "$(readlink -f "$exe_path")")"
+  cd "$(dirname "$(readlink -f "$exe_path")")"
 }
 
 nvo() {
-	LAST_FOLDER=$PWD
-	cd $DOT_DIR
-	nvim
-	cd $LAST_FOLDER
+  LAST_FOLDER=$PWD
+  cd $DOT_DIR
+  nvim
+  cd $LAST_FOLDER
 }
 
 fzf_docker_actions() {
 
-	container=$(docker ps | fzf)
-	if [ $? -ne 0 ]; then
-		echo "Canceled"
-		return 1
-	fi
-	container_id=$(echo $container | awk '{print $1}')
+  container=$(docker ps | fzf)
+  if [ $? -ne 0 ]; then
+    echo "Canceled"
+    return 1
+  fi
+  container_id=$(echo $container | awk '{print $1}')
 
-	all_actions="log\nbash"
+  all_actions="log\nbash"
 
-	action=$(echo $all_actions | fzf)
-	if [ $? -ne 0 ]; then
-		echo "Canceled"
-		return 1
-	fi
+  action=$(echo $all_actions | fzf)
+  if [ $? -ne 0 ]; then
+    echo "Canceled"
+    return 1
+  fi
 
-	if [ $action = "log" ]; then
-		exe_cmd="docker logs -f $container_id"
-	elif [ $action = "bash" ]; then
-		exe_cmd="docker exec -it $container_id bash"
-	fi
-	print -s "$exe_cmd"
-	eval "$exe_cmd"
+  if [ $action = "log" ]; then
+    exe_cmd="docker logs -f $container_id"
+  elif [ $action = "bash" ]; then
+    exe_cmd="docker exec -it $container_id bash"
+  fi
+  print -s "$exe_cmd"
+  eval "$exe_cmd"
 }
 
 fzf_k8s_actions() {
 
-	name_space=$(kubectl get ns | fzf)
-	if [ $? -ne 0 ]; then
-		echo "Canceled"
-		return 1
-	fi
-	name_space=$(echo $name_space | awk '{print $1}')
+  name_space=$(kubectl get ns | fzf)
+  if [ $? -ne 0 ]; then
+    echo "Canceled"
+    return 1
+  fi
+  name_space=$(echo $name_space | awk '{print $1}')
 
-	pod=$(kubectl get pod -n $name_space | fzf)
-	if [ $? -ne 0 ]; then
-		echo "Canceled"
-		return 1
-	fi
-	pod=$(echo $pod | awk '{print $1}')
+  pod=$(kubectl get pod -n $name_space | fzf)
+  if [ $? -ne 0 ]; then
+    echo "Canceled"
+    return 1
+  fi
+  pod=$(echo $pod | awk '{print $1}')
 
-	containers=$(kubectl get pod $pod -n $name_space -o jsonpath='{.spec.containers[*].name}')
-	container=$(awk 'NR>0' RS='[[:space:]]' <<<"$containers" | fzf)
+  containers=$(kubectl get pod $pod -n $name_space -o jsonpath='{.spec.containers[*].name}')
+  container=$(awk 'NR>0' RS='[[:space:]]' <<<"$containers" | fzf)
 
-	all_actions="log\nbash"
+  all_actions="log\nbash"
 
-	action=$(echo $all_actions | fzf)
-	if [ $? -ne 0 ]; then
-		echo "Canceled"
-		return 1
-	fi
+  action=$(echo $all_actions | fzf)
+  if [ $? -ne 0 ]; then
+    echo "Canceled"
+    return 1
+  fi
 
-	if [ $action = "log" ]; then
-		exe_cmd="kubectl logs -n $name_space -f $pod -c $container"
-	elif [ $action = "bash" ]; then
-		exe_cmd="kubectl exec -n $name_space -ti $pod -c $container -- bash"
-	fi
-	print -s "$exe_cmd"
-	eval "$exe_cmd"
+  if [ $action = "log" ]; then
+    exe_cmd="kubectl logs -n $name_space -f $pod -c $container"
+  elif [ $action = "bash" ]; then
+    exe_cmd="kubectl exec -n $name_space -ti $pod -c $container -- bash"
+  fi
+  print -s "$exe_cmd"
+  eval "$exe_cmd"
 }
 
 nginx_sites() {
-	cd /etc/nginx/sites-available/
+  cd /etc/nginx/sites-available/
 }
 
 adb_log_filter() {
-	echo '--- Start capture ADB log ---'
-	temp="$@"
-	command=$(echo "$temp" | sed 's/ *$//g')
+  echo '--- Start capture ADB log ---'
+  temp="$@"
+  command=$(echo "$temp" | sed 's/ *$//g')
 
-	if [ -z "$command" ]; then
-		adb logcat -v color
-	else
-		adb logcat -v color | grep $@
-	fi
+  if [ -z "$command" ]; then
+    adb logcat -v color
+  else
+    adb logcat -v color | grep $@
+  fi
 }
 
 run_in_parent() {
-	command="$@"
-	exe_file="$1"
-	current_d=$PWD
-	temp=$PWD
+  command="$@"
+  exe_file="$1"
+  current_d=$PWD
+  temp=$PWD
 
-	while [[ true ]]; do
-		if [ -f "$temp/$1" ]; then
-			$@
-			cd $current_d
-			return 0
-		fi
-		cd $temp/..
-		temp=$PWD
-		if [ "$temp" = "/" ]; then
-			echo "Cannot find any place to run this command"
-			cd $current_d
-			return 1
-		fi
-	done
+  while [[ true ]]; do
+    if [ -f "$temp/$1" ]; then
+      $@
+      cd $current_d
+      return 0
+    fi
+    cd $temp/..
+    temp=$PWD
+    if [ "$temp" = "/" ]; then
+      echo "Cannot find any place to run this command"
+      cd $current_d
+      return 1
+    fi
+  done
 }
 
 # handle_docker_compose() {
@@ -174,27 +187,27 @@ run_in_parent() {
 # }
 
 exists() {
-	command -v "$1" >/dev/null 2>&1
+  command -v "$1" >/dev/null 2>&1
 }
 
 cdo() {
-	cd $DOT_DIR
+  cd $DOT_DIR
 }
 
 cptp() {
-	output=$(echo "$1")
+  output=$(echo "$1")
 
-	(($#)) || set -- -
-	while (($#)); do
-		# { [[ $1 = - ]] || exec < "$1"; } &&
-		while read -r; do
-			input_file=$(echo "$REPLY")
-			output_file="$output/$input_file"
-			output_file_dir=$(dirname $output_file)
-			mkdir -p $output_file_dir && cp -r $input_file "$output_file_dir/."
-		done
-		shift
-	done
+  (($#)) || set -- -
+  while (($#)); do
+    # { [[ $1 = - ]] || exec < "$1"; } &&
+    while read -r; do
+      input_file=$(echo "$REPLY")
+      output_file="$output/$input_file"
+      output_file_dir=$(dirname $output_file)
+      mkdir -p $output_file_dir && cp -r $input_file "$output_file_dir/."
+    done
+    shift
+  done
 }
 
 lnr() {
@@ -218,6 +231,8 @@ fi
 
 if exists bat; then
   alias cat="bat --paging=never -p"
+  export MANPAGER="sh -c 'col -bx | bat -l man -p'"
+  export MANROFFOPT="-c"
 fi
 
 if exists btop; then
@@ -239,7 +254,6 @@ fi
 
 alias gdiff="yes | git difftool --tool=intelliJ HEAD"
 alias ssys="sudo systemctl"
-alias lg="lazygit"
 # alias n="nnn"
 alias ncp="cat ${NNN_SEL:-${XDG_CONFIG_HOME:-$HOME/.config}/nnn/.selection} | tr '\0' '\n'"
 alias nv="nvim"
@@ -256,3 +270,21 @@ alias duhs="du -hs"
 dur() {
   du -ah $@ --max-depth=0 | sort -h
 }
+
+osis Darwin && {
+  dur() {
+    du -h -d 0 $@ | sort -h
+  }
+}
+alias gcurl='curl -H "Authorization: Bearer $(gcloud auth print-access-token)" -H "Content-Type: application/json"'
+
+if [[ -f /usr/bin/src-hilite-lesspipe.sh ]]; then
+  export LESSOPEN="| /usr/bin/src-hilite-lesspipe.sh %s"
+  export LESS=' -R'
+elif exists moar; then
+  export PAGER=$(which moar)
+  export MOAR='--statusbar=bold --no-linenumbers'
+  alias less="$PAGER"
+else
+  export PAGER='less -R'
+fi
