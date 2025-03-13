@@ -265,6 +265,7 @@ if exists xdg-open; then
 fi
 alias enw="emacs -nw"
 alias duhs="du -hs"
+alias sudoe="sudo -E"
 
 # Use du only with top level, and size is sorted as increasing
 dur() {
