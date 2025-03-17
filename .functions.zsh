@@ -287,3 +287,7 @@ elif exists moar; then
 else
   export PAGER='less -R'
 fi
+
+apk_key_hash() {
+  keytool -exportcert -alias $1 -keystore $2 | openssl sha256 -binary | openssl base64 | sed 's/=//g'| sed s/\\+/-/g | sed s/\\//_/g | sed -E s/=+$//
+}
