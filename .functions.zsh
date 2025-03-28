@@ -291,3 +291,21 @@ fi
 apk_key_hash() {
   keytool -exportcert -alias $1 -keystore $2 | openssl sha256 -binary | openssl base64 | sed 's/=//g'| sed s/\\+/-/g | sed s/\\//_/g | sed -E s/=+$//
 }
+
+osis Darwin && {
+  lctl() {
+      set -x
+      echo "service = $2"
+      if [[ "$1" == "restart" ]]; then
+        echo "run restart"
+        launchctl unload $2;
+        launchctl load $2;
+      elif [[ "$1" == "start" ]]; then
+        echo "run start"
+        launchctl load $2;
+      elif [[ "$1" == "stop" ]]; then
+        echo "run stop"
+        launchctl unload $2;
+      fi
+  }
+}
