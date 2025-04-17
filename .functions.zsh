@@ -224,7 +224,7 @@ if exists fuck; then
   eval $(thefuck --alias)
 fi
 
-if exists kitty; then
+if exists kitty && [[ -z "$SSH_CONNECTION" ]]; then
   alias ssh="kitty +kitten ssh"
   alias icat="kitty +kitten icat"
 fi
@@ -289,19 +289,19 @@ else
 fi
 
 apk_key_hash() {
-  keytool -exportcert -alias $1 -keystore $2 | openssl sha256 -binary | openssl base64 | sed 's/=//g'| sed s/\\+/-/g | sed s/\\//_/g | sed -E s/=+$//
+  keytool -exportcert -alias $1 -keystore $2 | openssl sha256 -binary | openssl base64 | sed 's/=//g' | sed s/\\+/-/g | sed s/\\//_/g | sed -E s/=+$//
 }
 
 osis Darwin && {
   lctl() {
-      if [[ "$1" == "reload" ]]; then
-        launchctl unload $2;
-        launchctl load $2;
-      elif [[ "$1" == "load" ]]; then
-        launchctl load $2;
-      elif [[ "$1" == "unload" ]]; then
-        echo "run stop"
-        launchctl unload $2;
-      fi
+    if [[ "$1" == "reload" ]]; then
+      launchctl unload $2
+      launchctl load $2
+    elif [[ "$1" == "load" ]]; then
+      launchctl load $2
+    elif [[ "$1" == "unload" ]]; then
+      echo "run stop"
+      launchctl unload $2
+    fi
   }
 }
