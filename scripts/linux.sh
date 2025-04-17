@@ -18,7 +18,8 @@ apps=(
  docker docker-compose 
 
  # Terminal
- zsh fd ripgrep fzf uctags-git tmux 
+ zsh fd ripgrep fzf uctags-git tmux lsd eza btop direnv kitty
+ bat tmuxp tldr nnn-nerd autojump
 
  # Development
  neovim 
@@ -38,9 +39,8 @@ apps=(
  vlc 
 
  # Others
- neofetch syncthing 
- pet-bin 
- direnv xclip prettier gtk2 wl-clipboard rclone crow-translate fluent-reader-bin libvncserver lemonade-git net-tools watchman-bin bat tmuxp tldr nnn-nerd autojump lazydocker-bin nordvpn-bin
+ neofetch syncthing pet-bin 
+ xclip prettier gtk2 wl-clipboard rclone crow-translate fluent-reader-bin libvncserver lemonade-git net-tools watchman-bin  lazydocker-bin nordvpn-bin
 )
 
 yay -S --needed ${apps[@]}

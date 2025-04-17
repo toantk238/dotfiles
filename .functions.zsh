@@ -305,3 +305,10 @@ osis Darwin && {
     fi
   }
 }
+
+# if lsd, replace ls
+if exists lsd; then
+  alias ls="lsd"
+  alias l="ls -Al;"
+  alias lt="ls --tree"
+fi
