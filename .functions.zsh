@@ -217,7 +217,9 @@ lnr() {
 export LC_ALL="en_US.UTF-8"
 
 if exists eza; then
-  alias l="eza -lah"
+  alias l="eza -lah --icons=auto"
+  alias lt="eza -lah --icons=auto --tree"
+  alias ltg="eza -lah --icons=auto --tree --git-ignore"
 fi
 
 if exists fuck; then
@@ -306,9 +308,9 @@ osis Darwin && {
   }
 }
 
-# if lsd, replace ls
-if exists lsd; then
-  alias ls="lsd"
-  alias l="ls -Al;"
-  alias lt="ls --tree"
-fi
+# # if lsd, replace ls
+# if exists lsd; then
+#   alias ls="lsd"
+#   alias l="ls -Al;"
+#   alias lt="ls --tree"
+# fi
