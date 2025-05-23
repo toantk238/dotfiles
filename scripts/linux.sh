@@ -19,7 +19,7 @@ apps=(
 
  # Terminal
  zsh fd ripgrep fzf uctags-git tmux lsd eza btop direnv kitty
- bat tmuxp tldr nnn-nerd autojump
+ bat tmuxp tldr nnn-nerd autojump jq
 
  # Development
  neovim 
@@ -27,7 +27,7 @@ apps=(
  npm yarn nodejs 
 
  # Git
- git-delta lazygit forgit 
+ git-delta lazygit forgit git-lfs github-cli
 
  # Fonts
  ttf-clear-sans nerd-fonts-meslo ttf-meslo-nerd-font-powerlevel10k ttf-jetbrains-mono-nerd 
