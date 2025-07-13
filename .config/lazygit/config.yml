@@ -14,17 +14,17 @@ git:
     pager: delta --dark --paging=never
   commitPrefixes:
     android-doctor-app: # This is repository folder name
-       pattern: "^\\w+\\/(\\w+-\\w+).*"
-       replace: 'feat($1): '
+      - pattern: "^\\w+\\/(\\w+-\\w+).*"
+        replace: 'feat($1): '
     appointment-droid: # This is repository folder name
-      pattern: "^\\w+\\/(\\w+-\\w+).*"
-      replace: 'feat($1): '
+      - pattern: "^\\w+\\/(\\w+-\\w+).*"
+        replace: 'feat($1): '
     cms-mohconnect-backend: # This is repository folder name
-      pattern: "^\\w+\\/(\\w+-\\w+).*"
-      replace: 'feat($1): '
+      - pattern: "^\\w+\\/(\\w+-\\w+).*"
+        replace: 'feat($1): '
     cms-search:
-      pattern: "^\\w+\\/(\\w+-\\w+).*"
-      replace: 'feat($1): '
+      - pattern: "^\\w+\\/(\\w+-\\w+).*"
+        replace: 'feat($1): '
   mainBranches: [master, develop]
 os:
   copyToClipboardCmd: echo {{text}} | lemonade copy --host=127.0.0.1

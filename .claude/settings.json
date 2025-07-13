@@ -4,7 +4,36 @@
       "Read",
       "Write",
       "Edit",
-      "MultiEdit"
-    ]
-  }
+      "MultiEdit",
+      "Bash(npm run lint)",
+      "Bash(npm run test:*)",
+      "Bash(git status)",
+      "Bash(git diff)",
+      "Bash(git log)",
+      "Bash(pyinstaller *)",
+      "Bash(find *)",
+      "Bash(cd *)",
+      "Bash(mkdir *)"
+    ],
+    "deny": [
+      "Bash(rm -rf /)",
+      "Bash(sudo rm -rf *)",
+      "Bash(dd if=/dev/zero of=*)",
+      "Bash(:(){ :|:& };:)"
+    ],
+    "additionalDirectories": [],
+    "defaultMode": "acceptEdits",
+    "disableBypassPermissionsMode": "disable"
+  },
+  "env": {
+    "CLAUDE_CODE_ENABLE_TELEMETRY": "1",
+    "NODE_ENV": "development"
+  },
+  "includeCoAuthoredBy": true,
+  "hooks": {},
+  "model": "",
+  "forceLoginMethod": "console",
+  "enableAllProjectMcpServers": false,
+  "enabledMcpjsonServers": [],
+  "disabledMcpjsonServers": []
 }
