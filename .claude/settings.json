@@ -13,7 +13,10 @@
       "Bash(git status)",
       "Bash(git diff)",
       "Bash(git log)",
-      "Bash(pyinstaller *)"
+      "Bash(pyinstaller *)",
+      "Bash(find *)",
+      "Bash(cd *)",
+      "Bash(mkdir *)"
     ],
     "deny": [
       "Bash(rm -rf /)",
@@ -22,12 +25,12 @@
       "Bash(:(){ :|:& };:)"
     ],
     "additionalDirectories": [],
-    "defaultMode": "allowEdits",
-    "disableBypassPermissionsMode": false
+    "defaultMode": "acceptEdits",
+    "disableBypassPermissionsMode": "disable"
   },
   "hooks": {},
   "model": "",
-  "forceLoginMethod": "",
+  "forceLoginMethod": "console",
   "enableAllProjectMcpServers": false,
   "enabledMcpjsonServers": [],
   "disabledMcpjsonServers": []
