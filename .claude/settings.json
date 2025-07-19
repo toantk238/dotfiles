@@ -11,9 +11,9 @@
       "Bash(git diff)",
       "Bash(git log)",
       "Bash(pyinstaller *)",
-      "Bash(find *)",
-      "Bash(cd *)",
-      "Bash(mkdir *)"
+      "Bash(find)",
+      "Bash(cd)",
+      "Bash(mkdir)"
     ],
     "deny": [
       "Bash(rm -rf /)",
@@ -25,15 +25,12 @@
     "defaultMode": "acceptEdits",
     "disableBypassPermissionsMode": "disable"
   },
-  "env": {
-    "CLAUDE_CODE_ENABLE_TELEMETRY": "1",
-    "NODE_ENV": "development"
-  },
   "includeCoAuthoredBy": true,
   "hooks": {},
-  "model": "",
   "forceLoginMethod": "console",
-  "enableAllProjectMcpServers": false,
-  "enabledMcpjsonServers": [],
-  "disabledMcpjsonServers": []
+  "enableAllProjectMcpServers": true,
+  "enabledMcpjsonServers": [
+    "sequential-thinking",
+    "memory:"
+  ]
 }
