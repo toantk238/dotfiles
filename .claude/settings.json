@@ -26,11 +26,24 @@
     "disableBypassPermissionsMode": "disable"
   },
   "includeCoAuthoredBy": true,
-  "hooks": {},
   "forceLoginMethod": "console",
   "enableAllProjectMcpServers": true,
   "enabledMcpjsonServers": [
     "sequential-thinking",
     "memory:"
-  ]
+  ],
+  "hooks": {
+    "Notification": [
+      {
+        "matcher": "",
+        "hooks": [
+          {
+            "type": "command",
+            "command": "source ~/.zshrc; $DOT_DIR/.claude/notify_slack.sh \"$CLAUDE_NOTIFICATION\""
+          }
+        ]
+      }
+    ]
+  }
 }
+
