@@ -30,7 +30,7 @@
   "enableAllProjectMcpServers": true,
   "enabledMcpjsonServers": [
     "sequential-thinking",
-    "memory:"
+    "memory"
   ],
   "hooks": {
     "Notification": [
@@ -40,26 +40,6 @@
           {
             "type": "command",
             "command": "source ~/.env.zsh; ~/.claude/notify_slack.sh"
-          }
-        ]
-      }
-    ],
-    "PreToolUse": [
-      {
-        "matcher": "^(Read|Write|Edit|MultiEdit)$",
-        "hooks": [
-          {
-            "type": "command",
-            "command": "source ~/.env.zsh; ~/.claude/hooks/slack-wait-approval.sh"
-          }
-        ]
-      },
-      {
-        "matcher": "^(Bash|Grep|Glob|LS)$",
-        "hooks": [
-          {
-            "type": "command",
-            "command": "source ~/.env.zsh; ~/.claude/hooks/slack-notify-only.sh"
           }
         ]
       }
