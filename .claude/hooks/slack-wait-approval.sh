@@ -1,6 +1,12 @@
 #!/bin/bash
 # ~/.claude/hooks/slack-wait-approval.sh
 
+# Set up logging
+SCRIPT_NAME=$(basename "$0")
+LOG_FILE="${SCRIPT_NAME%.sh}.log"
+exec > >(tee -a "$LOG_FILE")
+exec 2>&1
+
 read -r input
 session_id=$(echo "$input" | jq -r '.session_id')
 command=$(echo "$input" | jq -r '.tool_input.command')
