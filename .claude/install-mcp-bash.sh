@@ -6,12 +6,11 @@
 set -e
 
 # Set up logging
+SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 SCRIPT_NAME=$(basename "$0")
-LOG_FILE="${SCRIPT_NAME%.sh}.log"
+LOG_FILE="$SCRIPT_DIR/${SCRIPT_NAME%.sh}.log"
 exec > >(tee -a "$LOG_FILE")
 exec 2>&1
-
-SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 SOURCE_FILE="$SCRIPT_DIR/.local.mcp.json"
 TARGET_FILE="$HOME/.claude.json"
 

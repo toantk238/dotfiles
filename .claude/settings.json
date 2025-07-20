@@ -39,7 +39,7 @@
         "hooks": [
           {
             "type": "command",
-            "command": "source ~/.zshrc; $DOT_DIR/.claude/notify_slack.sh \"$CLAUDE_NOTIFICATION\""
+            "command": "source ~/.env.zsh; ~/.claude/notify_slack.sh"
           }
         ]
       }
