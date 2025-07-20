@@ -50,7 +50,7 @@
         "hooks": [
           {
             "type": "command",
-            "command": "~/.claude/hooks/slack-wait-approval.sh"
+            "command": "source ~/.env.zsh; ~/.claude/hooks/slack-wait-approval.sh"
           }
         ]
       },
@@ -59,7 +59,7 @@
         "hooks": [
           {
             "type": "command",
-            "command": "~/.claude/hooks/slack-notify-only.sh"
+            "command": "source ~/.env.zsh; ~/.claude/hooks/slack-notify-only.sh"
           }
         ]
       }
