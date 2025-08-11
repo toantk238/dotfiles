@@ -1,7 +1,7 @@
 #!/bin/zsh
 #
 #export FZF_DEFAULT_COMMAND="rg --no-ignore --hidden --files -g '!.git/' "
-export FZF_DEFAULT_COMMAND="fd --type f -HI --exclude .git --exclude .gradle --exclude .transforms --exclude .idea"
+export FZF_DEFAULT_COMMAND="fd --type f -HI --exclude .git --exclude .gradle --exclude .transforms --exclude .idea --exclude node_modules"
 
 export FZF_DEFAULT_OPTS='--height 70% --layout=reverse --border'
 
