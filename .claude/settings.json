@@ -1,37 +1,51 @@
 {
-  "apiKeyHelper": "",
-  "cleanupPeriodDays": 30,
-  "env": {
-    "CLAUDE_CODE_ENABLE_TELEMETRY": "1",
-    "NODE_ENV": "development"
-  },
-  "includeCoAuthoredBy": true,
   "permissions": {
     "allow": [
-      "Bash(npm run lint)",
-      "Bash(npm run test:*)",
-      "Bash(git status)",
-      "Bash(git diff)",
-      "Bash(git log)",
-      "Bash(pyinstaller *)",
-      "Bash(find *)",
-      "Bash(cd *)",
-      "Bash(mkdir *)"
+      "Read",
+      "Write",
+      "Edit",
+      "MultiEdit",
+      "Glob",
+      "Grep",
+      "LS",
+      "TodoRead",
+      "TodoWrite",
+      "WebFetch",
+      "WebSearch",
+      "NotebookRead",
+      "NotebookEdit",
+      "Task",
+      "exit_plan_mode",
+      "Bash",
+      "mcp__*"
     ],
     "deny": [
       "Bash(rm -rf /)",
       "Bash(sudo rm -rf *)",
-      "Bash(dd if=/dev/zero of=*)",
-      "Bash(:(){ :|:& };:)"
+      "Bash(dd if=/dev/zero of=*)"
     ],
     "additionalDirectories": [],
     "defaultMode": "acceptEdits",
     "disableBypassPermissionsMode": "disable"
   },
-  "hooks": {},
-  "model": "",
+  "includeCoAuthoredBy": true,
   "forceLoginMethod": "console",
-  "enableAllProjectMcpServers": false,
-  "enabledMcpjsonServers": [],
-  "disabledMcpjsonServers": []
+  "enableAllProjectMcpServers": true,
+  "enabledMcpjsonServers": [
+    "sequential-thinking",
+    "memory"
+  ],
+  "hooks": {
+    "Notification": [
+      {
+        "matcher": "",
+        "hooks": [
+          {
+            "type": "command",
+            "command": "source ~/.env.zsh; ~/.claude/notify_slack.sh"
+          }
+        ]
+      }
+    ]
+  }
 }
