@@ -228,8 +228,12 @@ fi
 
 if exists kitty && [[ -z "$SSH_CONNECTION" ]]; then
   alias ssh="kitty +kitten ssh"
-  alias icat="kitty +kitten icat"
 fi
+
+if exists kitty; then
+  alias icat="kitten icat"
+fi
+
 
 if exists bat; then
   alias cat="bat --paging=never -p"
@@ -284,8 +288,8 @@ alias gcurl='curl -H "Authorization: Bearer $(gcloud auth print-access-token)" -
 if [[ -f /usr/bin/src-hilite-lesspipe.sh ]]; then
   export LESSOPEN="| /usr/bin/src-hilite-lesspipe.sh %s"
   export LESS=' -R'
-elif exists moar; then
-  export PAGER=$(which moar)
+elif exists moor; then
+  export PAGER=$(which moor)
   export MOAR='--statusbar=bold --no-linenumbers'
   alias less="$PAGER"
 else
@@ -299,13 +303,13 @@ apk_key_hash() {
 osis Darwin && {
   lctl() {
     if [[ "$1" == "reload" ]]; then
-      launchctl unload $2
-      launchctl load $2
+      launchctl unload -w $2
+      launchctl load -w $2
     elif [[ "$1" == "load" ]]; then
-      launchctl load $2
+      launchctl load -w $2
     elif [[ "$1" == "unload" ]]; then
       echo "run stop"
-      launchctl unload $2
+      launchctl unload -w $2
     fi
   }
 }
