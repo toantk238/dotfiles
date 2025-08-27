@@ -25,6 +25,11 @@ export ZSH="/$HOME/.oh-my-zsh"
 # ZSH_THEME="powerlevel10k/powerlevel10k"
 ZSH_THEME="robbyrussell"
 
+export _ZO_DATA_DIR="$HOME/.local/share/zoxide"
+export _ZO_ECHO=1
+export _ZO_FZF_OPTS="--height=40% --layout=reverse --border --cycle"
+export ZOXIDE_CMD_OVERRIDE="j"
+
 if [ -f "/$HOME/.env.zsh" ]; 
 then
   source "/$HOME/.env.zsh"
@@ -91,8 +96,8 @@ fi
 # Custom plugins may be added to $ZSH_CUSTOM/plugins/
 # Example format: plugins=(rails git textmate ruby lighthouse)
 # Add wisely, as too many plugins slow down shell startup.
-plugins=(git tmux autojump fzf direnv zsh-autosuggestions zsh-syntax-highlighting forgit fzf-tab eza)
-# plugins=(git tmux autojump fzf direnv flutter zsh-autosuggestions zsh-syntax-highlighting forgit)
+plugins=(git zoxide tmux fzf direnv zsh-autosuggestions zsh-syntax-highlighting forgit eza fzf-tab)
+# plugins=(git tmux fzf direnv flutter zsh-autosuggestions zsh-syntax-highlighting forgit)
 
 if [ -n "$RUN_BY_ME" ]; then
   ZSH_TMUX_AUTOSTART=true
@@ -145,7 +150,6 @@ export DOT_DIR="$dot_dir"
 source "$dot_dir/.functions.zsh"
 # source "$dot_dir/.p10k.zsh"
 source "$dot_dir/.nnn.zsh"
-source "$dot_dir/.autojump.zsh"
 source "$dot_dir/.pet.sh"
 source "$dot_dir/.scrcpy.zsh"
 source "$dot_dir/.fzf.zsh"
@@ -190,3 +194,5 @@ autoload -U compinit && compinit
 source "$dot_dir/.pyenv.zsh"
 source "$dot_dir/.kompose.zsh"
 source "$dot_dir/.kubectl.zsh"
+
+compdef -d ssh

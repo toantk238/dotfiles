@@ -1,7 +1,7 @@
 #!/bin/zsh
 #
 #export FZF_DEFAULT_COMMAND="rg --no-ignore --hidden --files -g '!.git/' "
-export FZF_DEFAULT_COMMAND="fd --type f -HI --exclude .git --exclude .gradle --exclude .transforms --exclude .idea"
+export FZF_DEFAULT_COMMAND="fd --type f -HI --exclude .git --exclude .gradle --exclude .transforms --exclude .idea --exclude node_modules --exclude Localizable.strings --exclude Generated"
 
 export FZF_DEFAULT_OPTS='--height 70% --layout=reverse --border'
 
@@ -14,6 +14,8 @@ export RG_FZF_OPTS=$(cat <<END
 -g '!Text.swift' \\
 -g '!*.pbxproj' \\
 -g '!DerivedData/'
+-g '!Localizable.strings'
+-g '!Generated/'
 END
 )
 

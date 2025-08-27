@@ -245,10 +245,6 @@ if exists btop; then
   alias top="btop"
 fi
 
-if exists zoxide; then
-  eval "$(zoxide init zsh)"
-fi
-
 if exists glow; then
   eval "$(glow completion zsh)"
   alias glow="glow --pager"
