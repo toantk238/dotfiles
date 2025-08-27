@@ -29,7 +29,7 @@
     "disableBypassPermissionsMode": "disable"
   },
   "includeCoAuthoredBy": true,
-  "forceLoginMethod": "console",
+  "forceLoginMethod": "claudeai",
   "enableAllProjectMcpServers": true,
   "enabledMcpjsonServers": [
     "sequential-thinking",
