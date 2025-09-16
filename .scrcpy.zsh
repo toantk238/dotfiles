@@ -30,3 +30,12 @@ function scrcpy_all() {
 		start_new_device $device_serial
 	done
 }
+
+function adb_tcpip_all() {
+  IFS=$'\n' all_devices=($(adb devices | grep -v devices))
+
+  for line in $all_devices; do
+    device_serial=$(echo "$line" | awk '{print $1}')
+    adb -s $device_serial tcpip 5555
+  done
+}
