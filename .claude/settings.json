@@ -15,13 +15,13 @@
       "NotebookRead",
       "NotebookEdit",
       "Task",
-      "exit_plan_mode",
+      "Exit_plan_mode",
       "Bash",
       "mcp__*"
     ],
     "deny": [
       "Bash(rm -rf /)",
-      "Bash(sudo rm -rf *)",
+      "Bash(sudo rm -rf :*)",
       "Bash(dd if=/dev/zero of=*)"
     ],
     "additionalDirectories": [],
@@ -29,7 +29,7 @@
     "disableBypassPermissionsMode": "disable"
   },
   "includeCoAuthoredBy": true,
-  "forceLoginMethod": "console",
+  "forceLoginMethod": "claudeai",
   "enableAllProjectMcpServers": true,
   "enabledMcpjsonServers": [
     "sequential-thinking",

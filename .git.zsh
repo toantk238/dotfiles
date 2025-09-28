@@ -17,6 +17,6 @@ current_branch() {
   git rev-parse --abbrev-ref HEAD
 }
 
-gf_all() {
+gfj() {
   git fetch --recurse-submodules=yes --jobs=16
 }
