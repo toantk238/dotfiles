@@ -160,6 +160,7 @@ source "$dot_dir/.nvm.zsh"
 source "$dot_dir/.nvim.zsh"
 source "$dot_dir/.tmux.zsh"
 source "$dot_dir/.android.zsh"
+source "$dot_dir/.ios.zsh"
 source "$dot_dir/.luaenv.zsh"
 source "$dot_dir/.ranger.zsh"
 source "$dot_dir/.goenv.zsh"
@@ -196,3 +197,5 @@ source "$dot_dir/.kompose.zsh"
 source "$dot_dir/.kubectl.zsh"
 
 compdef -d ssh
+
+[ -f ~/.fzf.zsh ] && source ~/.fzf.zsh
