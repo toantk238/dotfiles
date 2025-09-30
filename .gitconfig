@@ -70,3 +70,5 @@ ds = diff --submodule=diff
 
 [safe]
 	directory = *
+	directory = /Users/mbhealth/Workspace/github-runner/ios-2/_work/manadr-doctor-ios/manadr-doctor-ios
+	directory = /Users/mbhealth/Workspace/github-runner/ios-2/_work/manadr-doctor-ios/manadr-doctor-ios

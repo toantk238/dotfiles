@@ -1,4 +1,5 @@
 {
+  "includeCoAuthoredBy": true,
   "permissions": {
     "allow": [
       "Read",
@@ -24,12 +25,10 @@
       "Bash(sudo rm -rf :*)",
       "Bash(dd if=/dev/zero of=*)"
     ],
-    "additionalDirectories": [],
     "defaultMode": "acceptEdits",
-    "disableBypassPermissionsMode": "disable"
+    "disableBypassPermissionsMode": "disable",
+    "additionalDirectories": []
   },
-  "includeCoAuthoredBy": true,
-  "forceLoginMethod": "claudeai",
   "enableAllProjectMcpServers": true,
   "enabledMcpjsonServers": [
     "sequential-thinking",
@@ -47,5 +46,7 @@
         ]
       }
     ]
-  }
+  },
+  "forceLoginMethod": "claudeai",
+  "alwaysThinkingEnabled": false
 }
