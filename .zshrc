@@ -166,6 +166,7 @@ source "$dot_dir/.goenv.zsh"
 source "$dot_dir/.just.zsh"
 source "$dot_dir/.ssh.zsh"
 source "$dot_dir/.gh.zsh"
+source "$dot_dir/.yazi.zsh"
 
 export PATH=$DOT_DIR/git:$PATH
 
