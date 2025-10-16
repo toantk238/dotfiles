@@ -10,6 +10,7 @@ if exists ranger; then
 fi
 
 # Setup
+# ya pkg add yazi-rs/plugins:git
 # ya pkg add yazi-rs/plugins:piper
 # ya pack -a sanjinso/monokai-vibrant
 # git clone https://github.com/DreamMaoMao/fg.yazi.git ~/.config/yazi/plugins/fg.yazi
