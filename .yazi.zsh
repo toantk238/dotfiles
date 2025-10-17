@@ -1,4 +1,4 @@
-if exists ranger; then
+if exists yazi; then
   function y() {
     local tmp="$(mktemp -t "yazi-cwd.XXXXXX")" cwd
     yazi "$@" --cwd-file="$tmp"
