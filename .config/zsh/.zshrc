@@ -1,0 +1,1 @@
+source "$ZDOTDIR"/.yazi.sh
