@@ -9,8 +9,3 @@ if exists ranger; then
   alias n=y
 fi
 
-# Setup
-# ya pkg add yazi-rs/plugins:git
-# ya pkg add yazi-rs/plugins:piper
-# ya pkg add yazi-rs/flavors:dracula
-# git clone https://github.com/DreamMaoMao/fg.yazi.git ~/.config/yazi/plugins/fg.yazi
