@@ -13,8 +13,12 @@ on   = [ "f","f" ]
 run  = "plugin fg -- fzf"
 desc = "find file by filename"
 
-prepend_keymap = [
-    # glow.yazi
-    { on = ["<C-e>"], run = "seek 5" },
-    { on = ["<C-y>"], run = "seek -5" },
-]
+[[mgr.prepend_keymap]]
+on   = "!"
+for  = "unix"
+run  = 'shell "$SHELL" --block'
+desc = "Open $SHELL here"
+
+[[mgr.prepend_keymap]]
+on = [ "g", "r" ]
+run = 'shell -- ya emit cd "$(git rev-parse --show-toplevel)"'

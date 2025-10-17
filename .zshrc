@@ -4,9 +4,14 @@
 
 # (( ${+commands[direnv]} )) && emulate zsh -c "$(direnv export zsh)"
 
-# if [[ -r "${XDG_CACHE_HOME:-$HOME/.cache}/p10k-instant-prompt-${(%):-%n}.zsh" ]]; then
-#   source "${XDG_CACHE_HOME:-$HOME/.cache}/p10k-instant-prompt-${(%):-%n}.zsh"
-# fi
+if [[ -r "${XDG_CACHE_HOME:-$HOME/.cache}/p10k-instant-prompt-${(%):-%n}.zsh" ]]; then
+  source "${XDG_CACHE_HOME:-$HOME/.cache}/p10k-instant-prompt-${(%):-%n}.zsh"
+fi
+
+this_path="$HOME/.zshrc"
+real_path=$(realpath "$this_path")
+dot_dir=$(dirname "$real_path")
+export DOT_DIR="$dot_dir"
 
 (( ${+commands[direnv]} )) && emulate zsh -c "$(direnv hook zsh)"
 
@@ -22,13 +27,11 @@ export ZSH="/$HOME/.oh-my-zsh"
 # load a random theme each time oh-my-zsh is loaded, in which case,
 # to know which specific one was loaded, run: echo $RANDOM_THEME
 # See https://github.com/ohmyzsh/ohmyzsh/wiki/Themes
-# ZSH_THEME="powerlevel10k/powerlevel10k"
-ZSH_THEME="robbyrussell"
+ZSH_THEME="powerlevel10k/powerlevel10k"
+# ZSH_THEME="robbyrussell"
 
-export _ZO_DATA_DIR="$HOME/.local/share/zoxide"
-export _ZO_ECHO=1
-export _ZO_FZF_OPTS="--height=40% --layout=reverse --border --cycle"
-export ZOXIDE_CMD_OVERRIDE="j"
+source "$dot_dir/.environment.zsh"
+source "$dot_dir/.zoxide.zsh"
 
 if [ -f "/$HOME/.env.zsh" ]; 
 then
@@ -142,13 +145,9 @@ source $ZSH/oh-my-zsh.sh
 # if [ -f "/$HOME/google-cloud-sdk/completion.zsh.inc" ]; then . "/$HOME/google-cloud-sdk/completion.zsh.inc"; fi
 
 # source <(kubectl completion zsh)
-this_path="$HOME/.zshrc"
-real_path=$(realpath "$this_path")
-dot_dir=$(dirname "$real_path")
-export DOT_DIR="$dot_dir"
 
 source "$dot_dir/.functions.zsh"
-# source "$dot_dir/.p10k.zsh"
+source "$dot_dir/.p10k.zsh"
 source "$dot_dir/.nnn.zsh"
 source "$dot_dir/.pet.sh"
 source "$dot_dir/.scrcpy.zsh"
