@@ -155,7 +155,6 @@ source "$dot_dir/.fzf.zsh"
 source "$dot_dir/.git.zsh"
 source "$dot_dir/.forgit.zsh"
 source "$dot_dir/.lspconfig.zsh"
-source "$dot_dir/.nvm.zsh"
 source "$dot_dir/.nvim.zsh"
 source "$dot_dir/.tmux.zsh"
 source "$dot_dir/.android.zsh"
@@ -192,6 +191,7 @@ export PATH=$JAVA_HOME/bin:$PATH
 autoload -U compinit && compinit
 
 source "$dot_dir/.pyenv.zsh"
+source "$dot_dir/.nvm.zsh"
 source "$dot_dir/.kompose.zsh"
 source "$dot_dir/.kubectl.zsh"
 
