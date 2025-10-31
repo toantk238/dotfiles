@@ -155,7 +155,6 @@ source "$dot_dir/.fzf.zsh"
 source "$dot_dir/.git.zsh"
 source "$dot_dir/.forgit.zsh"
 source "$dot_dir/.lspconfig.zsh"
-source "$dot_dir/.nvm.zsh"
 source "$dot_dir/.nvim.zsh"
 source "$dot_dir/.tmux.zsh"
 source "$dot_dir/.android.zsh"
@@ -167,6 +166,7 @@ source "$dot_dir/.just.zsh"
 source "$dot_dir/.ssh.zsh"
 source "$dot_dir/.gh.zsh"
 source "$dot_dir/.yazi.zsh"
+source "$dot_dir/.rvm.zsh"
 
 export PATH=$DOT_DIR/git:$PATH
 
@@ -181,21 +181,19 @@ if [ -f $HOME/bin ]; then
   export PATH=$HOME/bin:$PATH
 fi
 
-export PATH=$JAVA_HOME/bin:$PATH
+if [ -n "$JAVA_HOME" ]; then
+  export PATH=$JAVA_HOME/bin:$PATH
+fi
 
 [ -f $HOME/.config/broot/launcher/bash/br ] && source $HOME/.config/broot/launcher/bash/br
-
-# # Add RVM to PATH for scripting. Make sure this is the last PATH variable change.
-[ -f $HOME/.rvm/bin ] && export PATH=$HOME/.rvm/bin:$PATH
-
 [ -f $HOME/.cargo/env ] && source $HOME/.cargo/env
 
-autoload -U compinit && compinit
-
 source "$dot_dir/.pyenv.zsh"
+source "$dot_dir/.nvm.zsh"
 source "$dot_dir/.kompose.zsh"
 source "$dot_dir/.kubectl.zsh"
 
+autoload -U compinit && compinit
 compdef -d ssh
 
 [ -f ~/.fzf.zsh ] && source ~/.fzf.zsh
