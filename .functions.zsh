@@ -254,6 +254,10 @@ if exists cloudlens; then
   alias cloudlens="cloudlens aws"
 fi
 
+if exists lazydocker; then
+  alias lzd="lazydocker"
+fi
+
 alias gdiff="yes | git difftool --tool=intelliJ HEAD"
 alias ssys="sudo systemctl"
 # alias n="nnn"

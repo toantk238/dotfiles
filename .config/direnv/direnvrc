@@ -7,3 +7,10 @@ use_nvm() {
     nvm use $node_version
   fi
 }
+
+# Auto-activate .venv if it exists
+layout_uv() {
+    if [[ -d .venv ]]; then
+        source_env .venv/bin/activate
+    fi
+}

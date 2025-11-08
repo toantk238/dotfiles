@@ -1,7 +1,7 @@
 #!/bin/zsh
 #
 #export FZF_DEFAULT_COMMAND="rg --no-ignore --hidden --files -g '!.git/' "
-export FZF_DEFAULT_COMMAND="fd --type f -HI --exclude .git --exclude .gradle --exclude .transforms --exclude .idea --exclude node_modules --exclude Localizable.strings --exclude Generated"
+export FZF_DEFAULT_COMMAND="fd --type f -HI --exclude .git --exclude .gradle --exclude .transforms --exclude .idea --exclude node_modules --exclude __pycache__ --exclude .mypy_cache --exclude Localizable.strings --exclude Generated"
 
 export FZF_DEFAULT_OPTS='--height 70% --layout=reverse --border'
 
@@ -13,8 +13,8 @@ export RG_FZF_OPTS=$(cat <<END
 -g '!Pods/' \\
 -g '!Text.swift' \\
 -g '!*.pbxproj' \\
--g '!DerivedData/'
--g '!Localizable.strings'
+-g '!DerivedData/' \\
+-g '!Localizable.strings' \\
 -g '!Generated/'
 END
 )
@@ -22,7 +22,8 @@ END
 function rg_fzf() {
   rg_cmd=$(cat <<END
 rg --color=always --line-number \\
---no-heading "${*:-}" $RG_FZF_OPTS
+--no-heading "${*:-}" \\
+$RG_FZF_OPTS
 END
   )
   fzf_cmd=$(cat <<END
