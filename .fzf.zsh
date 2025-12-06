@@ -13,8 +13,8 @@ export RG_FZF_OPTS=$(cat <<END
 -g '!Pods/' \\
 -g '!Text.swift' \\
 -g '!*.pbxproj' \\
--g '!DerivedData/'
--g '!Localizable.strings'
+-g '!DerivedData/' \\
+-g '!Localizable.strings' \\
 -g '!Generated/'
 END
 )
@@ -22,7 +22,8 @@ END
 function rg_fzf() {
   rg_cmd=$(cat <<END
 rg --color=always --line-number \\
---no-heading "${*:-}" $RG_FZF_OPTS
+--no-heading "${*:-}" \\
+$RG_FZF_OPTS
 END
   )
   fzf_cmd=$(cat <<END

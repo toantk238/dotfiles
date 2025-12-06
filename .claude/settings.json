@@ -29,6 +29,7 @@
     "disableBypassPermissionsMode": "disable",
     "additionalDirectories": []
   },
+  "model": "opusplan",
   "enableAllProjectMcpServers": true,
   "enabledMcpjsonServers": [
     "sequential-thinking",
