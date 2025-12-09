@@ -4,6 +4,8 @@
 ya pkg add yazi-rs/plugins:git
 ya pkg add yazi-rs/plugins:piper
 ya pkg add yazi-rs/flavors:dracula
+ya pkg add yazi-rs/plugins:types
+
 git clone https://github.com/DreamMaoMao/fg.yazi.git ~/.config/yazi/plugins/fg.yazi
 
 
