@@ -13,10 +13,6 @@ fi
 
 alias gdiffs="git diff --submodule=diff"
 
-current_branch() {
-  git rev-parse --abbrev-ref HEAD
-}
-
 gfj() {
   git fetch --recurse-submodules=yes --jobs=16
 }
