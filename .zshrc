@@ -168,6 +168,7 @@ source "$dot_dir/.ssh.zsh"
 source "$dot_dir/.gh.zsh"
 source "$dot_dir/.yazi.zsh"
 source "$dot_dir/.rvm.zsh"
+source "$dot_dir/.sesh.zsh"
 
 export PATH=$DOT_DIR/git:$PATH
 
