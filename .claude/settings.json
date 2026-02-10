@@ -18,7 +18,8 @@
       "Task",
       "Exit_plan_mode",
       "Bash",
-      "mcp__*"
+      "mcp__*",
+      "Skill(superpowers*)"
     ],
     "deny": [
       "Bash(rm -rf /)",
@@ -29,7 +30,6 @@
     "disableBypassPermissionsMode": "disable",
     "additionalDirectories": []
   },
-  "model": "opusplan",
   "enableAllProjectMcpServers": true,
   "enabledMcpjsonServers": [
     "sequential-thinking",
@@ -48,6 +48,10 @@
       }
     ]
   },
-  "forceLoginMethod": "claudeai",
-  "alwaysThinkingEnabled": false
+  "enabledPlugins": {
+    "superpowers@claude-plugins-official": true,
+    "clangd-lsp@claude-plugins-official": true,
+    "pyright-lsp@claude-plugins-official": true
+  },
+  "forceLoginMethod": "claudeai"
 }

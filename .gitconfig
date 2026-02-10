@@ -70,3 +70,6 @@ ds = diff --submodule=diff
 
 [safe]
 	directory = *
+
+[pull]
+	rebase = true
