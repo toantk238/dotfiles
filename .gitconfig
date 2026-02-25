@@ -1,44 +1,43 @@
 [user]
 	name = rock-tran
-  email = rock.tran@manadr.com
+	email = rock.tran@manadr.com
 
 [core]
-  editor = nvim
+	editor = nvim
 	autocrlf = input
-  ; pager = delta
-  ; pager = delta --side-by-side -w ${FZF_PREVIEW_COLUMNS:-$COLUMNS}
-  ; pager = delta --dark
+	pager = delta
+
 [delta]
-  line-numbers = true
-  zero-style = dim syntax
-  syntax-theme = Monokai Extended
-  plus-style = bold syntax "#002800"
-  navigate = true
+	line-numbers = true
+	zero-style = dim syntax
+	syntax-theme = Monokai Extended
+	plus-style = bold syntax "#002800"
+	navigate = true
 
 [interactive]
-  diffFilter = delta --color-only
+	diffFilter = delta --color-only
 
 [merge]
 	tool = intelliJ
 
 [diff]
 	tool = intelliJ
-  colorMoved = default
-  prompt = false
+	colorMoved = default
+	prompt = false
 
 [difftool]
-  prompt = false
+	prompt = false
 
 [mergetool]
-  tool = intelliJ
-  keepBackup = false
+	tool = intelliJ
+	keepBackup = false
 
 [difftool "intelliJ"]
-  cmd = "~/ProgramFiles/idea-IC/bin/idea" diff $(cd $(dirname \"$LOCAL\") && pwd)/$(basename \"$LOCAL\") $(cd $(dirname \"$REMOTE\") && pwd)/$(basename \"$REMOTE\")
+	cmd = "~/ProgramFiles/idea-IC/bin/idea" diff $(cd $(dirname \"$LOCAL\") && pwd)/$(basename \"$LOCAL\") $(cd $(dirname \"$REMOTE\") && pwd)/$(basename \"$REMOTE\")
 
 [mergetool "intelliJ"]
-  cmd = "~/ProgramFiles/idea-IC/bin/idea" merge $(cd $(dirname \"$LOCAL\") && pwd)/$(basename \"$LOCAL\") $(cd $(dirname \"$REMOTE\") && pwd)/$(basename \"$REMOTE\") $(cd $(dirname \"$BASE\") && pwd)/$(basename \"$BASE\") $(cd $(dirname \"$MERGED\") && pwd)/$(basename \"$MERGED\")
-  trustedExitCode= true
+	cmd = "~/ProgramFiles/idea-IC/bin/idea" merge $(cd $(dirname \"$LOCAL\") && pwd)/$(basename \"$LOCAL\") $(cd $(dirname \"$REMOTE\") && pwd)/$(basename \"$REMOTE\") $(cd $(dirname \"$BASE\") && pwd)/$(basename \"$BASE\") $(cd $(dirname \"$MERGED\") && pwd)/$(basename \"$MERGED\")
+	trustedExitCode = true
 
 [difftool "meld"]
 	path = /usr/bin/meld
@@ -47,17 +46,17 @@
 	path = /usr/bin/meld
 
 [difftool "nvimdiff"]
-    cmd = "nvim  -d \"$LOCAL\" \"$REMOTE\""
+	cmd = "nvim -d \"$LOCAL\" \"$REMOTE\""
 
 [mergetool "nvimdiff"]
-    cmd = "nvim  -d \"$LOCAL\" \"$REMOTE\" \"$MERGED\" -c 'wincmd w' -c 'wincmd J'"
+	cmd = "nvim -d \"$LOCAL\" \"$REMOTE\" \"$MERGED\" -c 'wincmd w' -c 'wincmd J'"
 
 [alias]
-lg1 = log --graph --abbrev-commit --decorate --format=format:'%C(bold blue)%h%C(reset) - %C(bold green)(%ar)%C(reset) %C(white)%s%C(reset) %C(dim white)- %an%C(reset)%C(bold yellow)%d%C(reset)' --all
-lg2 = log --graph --abbrev-commit --decorate --format=format:'%C(bold blue)%h%C(reset) - %C(bold cyan)%aD%C(reset) %C(bold green)(%ar)%C(reset)%C(bold yellow)%d%C(reset)%n''          %C(white)%s%C(reset) %C(dim white)- %an%C(reset)' --all
-lg = !"git lg1"
-dt = difftool --dir-diff
-ds = diff --submodule=diff
+	lg1 = log --graph --abbrev-commit --decorate --format=format:'%C(bold blue)%h%C(reset) - %C(bold green)(%ar)%C(reset) %C(white)%s%C(reset) %C(dim white)- %an%C(reset)%C(bold yellow)%d%C(reset)' --all
+	lg2 = log --graph --abbrev-commit --decorate --format=format:'%C(bold blue)%h%C(reset) - %C(bold cyan)%aD%C(reset) %C(bold green)(%ar)%C(reset)%C(bold yellow)%d%C(reset)%n''          %C(white)%s%C(reset) %C(dim white)- %an%C(reset)' --all
+	lg = !"git lg1"
+	dt = difftool --dir-diff
+	ds = diff --submodule=diff
 
 [filter "lfs"]
 	clean = git-lfs clean -- %f

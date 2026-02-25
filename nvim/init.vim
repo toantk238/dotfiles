@@ -96,7 +96,7 @@ nnoremap <C-l> :bn<CR>
 " go to previous buffer
 nnoremap <silent> <leader>bp :bp<CR>
 " https://github.com/neovim/neovim/issues/2048
-nnoremap <C-h> :bp<CR>i
+nnoremap <C-h> :bp<CR>
 
 " close buffer
 nnoremap <silent> <leader>bd :bd<CR>
@@ -115,9 +115,8 @@ nnoremap <silent> <leader>bh :new<CR>
 " vertical split with new buffer
 nnoremap <silent> <leader>bv :vnew<CR>
 
-" redraw screen and clear search highlighted items
-"http://stackoverflow.com/questions/657447/vim-clear-last-search-highlighting#answer-25569434
-nnoremap <silent> <C-L> :nohlsearch<CR><C-L>
+" clear search highlighted items
+nnoremap <silent> <leader>h :nohlsearch<CR>
 
 nnoremap <silent> <leader>nf :NERDTreeFind<CR>
 
