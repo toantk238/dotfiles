@@ -51,7 +51,9 @@
   "enabledPlugins": {
     "superpowers@claude-plugins-official": true,
     "clangd-lsp@claude-plugins-official": true,
-    "pyright-lsp@claude-plugins-official": true
+    "pyright-lsp@claude-plugins-official": true,
+    "figma@claude-plugins-official": true,
+    "document-skills@anthropic-agent-skills": true
   },
   "forceLoginMethod": "claudeai"
 }
