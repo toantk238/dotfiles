@@ -2,6 +2,11 @@
 # Initialization code that may require console input (password prompts, [y/n]
 # confirmations, etc.) must go above this block; everything else may go below.
 
+if [ -f "/$HOME/.env.zsh" ];
+then
+  source "/$HOME/.env.zsh"
+fi
+
 autoload -U compinit && compinit
 
 this_path="$HOME/.zshrc"
@@ -34,12 +39,6 @@ fi
 
 source "$dot_dir/.environment.zsh"
 source "$dot_dir/.zoxide.zsh"
-
-if [ -f "/$HOME/.env.zsh" ]; 
-then
-  source "/$HOME/.env.zsh"
-fi
-
 
 # Set list of themes to pick from when loading at random
 # Setting this variable when ZSH_THEME=random will cause zsh to load
