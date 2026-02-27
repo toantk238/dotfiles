@@ -14,7 +14,7 @@ real_path=$(realpath "$this_path")
 dot_dir=$(dirname "$real_path")
 export DOT_DIR="$dot_dir"
 
-source "$dot_dir/.functions.zsh"
+source "$dot_dir/.functions.sh"
 ssh_tmux
 THIS_USER=$(whoami)
 
@@ -37,8 +37,8 @@ fi
 
 (( ${+commands[direnv]} )) && emulate zsh -c "$(direnv hook zsh)"
 
-source "$dot_dir/.environment.zsh"
-source "$dot_dir/.zoxide.zsh"
+source "$dot_dir/.environment.sh"
+source "$dot_dir/.zoxide.sh"
 
 # Set list of themes to pick from when loading at random
 # Setting this variable when ZSH_THEME=random will cause zsh to load
@@ -147,26 +147,26 @@ source $ZSH/oh-my-zsh.sh
 
 # source <(kubectl completion zsh)
 
-source "$dot_dir/.p10k.zsh"
-source "$dot_dir/.nnn.zsh"
+source "$dot_dir/.p10k.sh"
+source "$dot_dir/.nnn.sh"
 source "$dot_dir/.pet.sh"
-source "$dot_dir/.scrcpy.zsh"
-source "$dot_dir/.fzf.zsh"
-source "$dot_dir/.git.zsh"
-source "$dot_dir/.forgit.zsh"
-source "$dot_dir/.lspconfig.zsh"
-source "$dot_dir/.nvim.zsh"
-source "$dot_dir/.tmux.zsh"
-source "$dot_dir/.android.zsh"
-source "$dot_dir/.luaenv.zsh"
-source "$dot_dir/.ranger.zsh"
-source "$dot_dir/.goenv.zsh"
-source "$dot_dir/.just.zsh"
-source "$dot_dir/.ssh.zsh"
-source "$dot_dir/.gh.zsh"
-source "$dot_dir/.yazi.zsh"
-source "$dot_dir/.rvm.zsh"
-source "$dot_dir/.sesh.zsh"
+source "$dot_dir/.scrcpy.sh"
+source "$dot_dir/.fzf.sh"
+source "$dot_dir/.git.sh"
+source "$dot_dir/.forgit.sh"
+source "$dot_dir/.lspconfig.sh"
+source "$dot_dir/.nvim.sh"
+source "$dot_dir/.tmux.sh"
+source "$dot_dir/.android.sh"
+source "$dot_dir/.luaenv.sh"
+source "$dot_dir/.ranger.sh"
+source "$dot_dir/.goenv.sh"
+source "$dot_dir/.just.sh"
+source "$dot_dir/.ssh.sh"
+source "$dot_dir/.gh.sh"
+source "$dot_dir/.yazi.sh"
+source "$dot_dir/.rvm.sh"
+source "$dot_dir/.sesh.sh"
 
 export PATH=$DOT_DIR/git:$PATH
 
@@ -188,9 +188,9 @@ fi
 [ -f $HOME/.config/broot/launcher/bash/br ] && source $HOME/.config/broot/launcher/bash/br
 [ -f $HOME/.cargo/env ] && source $HOME/.cargo/env
 
-source "$dot_dir/.pyenv.zsh"
-source "$dot_dir/.nvm.zsh"
-source "$dot_dir/.kompose.zsh"
-source "$dot_dir/.kubectl.zsh"
+source "$dot_dir/.pyenv.sh"
+source "$dot_dir/.nvm.sh"
+source "$dot_dir/.kompose.sh"
+source "$dot_dir/.kubectl.sh"
 
 compdef -d ssh
