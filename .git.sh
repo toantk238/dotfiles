@@ -12,6 +12,7 @@ if exists lazygit; then
 fi
 
 alias gdiffs="git diff --submodule=diff"
+alias gclean="git clean -dff && git submodule foreach git clean -dff"
 
 gfj() {
   git fetch --recurse-submodules=yes --jobs=16

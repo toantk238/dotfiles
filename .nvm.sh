@@ -36,3 +36,8 @@ nvm() { _nvm_lazy_load; nvm "$@"; }
 node() { _nvm_lazy_load; node "$@"; }
 npm() { _nvm_lazy_load; npm "$@"; }
 npx() { _nvm_lazy_load; npx "$@"; }
+
+[ -s "$HOME/.bun/_bun" ] && source "$HOME/.bun/_bun"
+
+# bun
+export BUN_INSTALL="$HOME/.bun"
