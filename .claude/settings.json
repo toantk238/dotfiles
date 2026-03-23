@@ -17,7 +17,6 @@
       "NotebookEdit",
       "Task",
       "Exit_plan_mode",
-      "Bash",
       "mcp__*",
       "Skill(superpowers*)"
     ],
@@ -43,6 +42,28 @@
           {
             "type": "command",
             "command": "source ~/.env.zsh; ~/.claude/notify_slack.sh"
+          }
+        ]
+      }
+    ],
+    "PreToolUse": [
+      {
+        "matcher": "Bash",
+        "hooks": [
+          {
+            "type": "command",
+            "command": "zsh -c \"source ~/.env.zsh; ~/.claude/hooks/.venv/bin/python ~/.claude/hooks/pre_tool_reviewer.py\""
+          }
+        ]
+      }
+    ],
+    "PostToolUse": [
+      {
+        "matcher": "AskFollowupQuestion",
+        "hooks": [
+          {
+            "type": "command",
+            "command": "zsh -c \"source ~/.env.zsh; ~/.claude/hooks/.venv/bin/python ~/.claude/hooks/choice_reviewer.py\""
           }
         ]
       }
