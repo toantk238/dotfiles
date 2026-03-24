@@ -12,13 +12,13 @@
       "TodoRead",
       "TodoWrite",
       "WebFetch",
-      "WebSearch",
       "NotebookRead",
       "NotebookEdit",
       "Task",
       "Exit_plan_mode",
       "mcp__*",
-      "Skill(superpowers*)"
+      "Skill(superpowers*)",
+      "Bash"
     ],
     "deny": [
       "Bash(rm -rf /)",
