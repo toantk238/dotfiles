@@ -162,6 +162,12 @@ def test_reviewer_decide_subprocess_exception():
     assert result == "HUMAN_NEEDED"
 
 
+def test_reviewer_decide_nonzero_exit_returns_human_needed():
+    with patch("stop_router.subprocess.run", return_value=_make_proc("", returncode=1)):
+        result = stop_router._reviewer_decide("some text")
+    assert result == "HUMAN_NEEDED"
+
+
 def test_proceed_handler_injects_and_exits_2(capsys):
     with patch("stop_router.subprocess.run", return_value=_make_proc("Proceed")):
         with pytest.raises(SystemExit) as exc:
