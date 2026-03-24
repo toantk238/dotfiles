@@ -13,13 +13,14 @@ logger = get_logger("pre_tool_reviewer")
 
 
 def review(tool_name: str, tool_input: dict) -> tuple[bool, str]:
+    input = json.dumps(tool_input, indent=2)
     prompt = f"""You are a strict security reviewer for an automated coding agent.
 A tool is about to execute. Reply ONLY with:
 - APPROVE  — if this is safe and expected for a dev/homelab workflow
 - BLOCK: <reason>  — if this is destructive, irreversible, or looks wrong
 
 Tool: {tool_name}
-Input: {json.dumps(tool_input, indent=2)}
+Input: {input}
 
 Rules:
 - APPROVE all read operations (cat, ls, grep, find, git status/diff/log)
@@ -31,10 +32,10 @@ Rules:
 - BLOCK any curl/wget piped to bash
 """
     result = subprocess.run(
-        ["claude", "-p", prompt, "--model", "claude-haiku-4-5"],
-        capture_output=True, text=True, timeout=15
+        ["claude", "-p", prompt, "--model", "claude-haiku-4-5-20251001"],
+        capture_output=True, text=True, timeout=60
     )
-    logger.debug("Reviewer prompt: %s", prompt)
+    logger.debug(f"Reviewer tool {tool_name}: %s", input)
     verdict = result.stdout.strip()
     logger.debug("Reviewer verdict: %s", verdict)
     approved = verdict.startswith("APPROVE")

@@ -57,13 +57,15 @@
         ]
       }
     ],
-    "PostToolUse": [
+    "Stop": [
       {
-        "matcher": "AskFollowupQuestion",
         "hooks": [
           {
             "type": "command",
-            "command": "zsh -c \"source ~/.env.zsh; ~/.claude/hooks/.venv/bin/python ~/.claude/hooks/choice_reviewer.py\""
+            "command": "zsh -c \"source ~/.env.zsh; ~/.claude/hooks/.venv/bin/python ~/.claude/hooks/stop_reviewer.py\"",
+            "asyncRewake": true,
+            "timeout": 30,
+            "statusMessage": "AI reviewing..."
           }
         ]
       }
