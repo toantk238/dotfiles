@@ -261,3 +261,10 @@ def test_question_handler_subprocess_exception_exits_0():
         with pytest.raises(SystemExit) as exc:
             stop_router.question_handler("Which option?", "Build a REST API")
     assert exc.value.code == 0
+
+
+def test_question_handler_nonzero_exit_exits_0():
+    with patch("stop_router.subprocess.run", return_value=_make_proc("", returncode=1)):
+        with pytest.raises(SystemExit) as exc:
+            stop_router.question_handler("Which option?", "Build a REST API")
+    assert exc.value.code == 0
