@@ -15,18 +15,15 @@ The current `classify_stop` relies on hard-coded keyword lists (`PROCEED_SIGNALS
 
 ### `stop_router.py`
 
-**Delete:**
-- `PROCEED_SIGNALS` list
-- `QUESTION_SIGNALS` list
-- `classify_stop(text: str) -> str`
+**Delete** `PROCEED_SIGNALS` and `QUESTION_SIGNALS`; `DANGER_SIGNALS` is kept because `has_danger_signal` still depends on it.
 
-**Add:**
-- `classify_stop_ai(text: str) -> str`
-  - Calls `claude -p <prompt> --model claude-haiku-4-5-20251001` via `subprocess.run`
-  - Timeout: 20s (matches existing Haiku calls)
-  - Prompt instructs Haiku to reply with exactly one word: `PROCEED`, `QUESTION`, or `OTHER`
-  - Strips and upper-cases the response
-  - Returns `"OTHER"` on: non-zero exit, subprocess exception, timeout, or unrecognised response
+**Delete** `classify_stop(text: str) -> str`.
+
+**Add** `classify_stop_ai(text: str) -> str`:
+- Calls `claude -p <prompt> --model claude-haiku-4-5-20251001` via `subprocess.run`, timeout=20s (matches existing Haiku calls)
+- Strips and upper-cases the response; if not one of `PROCEED`, `QUESTION`, `OTHER` → returns `"OTHER"`
+- A single `except Exception` handler is sufficient for all failure modes including `subprocess.TimeoutExpired` (which is a subclass of `Exception`) — on any exception, returns `"OTHER"`
+- Non-zero `returncode` → returns `"OTHER"`
 
 **Unchanged:**
 - `DANGER_SIGNALS` and `has_danger_signal` — cheap keyword check, runs before classification
@@ -45,7 +42,7 @@ Read the assistant's last message below and classify it as one of:
 Reply with exactly one word: PROCEED, QUESTION, or OTHER.
 
 Message:
-{text[:3000]}
+{last_text truncated to 3000 characters}  ← f-string: text[:3000]
 ```
 
 ## Testing
@@ -56,24 +53,46 @@ Message:
 - `test_classify_question_ends_with_question_mark`
 - `test_classify_question_signal`
 - `test_classify_other`
-- `test_classify_danger_check_not_in_classify`
+
+### Carried-forward test (renamed)
+`test_classify_danger_check_not_in_classify` → `test_classify_stop_ai_danger_check_not_in_classify`
+
+This test encodes an architectural invariant — that `classify_stop_ai` does not check danger signals; the caller (`main()`) is responsible for that. The invariant still holds; only the function name changes.
 
 ### New tests for `classify_stop_ai`
+
+All subprocess mocks use the existing `_make_proc(stdout, returncode)` helper.
+Exception tests use `side_effect=Exception("boom")` (or `side_effect=subprocess.TimeoutExpired(cmd=[], timeout=20)` for the timeout case).
+
 | Test | Mock | Expected |
 |---|---|---|
-| `test_classify_stop_ai_returns_proceed` | stdout=`"PROCEED"`, rc=0 | `"PROCEED"` |
-| `test_classify_stop_ai_returns_question` | stdout=`"QUESTION"`, rc=0 | `"QUESTION"` |
-| `test_classify_stop_ai_returns_other` | stdout=`"OTHER"`, rc=0 | `"OTHER"` |
-| `test_classify_stop_ai_unknown_response_returns_other` | stdout=`"BANANA"`, rc=0 | `"OTHER"` |
-| `test_classify_stop_ai_subprocess_exception_returns_other` | raises `Exception` | `"OTHER"` |
-| `test_classify_stop_ai_nonzero_exit_returns_other` | rc=1 | `"OTHER"` |
+| `test_classify_stop_ai_returns_proceed` | `_make_proc("PROCEED")`, rc=0 | `"PROCEED"` |
+| `test_classify_stop_ai_returns_question` | `_make_proc("QUESTION")`, rc=0 | `"QUESTION"` |
+| `test_classify_stop_ai_returns_other` | `_make_proc("OTHER")`, rc=0 | `"OTHER"` |
+| `test_classify_stop_ai_unknown_response_returns_other` | `_make_proc("BANANA")`, rc=0 | `"OTHER"` |
+| `test_classify_stop_ai_subprocess_exception_returns_other` | `side_effect=Exception("boom")` | `"OTHER"` |
+| `test_classify_stop_ai_timeout_returns_other` | `side_effect=subprocess.TimeoutExpired(cmd=[], timeout=20)` | `"OTHER"` |
+| `test_classify_stop_ai_nonzero_exit_returns_other` | `_make_proc("", returncode=1)` | `"OTHER"` |
+| `test_classify_stop_ai_danger_check_not_in_classify` | `_make_proc("PROCEED")`, rc=0 | `"PROCEED"` (dangerous text still classifies as PROCEED — caller checks danger separately) |
 
-### Unchanged integration tests
-`test_main_*` tests in `test_stop_router.py` mock `subprocess.run` and drive routing via transcript content — they continue to work without modification.
+### Updated integration tests
+
+`test_main_proceed_calls_proceed_handler` and `test_main_question_with_context_calls_question_handler` **must be updated**. After this change, `main()` calls `classify_stop_ai` (which uses `subprocess.run`) before the handler, meaning a single `subprocess.run` mock is consumed by the classifier before the handler call.
+
+Fix: patch `classify_stop_ai` directly in these tests:
+```python
+with patch("stop_router.classify_stop_ai", return_value="PROCEED"):
+    with patch("stop_router.subprocess.run", return_value=_make_proc("Proceed")):
+        ...
+```
+
+`test_main_other_classification_exits_0` also needs updating for the same reason — patch `classify_stop_ai` to return `"OTHER"` directly rather than relying on transcript text to drive keyword matching.
+
+`test_main_danger_signal_exits_0` and `test_main_stop_hook_active_exits_0` are unaffected (they exit before classification).
 
 ## Error handling
 
-All failure modes for `classify_stop_ai` return `"OTHER"`, which causes `main()` to `sys.exit(0)` — passing control to the human. This is the safe default.
+All failure modes for `classify_stop_ai` return `"OTHER"`, causing `main()` to `sys.exit(0)` — passing control to the human. This is the safe default.
 
 ## Out of scope
 
