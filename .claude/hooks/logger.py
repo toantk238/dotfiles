@@ -11,7 +11,7 @@ def get_logger(name: str) -> logging.Logger:
         return logger  # already configured
 
     logger.setLevel(logging.DEBUG)
-    fmt = logging.Formatter("%(asctime)s [%(name)s] %(levelname)s %(message)s")
+    fmt = logging.Formatter("%(asctime)s [%(name)s] [%(filename)s:%(lineno)d] %(levelname)s %(message)s")
 
     file_handler = logging.FileHandler(LOG_FILE, encoding="utf-8")
     file_handler.setFormatter(fmt)
