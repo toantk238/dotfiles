@@ -63,6 +63,21 @@ QUESTION_SIGNALS = [
 ]
 
 
+def has_danger_signal(text: str) -> bool:
+    t = text.lower()
+    return any(sig in t for sig in DANGER_SIGNALS)
+
+
+def classify_stop(text: str) -> str:
+    """Return 'PROCEED', 'QUESTION', or 'OTHER'. Does not check danger signals."""
+    t = text.lower()
+    if any(sig in t for sig in PROCEED_SIGNALS):
+        return "PROCEED"
+    if text.rstrip().endswith("?") or any(sig in t for sig in QUESTION_SIGNALS):
+        return "QUESTION"
+    return "OTHER"
+
+
 def _extract_text(content) -> str:
     """Extract text from a content field that may be a list of blocks or a plain string."""
     if isinstance(content, str):

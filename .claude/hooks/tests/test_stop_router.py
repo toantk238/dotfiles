@@ -92,3 +92,40 @@ def test_get_original_user_request_string_content(tmp_path):
 def test_get_original_user_request_no_transcript(tmp_path):
     stop_router._TRANSCRIPT_GLOB_TEMPLATE = str(tmp_path / "*.jsonl")
     assert stop_router.get_original_user_request("missing") is None
+
+
+# ── classify_stop ────────────────────────────────────────────────────────────
+
+def test_classify_proceed_signal():
+    assert stop_router.classify_stop("ready to proceed with the plan?") == "PROCEED"
+
+
+def test_classify_proceed_priority_over_question():
+    # Message matches both PROCEED and QUESTION — PROCEED wins
+    assert stop_router.classify_stop("shall i proceed? would you like me to?") == "PROCEED"
+
+
+def test_classify_question_ends_with_question_mark():
+    assert stop_router.classify_stop("What is the primary goal of this feature?") == "QUESTION"
+
+
+def test_classify_question_signal():
+    assert stop_router.classify_stop("Which approach would work best for your use case") == "QUESTION"
+
+
+def test_classify_other():
+    assert stop_router.classify_stop("Here is a summary of what I just did.") == "OTHER"
+
+
+def test_classify_danger_check_not_in_classify():
+    # classify_stop itself does NOT check danger — caller does that before invoking
+    # A dangerous "proceed" still classifies as PROCEED
+    assert stop_router.classify_stop("delete all files. ready to proceed?") == "PROCEED"
+
+
+def test_has_danger_signal_true():
+    assert stop_router.has_danger_signal("This action is irreversible") is True
+
+
+def test_has_danger_signal_false():
+    assert stop_router.has_danger_signal("Here is the plan ready to proceed") is False
