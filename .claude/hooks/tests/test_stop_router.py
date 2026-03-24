@@ -268,3 +268,57 @@ def test_question_handler_nonzero_exit_exits_0():
         with pytest.raises(SystemExit) as exc:
             stop_router.question_handler("Which option?", "Build a REST API")
     assert exc.value.code == 0
+
+
+# ── main() integration ───────────────────────────────────────────────────────
+
+def _run_main(tmp_path, hook_input: dict, transcript_lines: list[dict]):
+    """Helper: write transcript, patch glob, run main() with hook_input on stdin."""
+    sid = _write_transcript(tmp_path, transcript_lines)
+    hook_input["session_id"] = hook_input.get("session_id", sid)
+    with patch("sys.stdin", io.StringIO(json.dumps(hook_input))):
+        stop_router.main()
+
+
+def test_main_stop_hook_active_exits_0(tmp_path):
+    with pytest.raises(SystemExit) as exc:
+        _run_main(tmp_path, {"stop_hook_active": True}, [_msg("assistant", "ready to proceed?")])
+    assert exc.value.code == 0
+
+
+def test_main_danger_signal_exits_0(tmp_path):
+    with pytest.raises(SystemExit) as exc:
+        _run_main(tmp_path, {}, [_msg("assistant", "This will permanently delete all records. Shall we proceed?")])
+    assert exc.value.code == 0
+
+
+def test_main_other_classification_exits_0(tmp_path):
+    with pytest.raises(SystemExit) as exc:
+        _run_main(tmp_path, {}, [_msg("assistant", "Here is a summary of what I did.")])
+    assert exc.value.code == 0
+
+
+def test_main_proceed_calls_proceed_handler(tmp_path, capsys):
+    with patch("stop_router.subprocess.run", return_value=_make_proc("Proceed")):
+        with pytest.raises(SystemExit) as exc:
+            _run_main(tmp_path, {}, [_msg("assistant", "ready to proceed with the plan?")])
+    assert exc.value.code == 2
+
+
+def test_main_question_with_context_calls_question_handler(tmp_path, capsys):
+    ai_output = "CONFIDENCE: 90\nANSWER: Go with option B."
+    transcript = [
+        _msg("user", "Build a CLI tool"),
+        _msg("assistant", "Which option would you prefer, A or B?"),
+    ]
+    with patch("stop_router.subprocess.run", return_value=_make_proc(ai_output)):
+        with pytest.raises(SystemExit) as exc:
+            _run_main(tmp_path, {}, transcript)
+    assert exc.value.code == 2
+
+
+def test_main_question_without_original_request_exits_0(tmp_path):
+    # Transcript has no user message → original_request is None → exit 0
+    with pytest.raises(SystemExit) as exc:
+        _run_main(tmp_path, {}, [_msg("assistant", "Which approach would you prefer?")])
+    assert exc.value.code == 0

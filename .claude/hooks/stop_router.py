@@ -269,7 +269,47 @@ Rules:
 
 
 def main():
-    pass  # implemented in later tasks
+    try:
+        hook_input = json.load(sys.stdin)
+    except Exception:
+        sys.exit(0)
+
+    # Loop prevention
+    if hook_input.get("stop_hook_active"):
+        logger.debug("stop_hook_active=True, skipping")
+        sys.exit(0)
+
+    session_id = hook_input.get("session_id", "")
+    if not session_id:
+        sys.exit(0)
+
+    last_text = get_last_assistant_text(session_id)
+    if not last_text:
+        logger.debug("No assistant text found")
+        sys.exit(0)
+
+    logger.debug("Last assistant text (first 200): %s", last_text[:200])
+
+    # Danger check — before classification
+    if has_danger_signal(last_text):
+        logger.debug("Danger signal found — passing to human")
+        sys.exit(0)
+
+    stop_type = classify_stop(last_text)
+    logger.info("stop_type=%s", stop_type)
+
+    if stop_type == "PROCEED":
+        proceed_handler(last_text)
+
+    elif stop_type == "QUESTION":
+        original_request = get_original_user_request(session_id)
+        if original_request is None:
+            logger.debug("No original request found — passing to human")
+            sys.exit(0)
+        question_handler(last_text, original_request)
+
+    else:
+        sys.exit(0)
 
 
 if __name__ == "__main__":
