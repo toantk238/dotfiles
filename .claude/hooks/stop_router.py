@@ -124,6 +124,87 @@ def proceed_handler(text: str) -> None:
     sys.exit(2)
 
 
+def _parse_confidence_answer(output: str) -> tuple[int, str] | None:
+    """
+    Parse AI output for CONFIDENCE and ANSWER lines.
+    Returns (confidence_int, answer_str) or None on any parse failure.
+    answer_str is stripped; may be empty string (caller checks for blank).
+    """
+    confidence = None
+    answer = None
+    for line in output.splitlines():
+        if line.startswith("CONFIDENCE:"):
+            val = line[len("CONFIDENCE:"):].strip()
+            try:
+                confidence = int(val)
+            except ValueError:
+                return None
+            if not (0 <= confidence <= 100):
+                return None
+        elif line.startswith("ANSWER:"):
+            answer = line[len("ANSWER:"):].strip()
+    if confidence is None:
+        return None
+    if answer is None:
+        return None
+    return confidence, answer
+
+
+def question_handler(question_text: str, original_request: str) -> None:
+    prompt = f"""You are an autonomous assistant helping a developer.
+
+Original user request:
+{original_request[:1000]}
+
+Claude is now asking:
+{question_text[:2000]}
+
+Based ONLY on the original request, can you answer this question confidently?
+
+Reply in this exact format:
+CONFIDENCE: <integer 0-100>
+ANSWER: <your answer text, or leave blank if confidence is below 80>
+
+Rules:
+- If CONFIDENCE >= 80, write a clear direct answer on the ANSWER line
+- If CONFIDENCE < 80, leave the ANSWER line blank
+- Never invent details not implied by the original request
+- Keep answers concise (1-3 sentences max)
+"""
+    try:
+        result = subprocess.run(
+            ["claude", "-p", prompt, "--model", "claude-haiku-4-5-20251001"],
+            capture_output=True, text=True, timeout=20,
+        )
+        if result.returncode != 0:
+            logger.debug("question_handler non-zero exit: %d stderr: %s", result.returncode, result.stderr)
+            sys.exit(0)
+        output = result.stdout.strip()
+    except Exception as e:
+        logger.debug("question_handler subprocess exception: %s", e)
+        sys.exit(0)
+
+    parsed = _parse_confidence_answer(output)
+    if parsed is None:
+        logger.info("question_handler: parse failed — human needed")
+        sys.exit(0)
+
+    confidence, answer = parsed
+    logger.info("question_handler: confidence=%d answer=%r", confidence, answer[:80] if answer else "")
+
+    if confidence < 80 or not answer:
+        logger.info("question_handler: low confidence or blank answer — human needed")
+        sys.exit(0)
+
+    print(json.dumps({
+        "hookSpecificOutput": {
+            "hookEventName": "Stop",
+            "additionalContext": f'[stop_router] Auto-answered: "{answer}". Please continue accordingly.',
+        }
+    }))
+    sys.exit(2)
+
+
 def _extract_text(content) -> str:
     """Extract text from a content field that may be a list of blocks or a plain string."""
     if isinstance(content, str):

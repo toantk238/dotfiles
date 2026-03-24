@@ -190,3 +190,74 @@ def test_proceed_handler_empty_response_exits_0():
         with pytest.raises(SystemExit) as exc:
             stop_router.proceed_handler("ready to proceed?")
     assert exc.value.code == 0
+
+
+# ── _parse_confidence_answer ─────────────────────────────────────────────────
+
+def test_parse_high_confidence_with_answer():
+    conf, ans = stop_router._parse_confidence_answer("CONFIDENCE: 90\nANSWER: Use option B.")
+    assert conf == 90
+    assert ans == "Use option B."
+
+
+def test_parse_low_confidence_blank_answer():
+    conf, ans = stop_router._parse_confidence_answer("CONFIDENCE: 60\nANSWER: ")
+    assert conf == 60
+    assert ans == ""
+
+
+def test_parse_missing_confidence_line():
+    assert stop_router._parse_confidence_answer("ANSWER: something") is None
+
+
+def test_parse_non_integer_confidence():
+    assert stop_router._parse_confidence_answer("CONFIDENCE: high\nANSWER: foo") is None
+
+
+def test_parse_out_of_range_confidence():
+    assert stop_router._parse_confidence_answer("CONFIDENCE: 150\nANSWER: foo") is None
+
+
+def test_parse_missing_answer_line():
+    assert stop_router._parse_confidence_answer("CONFIDENCE: 90") is None
+
+
+def test_parse_whitespace_only_answer():
+    # High confidence but whitespace answer → returns (90, "") which caller treats as blank
+    conf, ans = stop_router._parse_confidence_answer("CONFIDENCE: 90\nANSWER:    ")
+    assert conf == 90
+    assert ans == ""
+
+
+# ── question_handler ─────────────────────────────────────────────────────────
+
+def test_question_handler_auto_answers(capsys):
+    output = "CONFIDENCE: 85\nANSWER: Use option A, it matches your original request."
+    with patch("stop_router.subprocess.run", return_value=_make_proc(output)):
+        with pytest.raises(SystemExit) as exc:
+            stop_router.question_handler("Which option?", "Build a REST API")
+    assert exc.value.code == 2
+    out = json.loads(capsys.readouterr().out)
+    assert "Auto-answered" in out["hookSpecificOutput"]["additionalContext"]
+
+
+def test_question_handler_low_confidence_exits_0():
+    output = "CONFIDENCE: 50\nANSWER: "
+    with patch("stop_router.subprocess.run", return_value=_make_proc(output)):
+        with pytest.raises(SystemExit) as exc:
+            stop_router.question_handler("Which option?", "Build a REST API")
+    assert exc.value.code == 0
+
+
+def test_question_handler_parse_failure_exits_0():
+    with patch("stop_router.subprocess.run", return_value=_make_proc("garbage output")):
+        with pytest.raises(SystemExit) as exc:
+            stop_router.question_handler("Which option?", "Build a REST API")
+    assert exc.value.code == 0
+
+
+def test_question_handler_subprocess_exception_exits_0():
+    with patch("stop_router.subprocess.run", side_effect=Exception("timeout")):
+        with pytest.raises(SystemExit) as exc:
+            stop_router.question_handler("Which option?", "Build a REST API")
+    assert exc.value.code == 0
