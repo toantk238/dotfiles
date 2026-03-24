@@ -78,6 +78,49 @@ def classify_stop(text: str) -> str:
     return "OTHER"
 
 
+def _reviewer_decide(text: str) -> str:
+    """Call Haiku to decide whether to proceed or return HUMAN_NEEDED."""
+    prompt = f"""You are an autonomous decision agent for a developer's coding assistant.
+Claude has stopped and is waiting for a response. Decide the best action.
+
+Claude's last message:
+{text[:3000]}
+
+Is this a simple "proceed to next step" situation (e.g. spec review done, plan ready, asking to continue)?
+If yes, reply with the exact text the developer would type (usually just: Proceed).
+If this requires human judgment (destructive action, unclear, important decision), reply with exactly: HUMAN_NEEDED
+
+Reply with ONLY the response text or HUMAN_NEEDED.
+"""
+    try:
+        result = subprocess.run(
+            ["claude", "-p", prompt, "--model", "claude-haiku-4-5-20251001"],
+            capture_output=True, text=True, timeout=20,
+        )
+        return result.stdout.strip()
+    except Exception as e:
+        logger.debug("_reviewer_decide exception: %s", e)
+        return "HUMAN_NEEDED"
+
+
+def proceed_handler(text: str) -> None:
+    decision = _reviewer_decide(text)
+    if not decision or decision == "HUMAN_NEEDED":
+        logger.info("proceed_handler: human needed")
+        sys.exit(0)
+    context = (
+        f'[stop_router] The developer\'s AI reviewer read your last message and responds: '
+        f'"{decision}". Please continue accordingly.'
+    )
+    print(json.dumps({
+        "hookSpecificOutput": {
+            "hookEventName": "Stop",
+            "additionalContext": context,
+        }
+    }))
+    sys.exit(2)
+
+
 def _extract_text(content) -> str:
     """Extract text from a content field that may be a list of blocks or a plain string."""
     if isinstance(content, str):

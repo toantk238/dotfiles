@@ -6,6 +6,9 @@ from pathlib import Path
 sys.path.insert(0, str(Path(__file__).parent.parent))
 
 import stop_router
+import pytest
+from unittest.mock import patch, MagicMock
+import io
 
 
 # ── Fixtures ────────────────────────────────────────────────────────────────
@@ -129,3 +132,55 @@ def test_has_danger_signal_true():
 
 def test_has_danger_signal_false():
     assert stop_router.has_danger_signal("Here is the plan ready to proceed") is False
+
+
+# ── proceed_handler ──────────────────────────────────────────────────────────
+
+def _make_proc(stdout: str, returncode: int = 0) -> MagicMock:
+    m = MagicMock()
+    m.stdout = stdout
+    m.returncode = returncode
+    return m
+
+
+def test_reviewer_decide_returns_proceed(monkeypatch):
+    with patch("stop_router.subprocess.run", return_value=_make_proc("Proceed")) as mock_run:
+        result = stop_router._reviewer_decide("some text")
+    assert result == "Proceed"
+    mock_run.assert_called_once()
+
+
+def test_reviewer_decide_returns_human_needed(monkeypatch):
+    with patch("stop_router.subprocess.run", return_value=_make_proc("HUMAN_NEEDED")):
+        result = stop_router._reviewer_decide("some text")
+    assert result == "HUMAN_NEEDED"
+
+
+def test_reviewer_decide_subprocess_exception():
+    with patch("stop_router.subprocess.run", side_effect=Exception("boom")):
+        result = stop_router._reviewer_decide("some text")
+    assert result == "HUMAN_NEEDED"
+
+
+def test_proceed_handler_injects_and_exits_2(capsys):
+    with patch("stop_router.subprocess.run", return_value=_make_proc("Proceed")):
+        with pytest.raises(SystemExit) as exc:
+            stop_router.proceed_handler("ready to proceed?")
+    assert exc.value.code == 2
+    out = json.loads(capsys.readouterr().out)
+    assert "additionalContext" in out["hookSpecificOutput"]
+    assert "Proceed" in out["hookSpecificOutput"]["additionalContext"]
+
+
+def test_proceed_handler_human_needed_exits_0():
+    with patch("stop_router.subprocess.run", return_value=_make_proc("HUMAN_NEEDED")):
+        with pytest.raises(SystemExit) as exc:
+            stop_router.proceed_handler("ready to proceed?")
+    assert exc.value.code == 0
+
+
+def test_proceed_handler_empty_response_exits_0():
+    with patch("stop_router.subprocess.run", return_value=_make_proc("")):
+        with pytest.raises(SystemExit) as exc:
+            stop_router.proceed_handler("ready to proceed?")
+    assert exc.value.code == 0
