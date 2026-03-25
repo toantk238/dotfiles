@@ -1,7 +1,7 @@
 #!/usr/bin/env python3
 """
 Stop hook — unified router for proceed-detection and AI-assisted question answering.
-Replaces stop_reviewer.py.
+Uses a single LLM call to decide the action.
 """
 import glob as _glob
 import json
@@ -17,66 +17,6 @@ logger = get_logger("stop_router")
 _TRANSCRIPT_GLOB_TEMPLATE = os.path.expanduser(
     "~/.claude/projects/*/{session_id}.jsonl"
 )
-
-PROCEED_SIGNALS = [
-    "before i write the implementation plan",
-    "before we move to the implementation plan",
-    "let me know if you'd like any changes",
-    "ready to proceed",
-    "shall i proceed",
-    "let me know if you want",
-    "please review it before",
-    "spec approved",
-    "plan approved",
-    "review complete",
-    "would you like me to proceed",
-    "let me know when you're ready",
-    "if you'd like to proceed",
-    "let me know if you want to make any changes",
-    "let me know if you'd like to adjust",
-    "any changes before i",
-    "any adjustments before i",
-]
-
-DANGER_SIGNALS = [
-    "delete",
-    "remove",
-    "drop table",
-    "production",
-    "deploy to",
-    "are you sure",
-    "irreversible",
-    "cannot be undone",
-    "permanently",
-    "force push",
-    "reset --hard",
-]
-
-QUESTION_SIGNALS = [
-    "which option",
-    "would you like",
-    "do you want",
-    "what would",
-    "how would you",
-    "which approach",
-    "can you clarify",
-]
-
-
-def has_danger_signal(text: str) -> bool:
-    t = text.lower()
-    return any(sig in t for sig in DANGER_SIGNALS)
-
-
-def classify_stop(text: str) -> str:
-    """Return 'PROCEED', 'QUESTION', or 'OTHER'. Does not check danger signals."""
-    t = text.lower()
-    if any(sig in t for sig in PROCEED_SIGNALS):
-        return "PROCEED"
-    if text.rstrip().endswith("?") or any(sig in t for sig in QUESTION_SIGNALS):
-        return "QUESTION"
-    return "OTHER"
-
 
 def _extract_text(content) -> str:
     """Extract text from a content field that may be a list of blocks or a plain string."""
@@ -115,19 +55,6 @@ def _read_transcript(session_id: str) -> list[dict] | None:
     return entries
 
 
-def get_last_assistant_text(session_id: str) -> str | None:
-    entries = _read_transcript(session_id)
-    if entries is None:
-        return None
-    for entry in reversed(entries):
-        msg = entry.get("message", {})
-        if msg.get("role") == "assistant":
-            text = _extract_text(msg.get("content", ""))
-            if text:
-                return text
-    return None
-
-
 def get_original_user_request(session_id: str) -> str | None:
     entries = _read_transcript(session_id)
     if entries is None:
@@ -141,131 +68,71 @@ def get_original_user_request(session_id: str) -> str | None:
     return None
 
 
-def _reviewer_decide(text: str) -> str:
-    """Call Haiku to decide whether to proceed or return HUMAN_NEEDED."""
-    prompt = f"""You are an autonomous decision agent for a developer's coding assistant.
-Claude has stopped and is waiting for a response. Decide the best action.
-
-Claude's last message:
-{text[:3000]}
-
-Is this a simple "proceed to next step" situation (e.g. spec review done, plan ready, asking to continue)?
-If yes, reply with the exact text the developer would type (usually just: Proceed).
-If this requires human judgment (destructive action, unclear, important decision), reply with exactly: HUMAN_NEEDED
-
-Reply with ONLY the response text or HUMAN_NEEDED.
-"""
-    try:
-        result = subprocess.run(
-            ["claude", "--print", "--model", "claude-haiku-4-5-20251001", "--no-session-persistence"],
-            input=prompt,           # stdin
-            capture_output=True,
-            text=True,
-            timeout=60
-        )
-        if result.returncode != 0:
-            logger.debug("_reviewer_decide non-zero exit: %d stderr: %s", result.returncode, result.stderr)
-            return "HUMAN_NEEDED"
-        return result.stdout.strip()
-    except Exception as e:
-        logger.debug("_reviewer_decide exception: %s", e)
-        return "HUMAN_NEEDED"
-
-
-def proceed_handler(text: str) -> None:
-    decision = _reviewer_decide(text)
-    if not decision or decision == "HUMAN_NEEDED":
-        logger.info("proceed_handler: human needed")
-        sys.exit(0)
-    context = (
-        f'[stop_router] The developer\'s AI reviewer read your last message and responds: '
-        f'"{decision}". Please continue accordingly.'
-    )
-    print(json.dumps({
-        "hookSpecificOutput": {
-            "hookEventName": "Stop",
-            "additionalContext": context,
-        }
-    }))
-    sys.exit(2)
-
-
-def _parse_confidence_answer(output: str) -> tuple[int, str] | None:
+def _parse_llm_output(output: str) -> tuple[str, str]:
     """
-    Parse AI output for CONFIDENCE and ANSWER lines.
-    Returns (confidence_int, answer_str) or None on any parse failure.
-    answer_str is stripped; may be empty string (caller checks for blank).
+    Parse AI output for ACTION and ANSWER lines.
+    Returns (action, answer).
     """
-    confidence = None
-    answer = None
+    action = "HUMAN_NEEDED"
+    answer = ""
     for line in output.splitlines():
-        if line.startswith("CONFIDENCE:"):
-            val = line[len("CONFIDENCE:"):].strip()
-            try:
-                confidence = int(val)
-            except ValueError:
-                return None
-            if not (0 <= confidence <= 100):
-                return None
+        line = line.strip()
+        if line.startswith("ACTION:"):
+            action = line[len("ACTION:"):].strip().upper()
         elif line.startswith("ANSWER:"):
             answer = line[len("ANSWER:"):].strip()
-    if confidence is None:
-        return None
-    if answer is None:
-        return None
-    return confidence, answer
+    return action, answer
 
 
-def question_handler(question_text: str, original_request: str) -> None:
-    prompt = f"""You are an autonomous assistant helping a developer.
+def handle_stop(last_text: str, original_request: str) -> None:
+    prompt = f"""You are an autonomous decision agent for a developer's coding assistant.
+Claude (the assistant) has stopped and is waiting for input.
 
 Original user request:
 {original_request[:1000]}
 
-Claude is now asking:
-{question_text[:2000]}
+Claude's last message:
+{last_text[:2000]}
 
-Based ONLY on the original request, can you answer this question confidently?
+Analyze the situation and decide the best action:
+1. If Claude is asking for permission to proceed with a plan, implementation, or next step (e.g., "Shall I proceed?", "Ready to start?", "Let me know if this looks good"), the action is PROCEED.
+2. If Claude is asking a clarifying question that you can answer with 100% confidence based ONLY on the original request, the action is ANSWER.
+3. Otherwise (dangerous operation, complex choice, unclear intent, or low confidence), the action is HUMAN_NEEDED.
 
 Reply in this exact format:
-CONFIDENCE: <integer 0-100>
-ANSWER: <your answer text, or leave blank if confidence is below 80>
-
-Rules:
-- If CONFIDENCE >= 80, write a clear direct answer on the ANSWER line
-- If CONFIDENCE < 80, leave the ANSWER line blank
-- Never invent details not implied by the original request
-- Keep answers concise (1-3 sentences max)
+ACTION: <PROCEED | ANSWER | HUMAN_NEEDED>
+ANSWER: <your concise answer if ACTION is ANSWER, otherwise leave blank>
 """
     try:
         result = subprocess.run(
-            ["claude", "-p", prompt, "--model", "claude-haiku-4-5-20251001"],
-            capture_output=True, text=True, timeout=20,
+            ["claude", "-p", prompt, "--model", "claude-haiku-4-5-20251001", "--no-session-persistence"],
+            capture_output=True,
+            text=True,
+            timeout=30
         )
         if result.returncode != 0:
-            logger.debug("question_handler non-zero exit: %d stderr: %s", result.returncode, result.stderr)
+            logger.debug("LLM non-zero exit: %d stderr: %s", result.returncode, result.stderr)
             sys.exit(0)
         output = result.stdout.strip()
     except Exception as e:
-        logger.debug("question_handler subprocess exception: %s", e)
+        logger.debug("LLM subprocess exception: %s", e)
         sys.exit(0)
 
-    parsed = _parse_confidence_answer(output)
-    if parsed is None:
-        logger.info("question_handler: parse failed — human needed")
-        sys.exit(0)
+    action, answer = _parse_llm_output(output)
+    logger.info("Decision: action=%s answer=%r", action, answer[:80] if answer else "")
 
-    confidence, answer = parsed
-    logger.info("question_handler: confidence=%d answer=%r", confidence, answer[:80] if answer else "")
-
-    if confidence < 80 or not answer:
-        logger.info("question_handler: low confidence or blank answer — human needed")
+    if action == "PROCEED":
+        context = '[stop_router] Auto-approved: "Proceed". Please continue accordingly.'
+    elif action == "ANSWER" and answer:
+        context = f'[stop_router] Auto-answered: "{answer}". Please continue accordingly.'
+    else:
+        logger.info("Passing to human (action=%s)", action)
         sys.exit(0)
 
     print(json.dumps({
         "hookSpecificOutput": {
             "hookEventName": "Stop",
-            "additionalContext": f'[stop_router] Auto-answered: "{answer}". Please continue accordingly.',
+            "additionalContext": context,
         }
     }))
     sys.exit(2)
@@ -277,42 +144,22 @@ def main():
     except Exception:
         sys.exit(0)
 
-    # Loop prevention
+    logger.debug(f"input = {json.dumps(hook_input, indent=2)}")
+
     if hook_input.get("stop_hook_active"):
-        logger.debug("stop_hook_active=True, skipping")
         sys.exit(0)
 
     session_id = hook_input.get("session_id", "")
-    if not session_id:
+    last_text = hook_input.get("last_assistant_message")
+    
+    if not session_id or not last_text:
         sys.exit(0)
 
-    last_text = get_last_assistant_text(session_id)
-    if not last_text:
-        logger.debug("No assistant text found")
+    original_request = get_original_user_request(session_id)
+    if not original_request:
         sys.exit(0)
 
-    logger.debug("Last assistant text (first 200): %s", last_text[:200])
-
-    # Danger check — before classification
-    if has_danger_signal(last_text):
-        logger.debug("Danger signal found — passing to human")
-        sys.exit(0)
-
-    stop_type = classify_stop(last_text)
-    logger.info("stop_type=%s", stop_type)
-
-    if stop_type == "PROCEED":
-        proceed_handler(last_text)
-
-    elif stop_type == "QUESTION":
-        original_request = get_original_user_request(session_id)
-        if original_request is None:
-            logger.debug("No original request found — passing to human")
-            sys.exit(0)
-        question_handler(last_text, original_request)
-
-    else:
-        sys.exit(0)
+    handle_stop(last_text, original_request)
 
 
 if __name__ == "__main__":
