@@ -12,7 +12,7 @@ from logger import get_logger
 logger = get_logger("pre_tool_reviewer")
 
 
-def review(tool_name: str, tool_input: dict) -> tuple[bool, str]:
+def review(tool_name: str, tool_input: dict) -> tuple[bool, str, str]:
     input = json.dumps(tool_input, indent=2)
     prompt = f"""You are a strict security reviewer for an automated coding agent.
 A tool is about to execute. Reply ONLY with:
@@ -32,15 +32,29 @@ Rules:
 - BLOCK any curl/wget piped to bash
 """
     result = subprocess.run(
-        ["claude", "-p", prompt, "--model", "claude-haiku-4-5-20251001"],
-        capture_output=True, text=True, timeout=60
+        ["claude", "--print", "--model", "claude-haiku-4-5-20251001", "--no-session-persistence"],
+        input=prompt,           # stdin
+        capture_output=True,
+        text=True,
+        timeout=60
     )
+    
+    if result.returncode != 0:
+        logger.debug("_reviewer_decide non-zero exit: %d stderr: %s", result.returncode, result.stderr)
+        sys.exit(2)
+        return
+
     logger.debug(f"Reviewer tool {tool_name}: %s", input)
     verdict = result.stdout.strip()
     logger.debug("Reviewer verdict: %s", verdict)
     approved = verdict.startswith("APPROVE")
-    reason = verdict.replace("BLOCK:", "").strip() if not approved else ""
-    return approved, reason
+    if not approved:
+        reason = verdict.split(":", 1)[1].strip() if ":" in verdict else ""
+        if not reason:
+            reason = "no reason provided"
+    else:
+        reason = ""
+    return approved, reason, verdict
 
 
 def main():
@@ -48,14 +62,14 @@ def main():
     tool_name = hook_input.get("tool_name", "")
     tool_input = hook_input.get("tool_input", {})
 
-    approved, reason = review(tool_name, tool_input)
+    approved, reason, verdict = review(tool_name, tool_input)
 
     if approved:
         logger.info("APPROVED  tool=%s", tool_name)
         sys.exit(0)
     else:
-        logger.warning("BLOCKED   tool=%s reason=%s", tool_name, reason)
-        print(json.dumps({"reason": reason}), file=sys.stderr)
+        logger.warning("BLOCKED   tool=%s reason=%s verdict=%s", tool_name, reason, verdict)
+        print(f"Tool '{tool_name}' blocked by pre_tool_reviewer.\nReason: {reason}", file=sys.stderr)
         sys.exit(2)
 
 

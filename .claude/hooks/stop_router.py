@@ -157,8 +157,11 @@ Reply with ONLY the response text or HUMAN_NEEDED.
 """
     try:
         result = subprocess.run(
-            ["claude", "-p", prompt, "--model", "claude-haiku-4-5-20251001"],
-            capture_output=True, text=True, timeout=20,
+            ["claude", "--print", "--model", "claude-haiku-4-5-20251001", "--no-session-persistence"],
+            input=prompt,           # stdin
+            capture_output=True,
+            text=True,
+            timeout=60
         )
         if result.returncode != 0:
             logger.debug("_reviewer_decide non-zero exit: %d stderr: %s", result.returncode, result.stderr)
