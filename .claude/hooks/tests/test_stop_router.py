@@ -116,6 +116,17 @@ def test_handle_stop_subprocess_error():
     assert exc.value.code == 0
 
 
+def test_handle_stop_subagent_choice(capsys):
+    last_text = "Two execution options:\n1. Subagent-Driven\n2. Inline Execution\nWhich approach?"
+    output = "ACTION: ANSWER\nANSWER: 1"
+    with patch("stop_router.subprocess.run", return_value=_make_proc(output)):
+        with pytest.raises(SystemExit) as exc:
+            stop_router.handle_stop(last_text, "build a tool")
+    assert exc.value.code == 2
+    out = json.loads(capsys.readouterr().out)
+    assert "Auto-answered: \"1\"" in out["hookSpecificOutput"]["additionalContext"]
+
+
 # ── main() integration ───────────────────────────────────────────────────────
 
 def _run_main(tmp_path, hook_input: dict, transcript_lines: list[dict]):

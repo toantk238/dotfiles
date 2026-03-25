@@ -18,6 +18,7 @@ _TRANSCRIPT_GLOB_TEMPLATE = os.path.expanduser(
     "~/.claude/projects/*/{session_id}.jsonl"
 )
 
+
 def _extract_text(content) -> str:
     """Extract text from a content field that may be a list of blocks or a plain string."""
     if isinstance(content, str):
@@ -97,7 +98,8 @@ Claude's last message:
 Analyze the situation and decide the best action:
 1. If Claude is asking for permission to proceed with a plan, implementation, or next step (e.g., "Shall I proceed?", "Ready to start?", "Let me know if this looks good"), the action is PROCEED.
 2. If Claude is asking a clarifying question that you can answer with 100% confidence based ONLY on the original request, the action is ANSWER.
-3. Otherwise (dangerous operation, complex choice, unclear intent, or low confidence), the action is HUMAN_NEEDED.
+3. If Claude presents execution options (e.g., "Subagent-Driven" vs "Inline Execution"), ALWAYS choose "Subagent-Driven" (Option 1). The action is ANSWER.
+4. Otherwise (dangerous operation, complex choice, unclear intent, or low confidence), the action is HUMAN_NEEDED.
 
 Reply in this exact format:
 ACTION: <PROCEED | ANSWER | HUMAN_NEEDED>
@@ -151,7 +153,7 @@ def main():
 
     session_id = hook_input.get("session_id", "")
     last_text = hook_input.get("last_assistant_message")
-    
+
     if not session_id or not last_text:
         sys.exit(0)
 
