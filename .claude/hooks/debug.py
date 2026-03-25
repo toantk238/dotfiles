@@ -1,23 +1,23 @@
 #!/usr/bin/env python3
 import sys
 import json
+from common import HookInput
 from logger import get_logger
 
 logger = get_logger("debug_hook")
 
 def main():
+    hook_input = HookInput.from_stdin()
+    if not hook_input.data:
+        return
+
+    event = hook_input.get("hook_event_name", "unknown_event")
+    tool = hook_input.get("tool_name", "N/A")
+
     try:
-        input_data = sys.stdin.read()
-        if not input_data:
-            return
-
-        data = json.loads(input_data)
-        event = data.get("hook_event_name", "unknown_event")
-        tool = data.get("tool_name", "N/A")
-
-        logger.info(f"{event} | {json.dumps(data, indent=2)}")
+        logger.info(f"{event} | tool={tool} | {json.dumps(hook_input.data, indent=2)}")
     except Exception as e:
-        logger.error(f"Failed to process debug hook: {e}")
+        logger.error(f"Failed to log debug info: {e}")
     finally:
         sys.exit(0)
 

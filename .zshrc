@@ -167,6 +167,7 @@ source "$dot_dir/.gh.sh"
 source "$dot_dir/.yazi.sh"
 source "$dot_dir/.rvm.sh"
 source "$dot_dir/.sesh.sh"
+source "$dot_dir/.claude.sh"
 
 export PATH=$DOT_DIR/git:$PATH
 
