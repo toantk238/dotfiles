@@ -68,7 +68,7 @@ def main():
         logger.info("APPROVED  tool=%s", tool_name)
         sys.exit(0)
     else:
-        logger.warning("BLOCKED   tool=%s reason=%s verdict=%s", tool_name, reason, verdict)
+        logger.warning("BLOCKED   tool=%s reason=%s", tool_name, reason)
         print(f"Tool '{tool_name}' blocked by pre_tool_reviewer.\nReason: {reason}", file=sys.stderr)
         sys.exit(2)
 
