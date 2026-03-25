@@ -1,11 +1,6 @@
 [ -z "$NVM_DIR" ] && export NVM_DIR="$HOME/.nvm"
 
-# Lazy-load NVM to avoid ~300ms shell startup penalty
-_nvm_lazy_load() {
-  unfunction nvm node npm npx 2>/dev/null
-  [ -f "$NVM_DIR/nvm.sh" ] && source "$NVM_DIR/nvm.sh"
-
-  # Set up auto-switch for .nvmrc files after NVM is loaded
+_nvm_setup_nvmrc_hook() {
   autoload -U add-zsh-hook
 
   load-nvmrc() {
@@ -31,11 +26,25 @@ _nvm_lazy_load() {
   load-nvmrc
 }
 
-# Define lazy wrapper functions
-nvm() { _nvm_lazy_load; nvm "$@"; }
-node() { _nvm_lazy_load; node "$@"; }
-npm() { _nvm_lazy_load; npm "$@"; }
-npx() { _nvm_lazy_load; npx "$@"; }
+# NVM_LAZY_LOAD=false (or 0) to eagerly load nvm at shell startup.
+# Defaults to lazy loading to avoid the ~300ms startup penalty.
+if [[ "${NVM_LAZY_LOAD:-true}" == "false" || "${NVM_LAZY_LOAD}" == "0" ]]; then
+  # Eager load
+  [ -f "$NVM_DIR/nvm.sh" ] && source "$NVM_DIR/nvm.sh"
+  _nvm_setup_nvmrc_hook
+else
+  # Lazy-load: defer sourcing until nvm/node/npm/npx is first invoked
+  _nvm_lazy_load() {
+    unfunction nvm node npm npx 2>/dev/null
+    [ -f "$NVM_DIR/nvm.sh" ] && source "$NVM_DIR/nvm.sh"
+    _nvm_setup_nvmrc_hook
+  }
+
+  nvm() { _nvm_lazy_load; nvm "$@"; }
+  node() { _nvm_lazy_load; node "$@"; }
+  npm() { _nvm_lazy_load; npm "$@"; }
+  npx() { _nvm_lazy_load; npx "$@"; }
+fi
 
 [ -s "$HOME/.bun/_bun" ] && source "$HOME/.bun/_bun"
 
