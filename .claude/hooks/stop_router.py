@@ -3,19 +3,22 @@
 Stop hook — unified router for proceed-detection and AI-assisted question answering.
 Uses a single LLM call to decide the action.
 """
+from dataclasses import dataclass
 import json
 import sys
-from dataclasses import dataclass
-from common import call_claude, HookInput, get_original_user_request
+
+from common import HookInput, call_claude, get_original_user_request
 from logger import get_logger
 
 logger = get_logger("stop_router")
+
 
 @dataclass(frozen=True)
 class StopDecision:
     """The decision result of the stop hook."""
     action: str
     answer: str = ""
+
 
 STOP_PROMPT_TEMPLATE = """You are an autonomous decision agent for a developer's coding assistant.
 Claude (the assistant) has stopped and is waiting for input.
@@ -37,6 +40,7 @@ ACTION: <PROCEED | ANSWER | HUMAN_NEEDED>
 ANSWER: <your concise answer if ACTION is ANSWER, otherwise leave blank>
 """
 
+
 def parse_llm_output(output: str) -> StopDecision:
     """Parse AI output for ACTION and ANSWER lines."""
     action = "HUMAN_NEEDED"
@@ -49,12 +53,13 @@ def parse_llm_output(output: str) -> StopDecision:
             answer = line[len("ANSWER:"):].strip()
     return StopDecision(action=action, answer=answer)
 
+
 def handle_stop(last_text: str, original_request: str) -> None:
     prompt = STOP_PROMPT_TEMPLATE.format(
         original_request=original_request[:1000],
         last_text=last_text[:2000]
     )
-    
+
     try:
         output = call_claude(prompt, timeout=30)
     except Exception:
@@ -81,6 +86,7 @@ def handle_stop(last_text: str, original_request: str) -> None:
     }))
     sys.exit(2)
 
+
 def main():
     hook_input = HookInput.from_stdin()
     if not hook_input.data:
@@ -102,6 +108,7 @@ def main():
         sys.exit(0)
 
     handle_stop(last_text, original_request)
+
 
 if __name__ == "__main__":
     main()

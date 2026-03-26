@@ -1,10 +1,12 @@
 #!/usr/bin/env python3
-import sys
 import json
+import sys
+
 from common import HookInput
 from logger import get_logger
 
 logger = get_logger("debug_hook")
+
 
 def main():
     hook_input = HookInput.from_stdin()
@@ -20,6 +22,7 @@ def main():
         logger.error(f"Failed to log debug info: {e}")
     finally:
         sys.exit(0)
+
 
 if __name__ == "__main__":
     main()

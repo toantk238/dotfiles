@@ -1,18 +1,17 @@
 """Common utilities for hooks."""
+from dataclasses import dataclass
+import glob
 import json
+import os
 import subprocess
 import sys
-from dataclasses import dataclass
+from typing import Any, Iterator
 from typing import Any
 
 from logger import get_logger
 
 logger = get_logger("common")
 
-
-import glob
-import os
-from typing import Any, Iterator
 
 @dataclass(frozen=True)
 class HookInput:
@@ -74,7 +73,7 @@ def read_transcript(session_id: str, glob_template: str = "~/.claude/projects/*/
     files = glob.glob(pattern)
     if not files:
         return
-    
+
     try:
         with open(files[0], encoding="utf-8") as f:
             for line in f:
