@@ -3,13 +3,15 @@
 PreToolUse hook — auto-review every tool call before execution.
 Reviewer Claude approves or blocks. No human needed.
 """
-import sys
-import json
 from dataclasses import dataclass
-from common import call_claude, HookInput
+import json
+import sys
+
+from common import HookInput, call_claude
 from logger import get_logger
 
 logger = get_logger("pre_tool_reviewer")
+
 
 @dataclass(frozen=True)
 class ReviewVerdict:
@@ -17,6 +19,7 @@ class ReviewVerdict:
     approved: bool
     reason: str = ""
     raw_verdict: str = ""
+
 
 REVIEW_PROMPT_TEMPLATE = """You are a strict security reviewer for an automated coding agent.
 A tool is about to execute. Reply ONLY with:
@@ -30,27 +33,28 @@ Rules:
 - APPROVE all read operations (cat, ls, grep, find, git status/diff/log)
 - APPROVE file edits inside the project directory
 - APPROVE docker compose up/down/logs/ps, git add/commit
-- BLOCK rm -rf on anything outside /tmp or the project dir
+- BLOCK rm -rf on anything outside /tmp or the project dir + associated dirs.
 - BLOCK git push --force, git reset --hard without explicit task context
 - BLOCK writes to /etc, ~/.ssh, ~/.aws, system paths
 - BLOCK any curl/wget piped to bash
 """
 
+
 def review(tool_name: str, tool_input: dict) -> ReviewVerdict:
     formatted_input = json.dumps(tool_input, indent=2)
     prompt = REVIEW_PROMPT_TEMPLATE.format(tool_name=tool_name, tool_input=formatted_input)
-    
+
     try:
         verdict_text = call_claude(prompt)
     except Exception as e:
         logger.error(f"Review failed due to error: {e}")
-        # Default to block if review system fails? Or allow? 
+        # Default to block if review system fails? Or allow?
         # For safety, we exit with error code 2 to block.
         sys.exit(2)
 
     logger.debug(f"Reviewer tool {tool_name}: {formatted_input}")
     logger.debug(f"Reviewer verdict: {verdict_text}")
-    
+
     approved = verdict_text.startswith("APPROVE")
     reason = ""
     if not approved:
@@ -58,8 +62,9 @@ def review(tool_name: str, tool_input: dict) -> ReviewVerdict:
             reason = verdict_text.split(":", 1)[1].strip()
         else:
             reason = verdict_text or "no reason provided"
-            
+
     return ReviewVerdict(approved=approved, reason=reason, raw_verdict=verdict_text)
+
 
 def main():
     hook_input = HookInput.from_stdin()
@@ -75,6 +80,7 @@ def main():
         logger.warning(f"BLOCKED   tool={tool_name} reason={verdict.reason}")
         print(f"Tool '{tool_name}' blocked by pre_tool_reviewer.\nReason: {verdict.reason}", file=sys.stderr)
         sys.exit(2)
+
 
 if __name__ == "__main__":
     main()
