@@ -241,10 +241,6 @@ if exists btop; then
   alias top="btop"
 fi
 
-if exists tspin; then
-  alias tail="tspin"
-fi
-
 if exists glow; then
   eval "$(glow completion zsh)"
   alias glow="glow --pager"
