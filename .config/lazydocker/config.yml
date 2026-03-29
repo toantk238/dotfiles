@@ -1,4 +1,4 @@
 gui:
   returnImmediately: true
   expandFocusedSidePanel: true
-  screenMode: "fullscreen"
+  screenMode: "half"

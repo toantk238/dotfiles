@@ -1,0 +1,2 @@
+tail-log:
+  tail -f ./hooks.log | logalize

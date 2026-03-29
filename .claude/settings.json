@@ -12,13 +12,13 @@
       "TodoRead",
       "TodoWrite",
       "WebFetch",
-      "WebSearch",
       "NotebookRead",
       "NotebookEdit",
       "Task",
       "Exit_plan_mode",
-      "Bash",
-      "mcp__*"
+      "mcp__*",
+      "Skill(superpowers*)",
+      "Bash"
     ],
     "deny": [
       "Bash(rm -rf /)",
@@ -29,7 +29,6 @@
     "disableBypassPermissionsMode": "disable",
     "additionalDirectories": []
   },
-  "model": "opusplan",
   "enableAllProjectMcpServers": true,
   "enabledMcpjsonServers": [
     "sequential-thinking",
@@ -46,8 +45,58 @@
           }
         ]
       }
+    ],
+    "PreToolUse": [
+      {
+        "matcher": "Bash",
+        "hooks": [
+          {
+            "type": "command",
+            "command": "zsh -c \"source ~/.env.zsh; ~/.claude/hooks/.venv/bin/python ~/.claude/hooks/pre_tool_reviewer.py\""
+          }
+        ]
+      }
+    ],
+    "Stop": [
+      {
+        "hooks": [
+          {
+            "type": "command",
+            "command": "zsh -c \"source ~/.env.zsh; ~/.claude/hooks/.venv/bin/python ~/.claude/hooks/stop_router.py\"",
+            "asyncRewake": true,
+            "timeout": 30,
+            "statusMessage": "AI reviewing..."
+          }
+        ]
+      }
+    ],
+    "PostToolUse": [
+      {
+        "hooks": [
+          {
+            "type": "command",
+            "command": "zsh -c \"source ~/.env.zsh; ~/.claude/hooks/.venv/bin/python ~/.claude/hooks/debug.py\""
+          }
+        ]
+      }
+    ],
+    "UserPromptSubmit": [
+      {
+        "hooks": [
+          {
+            "type": "command",
+            "command": "zsh -c \"source ~/.env.zsh; ~/.claude/hooks/.venv/bin/python ~/.claude/hooks/debug.py\""
+          }
+        ]
+      }
     ]
   },
-  "forceLoginMethod": "claudeai",
-  "alwaysThinkingEnabled": false
+  "enabledPlugins": {
+    "superpowers@claude-plugins-official": true,
+    "clangd-lsp@claude-plugins-official": true,
+    "pyright-lsp@claude-plugins-official": true,
+    "figma@claude-plugins-official": true,
+    "document-skills@anthropic-agent-skills": true
+  },
+  "forceLoginMethod": "claudeai"
 }
