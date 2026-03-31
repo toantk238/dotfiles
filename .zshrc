@@ -195,3 +195,5 @@ source "$dot_dir/.kompose.sh"
 source "$dot_dir/.kubectl.sh"
 
 compdef -d ssh
+
+[ -f ~/.fzf.zsh ] && source ~/.fzf.zsh
