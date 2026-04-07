@@ -72,3 +72,11 @@
 
 [pull]
 	rebase = true
+[lfs]
+	locksverify = true
+[lfs "ssh"]
+	automultiplex = false
+[credential]
+	helper = store
+[gc]
+	auto = 256
