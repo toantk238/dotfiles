@@ -194,8 +194,8 @@ def test_main_nonexistent_transcript_exits_0():
     assert exc.value.code == 0
 
 
-def test_main_stop_hook_active_still_processes(tmp_path):
-    """Re-woken stop (stop_hook_active=True) goes through full PROCEED path."""
+def test_main_proceeds_with_valid_transcript(tmp_path):
+    """Valid transcript with PROCEED-worthy last message → exits 2."""
     path = _write_transcript(tmp_path, [
         _msg("user", "build a tool"),
         _msg("assistant", "Shall I proceed?"),
@@ -203,7 +203,7 @@ def test_main_stop_hook_active_still_processes(tmp_path):
     output = "ACTION: PROCEED\nANSWER: "
     with patch("stop_router.call_claude", return_value=output):
         with pytest.raises(SystemExit) as exc:
-            _run_main(path, {"stop_hook_active": True})
+            _run_main(path)
     assert exc.value.code == 2
 
 

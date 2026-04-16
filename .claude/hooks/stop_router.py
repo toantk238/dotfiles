@@ -63,8 +63,8 @@ def handle_stop(last_text: str, original_request: str) -> None:
 
     try:
         output = call_claude(prompt, timeout=30)
-    except Exception:
-        # Fallback to human if LLM fails
+    except Exception as e:
+        logger.warning(f"LLM call failed, falling back to human: {e}")
         sys.exit(0)
 
     decision = parse_llm_output(output)
