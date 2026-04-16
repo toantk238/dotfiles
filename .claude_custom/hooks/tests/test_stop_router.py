@@ -261,3 +261,46 @@ def test_main_calls_handle_stop(tmp_path):
         with pytest.raises(SystemExit) as exc:
             _run_main(path)
     assert exc.value.code == 2
+
+
+# ── Prompt content checks ────────────────────────────────────────────────────
+
+def test_prompt_contains_decision_tree_steps():
+    """New prompt must contain explicit STEP labels for the decision tree."""
+    assert "STEP 1" in stop_router.STOP_PROMPT_TEMPLATE
+    assert "STEP 2" in stop_router.STOP_PROMPT_TEMPLATE
+    assert "STEP 3" in stop_router.STOP_PROMPT_TEMPLATE
+    assert "STEP 4" in stop_router.STOP_PROMPT_TEMPLATE
+    assert "STEP 5" in stop_router.STOP_PROMPT_TEMPLATE
+
+
+def test_prompt_contains_human_needed_preference_guard():
+    """Prompt must explicitly guard preference/approval questions → HUMAN_NEEDED."""
+    assert "preference" in stop_router.STOP_PROMPT_TEMPLATE.lower() or \
+           "does this look right" in stop_router.STOP_PROMPT_TEMPLATE.lower()
+
+
+def test_handle_stop_multi_choice_clear_winner(capsys):
+    """Multi-choice where LLM confidently picks an option → ANSWER."""
+    llm_response = "ACTION: ANSWER\nANSWER: Option 2 (Subagent-Driven)"
+    with patch("stop_router.call_claude", return_value=llm_response):
+        with pytest.raises(SystemExit) as exc:
+            stop_router.handle_stop(
+                "Which approach?\n1. Inline\n2. Subagent-Driven\n3. Manual",
+                "I want subagent-driven execution for isolation"
+            )
+    assert exc.value.code == 2
+    out = json.loads(capsys.readouterr().out)
+    assert "Option 2" in out["hookSpecificOutput"]["additionalContext"]
+
+
+def test_handle_stop_human_directed_approval_question():
+    """'Does this look right?' type question → LLM returns HUMAN_NEEDED → exit 0."""
+    llm_response = "ACTION: HUMAN_NEEDED\nANSWER: "
+    with patch("stop_router.call_claude", return_value=llm_response):
+        with pytest.raises(SystemExit) as exc:
+            stop_router.handle_stop(
+                "Here is the design. Does this look right to you?",
+                "design a system"
+            )
+    assert exc.value.code == 0
