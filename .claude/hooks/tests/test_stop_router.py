@@ -68,6 +68,49 @@ def test_get_original_user_request_no_user_messages(tmp_path):
     assert common.get_original_user_request(str(transcript)) is None
 
 
+# ── get_last_assistant_message ──────────────────────────────────────────────
+
+def test_get_last_assistant_message_basic(tmp_path):
+    transcript = tmp_path / "session.jsonl"
+    transcript.write_text(
+        "\n".join(json.dumps(e) for e in [
+            {"message": {"role": "user", "content": [{"type": "text", "text": "do something"}]}},
+            {"message": {"role": "assistant", "content": [{"type": "text", "text": "first response"}]}},
+            {"message": {"role": "assistant", "content": [{"type": "text", "text": "final response — shall I proceed?"}]}},
+        ]),
+        encoding="utf-8",
+    )
+    assert common.get_last_assistant_message(str(transcript)) == "final response — shall I proceed?"
+
+
+def test_get_last_assistant_message_skips_thinking_blocks(tmp_path):
+    transcript = tmp_path / "session.jsonl"
+    transcript.write_text(
+        json.dumps({"message": {"role": "assistant", "content": [
+            {"type": "thinking", "thinking": "I am thinking..."},
+            {"type": "text", "text": "Here is my answer"},
+        ]}}),
+        encoding="utf-8",
+    )
+    assert common.get_last_assistant_message(str(transcript)) == "Here is my answer"
+
+
+def test_get_last_assistant_message_no_text_blocks(tmp_path):
+    """Tool-use-only turns have no text block — should return None."""
+    transcript = tmp_path / "session.jsonl"
+    transcript.write_text(
+        json.dumps({"message": {"role": "assistant", "content": [
+            {"type": "tool_use", "id": "x", "name": "Bash", "input": {}},
+        ]}}),
+        encoding="utf-8",
+    )
+    assert common.get_last_assistant_message(str(transcript)) is None
+
+
+def test_get_last_assistant_message_no_file():
+    assert common.get_last_assistant_message("/nonexistent.jsonl") is None
+
+
 # ── parse_llm_output ───────────────────────────────────────────────────────
 
 def test_parse_llm_output_proceed():

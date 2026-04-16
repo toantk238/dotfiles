@@ -7,7 +7,7 @@ from dataclasses import dataclass
 import json
 import sys
 
-from common import HookInput, call_claude, get_original_user_request
+from common import HookInput, call_claude, get_original_user_request, get_last_assistant_message
 from logger import get_logger
 
 logger = get_logger("stop_router")

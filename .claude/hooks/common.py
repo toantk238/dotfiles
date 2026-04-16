@@ -93,3 +93,15 @@ def get_original_user_request(transcript_path: str) -> str | None:
             if text:
                 return text
     return None
+
+
+def get_last_assistant_message(transcript_path: str) -> str | None:
+    """Return the text content of the last assistant turn in the transcript."""
+    last_text = None
+    for entry in read_transcript(transcript_path):
+        msg = entry.get("message", {})
+        if msg.get("role") == "assistant":
+            text = extract_text(msg.get("content", ""))
+            if text:
+                last_text = text
+    return last_text
