@@ -5,6 +5,7 @@ Uses a single LLM call to decide the action.
 """
 from dataclasses import dataclass
 import json
+import os
 import sys
 
 from common import HookInput, call_claude, get_original_user_request, get_last_assistant_message
@@ -95,29 +96,21 @@ def main():
 
     logger.debug(f"input = {json.dumps(hook_input.data, indent=2)}")
 
-    if hook_input.get("stop_hook_active"):
-        # Claude was already woken by a previous stop hook — check if it's still asking
-        # for a choice we can auto-answer (e.g. execution options after plan writing).
+    transcript_path = hook_input.get("transcript_path", "")
+    if not transcript_path or not os.path.exists(transcript_path):
+        logger.debug("Early exit: no transcript (nested session)")
+        sys.exit(0)
+
+    last_text = get_last_assistant_message(transcript_path)
+    if not last_text:
         last_text = hook_input.get("last_assistant_message", "")
-        if last_text and ("subagent-driven" in last_text.lower() or "inline execution" in last_text.lower()):
-            logger.info("stop_hook_active=True but execution options detected — proceeding")
-            session_id = hook_input.get("session_id", "")
-            original_request = get_original_user_request(session_id) or "(not found)"
-            handle_stop(last_text, original_request)
-            return
-        logger.info("Early exit: stop_hook_active=True, last_message=%s", (last_text or "")[:120])
+    if not last_text:
+        logger.info("Early exit: no last_text found")
         sys.exit(0)
 
-    session_id = hook_input.get("session_id", "")
-    last_text = hook_input.get("last_assistant_message")
-
-    if not session_id or not last_text:
-        logger.info("Early exit: session_id=%r last_text_present=%s", session_id, bool(last_text))
-        sys.exit(0)
-
-    original_request = get_original_user_request(session_id)
+    original_request = get_original_user_request(transcript_path)
     if not original_request:
-        logger.info("Early exit: original_request not found for session_id=%s", session_id)
+        logger.info("Early exit: no original_request in transcript")
         sys.exit(0)
 
     handle_stop(last_text, original_request)

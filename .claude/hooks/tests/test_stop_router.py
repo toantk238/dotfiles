@@ -16,20 +16,13 @@ from stop_router import StopDecision
 # ── Fixtures ────────────────────────────────────────────────────────────────
 
 def _write_transcript(tmp_path, lines: list[dict]) -> str:
-    """Write a fake JSONL transcript, return a session_id whose glob will match."""
-    session_id = "test-session-abc123"
-    project_dir = tmp_path / ".claude" / "projects" / "myproject"
-    project_dir.mkdir(parents=True)
-    transcript = project_dir / f"{session_id}.jsonl"
-    transcript.write_text("\n".join(json.dumps(l) for l in lines), encoding="utf-8")
-    
-    # Patch the glob pattern in common
-    patcher = patch("common.os.path.expanduser")
-    mock_expand = patcher.start()
-    mock_expand.return_value = str(
-        tmp_path / ".claude" / "projects" / "*" / f"{session_id}.jsonl"
+    """Write a fake JSONL transcript, return the absolute path string."""
+    transcript = tmp_path / "session.jsonl"
+    transcript.write_text(
+        "\n".join(json.dumps(l) for l in lines),
+        encoding="utf-8",
     )
-    return session_id
+    return str(transcript)
 
 
 def _msg(role: str, text: str | list) -> dict:
@@ -174,30 +167,76 @@ def test_handle_stop_call_claude_error():
     assert exc.value.code == 0
 
 
-# ── main() integration ───────────────────────────────────────────────────────
+# ── main() integration ────────────────────────────────────────────────────────
 
-def _run_main(tmp_path, hook_input: dict, transcript_lines: list[dict]):
-    """Helper: write transcript, patch glob, run main() with hook_input on stdin."""
-    sid = _write_transcript(tmp_path, transcript_lines)
-    hook_input["session_id"] = hook_input.get("session_id", sid)
-    hook_input["last_assistant_message"] = hook_input.get("last_assistant_message", "mock last message")
-    
+def _run_main(transcript_path: str, extra_hook_input: dict | None = None):
+    """Run stop_router.main() with the given transcript_path in hook input."""
+    hook_input = {"transcript_path": transcript_path}
+    if extra_hook_input:
+        hook_input.update(extra_hook_input)
     with patch("sys.stdin", io.StringIO(json.dumps(hook_input))):
-        # We also need to patch get_original_user_request because it uses glob
-        with patch("stop_router.get_original_user_request", return_value=transcript_lines[0]["message"]["content"][0]["text"]):
-            stop_router.main()
+        stop_router.main()
 
 
-def test_main_stop_hook_active_exits_0(tmp_path):
+def test_main_no_transcript_path_exits_0():
+    """Missing transcript_path → nested session guard → exit 0."""
     with pytest.raises(SystemExit) as exc:
-        with patch("sys.stdin", io.StringIO(json.dumps({"stop_hook_active": True}))):
+        with patch("sys.stdin", io.StringIO(json.dumps({}))):
             stop_router.main()
     assert exc.value.code == 0
 
 
-def test_main_calls_handle_stop(tmp_path):
+def test_main_nonexistent_transcript_exits_0():
+    """transcript_path present but file missing → nested session guard → exit 0."""
+    with pytest.raises(SystemExit) as exc:
+        with patch("sys.stdin", io.StringIO(json.dumps({"transcript_path": "/no/such/file.jsonl"}))):
+            stop_router.main()
+    assert exc.value.code == 0
+
+
+def test_main_stop_hook_active_still_processes(tmp_path):
+    """Re-woken stop (stop_hook_active=True) goes through full PROCEED path."""
+    path = _write_transcript(tmp_path, [
+        _msg("user", "build a tool"),
+        _msg("assistant", "Shall I proceed?"),
+    ])
     output = "ACTION: PROCEED\nANSWER: "
     with patch("stop_router.call_claude", return_value=output):
         with pytest.raises(SystemExit) as exc:
-            _run_main(tmp_path, {}, [_msg("user", "original request")])
+            _run_main(path, {"stop_hook_active": True})
+    assert exc.value.code == 2
+
+
+def test_main_uses_transcript_message_not_payload_field(tmp_path):
+    """Full message from transcript is used even when payload has a truncated version."""
+    full_text = "FULL_SENTINEL: Shall I proceed with the implementation?"
+    truncated = "TRUNCATED_SENTINEL: cut off here"
+    path = _write_transcript(tmp_path, [
+        _msg("user", "build a tool"),
+        _msg("assistant", full_text),
+    ])
+    captured_prompt = []
+
+    def fake_claude(prompt, **kwargs):
+        captured_prompt.append(prompt)
+        return "ACTION: PROCEED\nANSWER: "
+
+    with patch("stop_router.call_claude", side_effect=fake_claude):
+        with pytest.raises(SystemExit):
+            _run_main(path, {"last_assistant_message": truncated})
+
+    assert full_text in captured_prompt[0]
+    assert truncated not in captured_prompt[0]
+
+
+def test_main_calls_handle_stop(tmp_path):
+    """Normal stop → finds original request and last message → PROCEED."""
+    path = _write_transcript(tmp_path, [
+        _msg("user", "original request"),
+        _msg("assistant", "ready to go"),
+    ])
+    output = "ACTION: PROCEED\nANSWER: "
+    with patch("stop_router.call_claude", return_value=output):
+        with pytest.raises(SystemExit) as exc:
+            _run_main(path)
     assert exc.value.code == 2
