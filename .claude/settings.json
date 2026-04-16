@@ -99,5 +99,6 @@
     "document-skills@anthropic-agent-skills": true,
     "typescript-lsp@claude-plugins-official": true
   },
-  "forceLoginMethod": "claudeai"
+  "forceLoginMethod": "claudeai",
+  "model": "opusplan"
 }
