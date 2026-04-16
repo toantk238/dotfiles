@@ -30,11 +30,38 @@ Original user request:
 Claude's last message:
 {last_text}
 
-Analyze the situation and decide the best action:
-1. If Claude is asking for permission to proceed with a plan, implementation, or next step (e.g., "Shall I proceed?", "Ready to start?", "Let me know if this looks good"), the action is PROCEED.
-2. If Claude is asking a clarifying question that you can answer with 100% confidence based ONLY on the original request, the action is ANSWER.
-3. If Claude presents execution options (e.g., "Subagent-Driven" vs "Inline Execution"), ALWAYS choose "Subagent-Driven" (Option 1). The action is ANSWER.
-4. Otherwise (dangerous operation, complex choice, unclear intent, or low confidence), the action is HUMAN_NEEDED.
+Follow these steps in order to decide the best action:
+
+STEP 1 — Detect options:
+Does Claude's message contain a numbered or lettered list of 2 or more distinct options for the human to choose from?
+  → YES: go to STEP 2
+  → NO: go to STEP 3
+
+STEP 2 — Can you pick confidently from the original request alone?
+Is one option clearly the best fit given ONLY the original user request, with high confidence?
+  → YES: ACTION = ANSWER. Name the specific option clearly (e.g., "Option 2" or "Subagent-Driven").
+  → NO or ambiguous: ACTION = HUMAN_NEEDED.
+
+STEP 3 — Is Claude asking the human a preference or approval question?
+Look for patterns like: "Does this look right?", "Which do you prefer?", "Shall I proceed with X or Y?",
+"Please review", "Let me know if you want changes", "Does this sound right?", "Any feedback?",
+"Does [X] look good?", "Is this what you had in mind?"
+  → YES: ACTION = HUMAN_NEEDED. (Human review is explicitly requested — never auto-answer these.)
+  → NO: go to STEP 4
+  Note: "Shall I proceed?" with no alternatives is a green-light ask — it goes to STEP 4, not here.
+
+STEP 4 — Is Claude proposing a plan and asking for a green light to continue?
+Look for patterns like: "Shall I proceed?", "Ready to start?", "Want me to continue?",
+"Let me know if you want me to go ahead", "I can begin implementation"
+  → YES: ACTION = PROCEED.
+  → NO: go to STEP 5
+
+STEP 5 — Is this a clarifying question answerable from the original request?
+Can you answer with 100% confidence using ONLY the original request, with no guessing?
+  → YES: ACTION = ANSWER with a concise answer.
+  → NO: ACTION = HUMAN_NEEDED.
+
+When in doubt, always choose HUMAN_NEEDED. A wrong auto-answer that causes a loop is worse than an unnecessary interruption.
 
 Reply in this exact format:
 ACTION: <PROCEED | ANSWER | HUMAN_NEEDED>
