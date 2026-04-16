@@ -90,21 +90,34 @@ def handle_stop(last_text: str, original_request: str) -> None:
 def main():
     hook_input = HookInput.from_stdin()
     if not hook_input.data:
+        logger.info("Early exit: empty stdin")
         sys.exit(0)
 
     logger.debug(f"input = {json.dumps(hook_input.data, indent=2)}")
 
     if hook_input.get("stop_hook_active"):
+        # Claude was already woken by a previous stop hook — check if it's still asking
+        # for a choice we can auto-answer (e.g. execution options after plan writing).
+        last_text = hook_input.get("last_assistant_message", "")
+        if last_text and ("subagent-driven" in last_text.lower() or "inline execution" in last_text.lower()):
+            logger.info("stop_hook_active=True but execution options detected — proceeding")
+            session_id = hook_input.get("session_id", "")
+            original_request = get_original_user_request(session_id) or "(not found)"
+            handle_stop(last_text, original_request)
+            return
+        logger.info("Early exit: stop_hook_active=True, last_message=%s", (last_text or "")[:120])
         sys.exit(0)
 
     session_id = hook_input.get("session_id", "")
     last_text = hook_input.get("last_assistant_message")
 
     if not session_id or not last_text:
+        logger.info("Early exit: session_id=%r last_text_present=%s", session_id, bool(last_text))
         sys.exit(0)
 
     original_request = get_original_user_request(session_id)
     if not original_request:
+        logger.info("Early exit: original_request not found for session_id=%s", session_id)
         sys.exit(0)
 
     handle_stop(last_text, original_request)
