@@ -1,12 +1,10 @@
 """Common utilities for hooks."""
 from dataclasses import dataclass
-import glob
 import json
 import os
 import subprocess
 import sys
 from typing import Any, Iterator
-from typing import Any
 
 from logger import get_logger
 
@@ -67,15 +65,12 @@ def extract_text(content: Any) -> str:
     return ""
 
 
-def read_transcript(session_id: str, glob_template: str = "~/.claude/projects/*/{session_id}.jsonl") -> Iterator[dict[str, Any]]:
-    """Read transcript for a session id."""
-    pattern = os.path.expanduser(glob_template.format(session_id=session_id))
-    files = glob.glob(pattern)
-    if not files:
+def read_transcript(transcript_path: str) -> Iterator[dict[str, Any]]:
+    """Read transcript from a given file path, yielding parsed JSONL entries."""
+    if not transcript_path or not os.path.exists(transcript_path):
         return
-
     try:
-        with open(files[0], encoding="utf-8") as f:
+        with open(transcript_path, encoding="utf-8") as f:
             for line in f:
                 line = line.strip()
                 if not line:
@@ -89,9 +84,9 @@ def read_transcript(session_id: str, glob_template: str = "~/.claude/projects/*/
         return
 
 
-def get_original_user_request(session_id: str) -> str | None:
-    """Find the first user message in the transcript."""
-    for entry in read_transcript(session_id):
+def get_original_user_request(transcript_path: str) -> str | None:
+    """Find the first user message in the transcript at the given path."""
+    for entry in read_transcript(transcript_path):
         msg = entry.get("message", {})
         if msg.get("role") == "user":
             text = extract_text(msg.get("content", ""))

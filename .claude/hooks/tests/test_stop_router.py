@@ -43,14 +43,29 @@ def _msg(role: str, text: str | list) -> dict:
 # ── get_original_user_request ────────────────────────────────────────────────
 
 def test_get_original_user_request_basic(tmp_path):
-    sid = _write_transcript(tmp_path, [
-        _msg("user", "original request"),
-        _msg("assistant", "sure"),
-        _msg("user", "second user message"),
-    ])
-    # Need to patch common because that's where it's defined now
-    with patch("common.os.path.expanduser", return_value=str(tmp_path / ".claude" / "projects" / "myproject" / f"{sid}.jsonl")):
-        assert common.get_original_user_request(sid) == "original request"
+    transcript = tmp_path / "session.jsonl"
+    transcript.write_text(
+        "\n".join(json.dumps(e) for e in [
+            {"message": {"role": "user", "content": [{"type": "text", "text": "original request"}]}},
+            {"message": {"role": "assistant", "content": [{"type": "text", "text": "sure"}]}},
+            {"message": {"role": "user", "content": [{"type": "text", "text": "second user message"}]}},
+        ]),
+        encoding="utf-8",
+    )
+    assert common.get_original_user_request(str(transcript)) == "original request"
+
+
+def test_get_original_user_request_no_file():
+    assert common.get_original_user_request("/nonexistent/path.jsonl") is None
+
+
+def test_get_original_user_request_no_user_messages(tmp_path):
+    transcript = tmp_path / "session.jsonl"
+    transcript.write_text(
+        json.dumps({"message": {"role": "assistant", "content": [{"type": "text", "text": "hi"}]}}),
+        encoding="utf-8",
+    )
+    assert common.get_original_user_request(str(transcript)) is None
 
 
 # ── parse_llm_output ───────────────────────────────────────────────────────
