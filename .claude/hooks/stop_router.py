@@ -97,6 +97,8 @@ def main():
     logger.debug(f"input = {json.dumps(hook_input.data, indent=2)}")
 
     transcript_path = hook_input.get("transcript_path", "")
+    # Check existence here (not just inside read_transcript) so we can exit early
+    # with a specific "nested session" log before making two file-open attempts.
     if not transcript_path or not os.path.exists(transcript_path):
         logger.debug("Early exit: no transcript (nested session)")
         sys.exit(0)

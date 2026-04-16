@@ -2,7 +2,7 @@ import json
 import sys
 from pathlib import Path
 import pytest
-from unittest.mock import patch, MagicMock
+from unittest.mock import patch
 import io
 
 # Put hooks dir on path so we can import stop_router
@@ -227,6 +227,27 @@ def test_main_uses_transcript_message_not_payload_field(tmp_path):
 
     assert full_text in captured_prompt[0]
     assert truncated not in captured_prompt[0]
+
+
+def test_main_falls_back_to_payload_when_transcript_has_no_assistant_turn(tmp_path):
+    """If transcript has no assistant turn, fall back to last_assistant_message payload field."""
+    path = _write_transcript(tmp_path, [
+        _msg("user", "build a tool"),
+        # no assistant turn written yet
+    ])
+    payload_text = "Shall I proceed with the plan?"
+    captured_prompt = []
+
+    def fake_claude(prompt, **kwargs):
+        captured_prompt.append(prompt)
+        return "ACTION: PROCEED\nANSWER: "
+
+    with patch("stop_router.call_claude", side_effect=fake_claude):
+        with pytest.raises(SystemExit) as exc:
+            _run_main(path, {"last_assistant_message": payload_text})
+
+    assert exc.value.code == 2
+    assert payload_text in captured_prompt[0]
 
 
 def test_main_calls_handle_stop(tmp_path):
