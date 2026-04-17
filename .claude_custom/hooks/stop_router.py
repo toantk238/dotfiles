@@ -54,7 +54,7 @@ Does Claude's message contain a numbered or lettered list of 2 or more distinct 
 
 STEP 2 — Can you pick confidently from the original request alone?
 Is one option clearly the best fit given ONLY the original user request, with high confidence?
-  → YES: ACTION = ANSWER. Name the specific option clearly (e.g., "Option 2" or "Subagent-Driven").
+  → YES: ACTION = ANSWER. Name the specific option clearly.
   → NO or ambiguous: ACTION = HUMAN_NEEDED.
 
 STEP 3 — Is Claude asking the human a preference or approval question?
@@ -85,15 +85,23 @@ ANSWER: <your concise answer if ACTION is ANSWER, otherwise leave blank>
 
 
 def parse_llm_output(output: str) -> StopDecision:
-    """Parse AI output for ACTION and ANSWER lines."""
+    """Parse AI output for ACTION and ANSWER lines. ANSWER may span multiple lines."""
+    logger.debug(f"LLM raw output:\n{output}")
     action = "HUMAN_NEEDED"
-    answer = ""
+    answer_lines: list[str] = []
+    in_answer = False
     for line in output.splitlines():
-        line = line.strip()
-        if line.startswith("ACTION:"):
-            action = line[len("ACTION:"):].strip().upper()
-        elif line.startswith("ANSWER:"):
-            answer = line[len("ANSWER:"):].strip()
+        stripped = line.strip()
+        if stripped.startswith("ACTION:"):
+            action = stripped[len("ACTION:"):].strip().upper()
+            in_answer = False
+        elif stripped.startswith("ANSWER:"):
+            answer_lines = [stripped[len("ANSWER:"):].strip()]
+            in_answer = True
+        elif in_answer and stripped:
+            answer_lines.append(stripped)
+    answer = " ".join(part for part in answer_lines if part).strip()
+    logger.debug(f"Parsed → action={action} answer={answer!r}")
     return StopDecision(action=action, answer=answer)
 
 
@@ -159,6 +167,7 @@ def main():
     last_text = get_last_assistant_message(transcript_path)
     if not last_text:
         last_text = hook_input.get("last_assistant_message", "")
+    logger.debug(f"last_text =\n{last_text}")
     if not last_text:
         logger.info("Early exit: no last_text found")
         sys.exit(0)

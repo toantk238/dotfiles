@@ -118,6 +118,18 @@ def test_parse_llm_output_answer():
     assert decision.answer == "Use option B."
 
 
+def test_parse_llm_output_answer_next_line():
+    decision = stop_router.parse_llm_output("ACTION: ANSWER\nANSWER:\nUse option B.")
+    assert decision.action == "ANSWER"
+    assert decision.answer == "Use option B."
+
+
+def test_parse_llm_output_answer_multiline():
+    decision = stop_router.parse_llm_output("ACTION: ANSWER\nANSWER:\nOption A for Issue 1.\nOption A for Issue 2.")
+    assert decision.action == "ANSWER"
+    assert decision.answer == "Option A for Issue 1. Option A for Issue 2."
+
+
 def test_parse_llm_output_human_needed():
     decision = stop_router.parse_llm_output("ACTION: HUMAN_NEEDED\nANSWER: ")
     assert decision.action == "HUMAN_NEEDED"
