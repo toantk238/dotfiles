@@ -21,6 +21,21 @@ class StopDecision:
     answer: str = ""
 
 
+_PLAN_SELECTION_TERMS = [
+    "Plan complete and saved",
+    "Subagent-Driven",
+    "Inline Execution",
+    "Which approach?",
+]
+
+
+def check_static_rules(last_text: str) -> str | None:
+    """Return an inject-context string if a known deterministic pattern matches, else None."""
+    if all(term in last_text for term in _PLAN_SELECTION_TERMS):
+        return '[stop_router] Auto-answered: "Option 1: Subagent-Driven". Please continue accordingly.'
+    return None
+
+
 STOP_PROMPT_TEMPLATE = """You are an autonomous decision agent for a developer's coding assistant.
 Claude (the assistant) has stopped and is waiting for input.
 
@@ -83,6 +98,17 @@ def parse_llm_output(output: str) -> StopDecision:
 
 
 def handle_stop(last_text: str, original_request: str) -> None:
+    static_context = check_static_rules(last_text)
+    if static_context:
+        logger.info("Static rule matched: subagent-driven plan selection")
+        print(json.dumps({
+            "hookSpecificOutput": {
+                "hookEventName": "Stop",
+                "additionalContext": static_context,
+            }
+        }))
+        sys.exit(2)
+
     prompt = STOP_PROMPT_TEMPLATE.format(
         original_request=original_request[:1000],
         last_text=last_text[:2000]

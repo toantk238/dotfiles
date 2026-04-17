@@ -304,3 +304,43 @@ def test_handle_stop_human_directed_approval_question():
                 "design a system"
             )
     assert exc.value.code == 0
+
+
+# ── check_static_rules ───────────────────────────────────────────────────────
+
+_PLAN_MSG = (
+    "Plan complete and saved to docs/superpowers/plans/2026-04-17-foo.md. "
+    "7 tasks, ~25 steps total.\n\n"
+    "Two execution options:\n\n"
+    "1. Subagent-Driven (recommended) — I dispatch a fresh subagent per task\n\n"
+    "2. Inline Execution — Execute tasks in this session\n\n"
+    "Which approach?"
+)
+
+
+def test_static_rule_plan_selection_matches():
+    result = stop_router.check_static_rules(_PLAN_MSG)
+    assert result is not None
+    assert "Option 1" in result
+    assert "Subagent-Driven" in result
+
+
+@pytest.mark.parametrize("missing_term", [
+    "Plan complete and saved",
+    "Subagent-Driven",
+    "Inline Execution",
+    "Which approach?",
+])
+def test_static_rule_missing_term_returns_none(missing_term):
+    msg = _PLAN_MSG.replace(missing_term, "REMOVED")
+    assert stop_router.check_static_rules(msg) is None
+
+
+def test_handle_stop_static_rule_exits_2_without_llm(capsys):
+    with patch("stop_router.call_claude") as mock_llm:
+        with pytest.raises(SystemExit) as exc:
+            stop_router.handle_stop(_PLAN_MSG, "build something")
+    assert exc.value.code == 2
+    mock_llm.assert_not_called()
+    out = json.loads(capsys.readouterr().out)
+    assert "Subagent-Driven" in out["hookSpecificOutput"]["additionalContext"]
