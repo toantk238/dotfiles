@@ -8,7 +8,12 @@ import json
 import os
 import sys
 
-from common import HookInput, call_claude, get_original_user_request, get_last_assistant_message
+from common import (
+    HookInput,
+    call_claude,
+    get_last_assistant_message,
+    get_original_user_request,
+)
 from logger import get_logger
 
 logger = get_logger("stop_router")
@@ -133,7 +138,6 @@ def handle_stop(last_text: str, original_request: str) -> None:
         sys.exit(0)
 
     decision = parse_llm_output(output)
-    logger.info(f"Decision: action={decision.action} answer={decision.answer[:80] if decision.answer else ''}")
 
     context = ""
     if decision.action == "PROCEED":
@@ -143,6 +147,8 @@ def handle_stop(last_text: str, original_request: str) -> None:
     else:
         logger.info(f"Passing to human (action={decision.action})")
         sys.exit(0)
+
+    logger.info(f"Decision: action={decision.action} context={context}")
 
     print(json.dumps({
         "hookSpecificOutput": {
