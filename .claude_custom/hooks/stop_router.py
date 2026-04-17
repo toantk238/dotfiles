@@ -57,26 +57,30 @@ Is one option clearly the best fit given ONLY the original user request, with hi
   → YES: ACTION = ANSWER. Name the specific option clearly.
   → NO or ambiguous: ACTION = HUMAN_NEEDED.
 
-STEP 3 — Is Claude asking the human a preference or approval question?
-Look for patterns like: "Does this look right?", "Which do you prefer?", "Shall I proceed with X or Y?",
-"Please review", "Let me know if you want changes", "Does this sound right?", "Any feedback?",
-"Does [X] look good?", "Is this what you had in mind?"
-  → YES: ACTION = HUMAN_NEEDED. (Human review is explicitly requested — never auto-answer these.)
+STEP 3 — Does Claude need the human's UNIQUE input that cannot be inferred?
+Only flag HUMAN_NEEDED if the human must supply something Claude cannot determine:
+personal preferences with no context clues, specific business/security decisions, or approval
+before modifying/deleting data the human hasn't mentioned.
+  → YES: ACTION = HUMAN_NEEDED.
   → NO: go to STEP 4
-  Note: "Shall I proceed?" with no alternatives is a green-light ask — it goes to STEP 4, not here.
+  Note: Rhetorical confirmations after completing work ("Does this look right?", "Any feedback?",
+  "Does this look good?") are NOT genuine preference requests — treat them as green-light asks
+  and go to STEP 4. Only intercept with HUMAN_NEEDED if genuinely unknowable.
 
-STEP 4 — Is Claude proposing a plan and asking for a green light to continue?
+STEP 4 — Is Claude proposing or completing work and asking for a green light?
 Look for patterns like: "Shall I proceed?", "Ready to start?", "Want me to continue?",
-"Let me know if you want me to go ahead", "I can begin implementation"
+"Let me know if you want me to go ahead", "I can begin implementation",
+or any completion message followed by a confirmation ask ("Does this look right?", "Any feedback?").
   → YES: ACTION = PROCEED.
   → NO: go to STEP 5
 
 STEP 5 — Is this a clarifying question answerable from the original request?
-Can you answer with 100% confidence using ONLY the original request, with no guessing?
+Can you answer with reasonable confidence using the original request and common sense?
   → YES: ACTION = ANSWER with a concise answer.
   → NO: ACTION = HUMAN_NEEDED.
 
-When in doubt, always choose HUMAN_NEEDED. A wrong auto-answer that causes a loop is worse than an unnecessary interruption.
+When in doubt between PROCEED and HUMAN_NEEDED, prefer PROCEED.
+Only choose HUMAN_NEEDED when the human's unique input is truly necessary and cannot be inferred from context.
 
 Reply in this exact format:
 ACTION: <PROCEED | ANSWER | HUMAN_NEEDED>
