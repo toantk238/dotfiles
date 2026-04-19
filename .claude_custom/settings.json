@@ -63,9 +63,9 @@
           {
             "type": "command",
             "command": "zsh -c \"source ~/.env.zsh; ~/.claude/hooks/.venv/bin/python ~/.claude/hooks/stop_router.py\"",
-            "asyncRewake": true,
             "timeout": 30,
-            "statusMessage": "AI reviewing..."
+            "statusMessage": "AI reviewing...",
+            "asyncRewake": true
           }
         ]
       }
@@ -98,5 +98,6 @@
     "figma@claude-plugins-official": true,
     "document-skills@anthropic-agent-skills": true
   },
-  "forceLoginMethod": "claudeai"
+  "forceLoginMethod": "claudeai",
+  "model": "opusplan"
 }

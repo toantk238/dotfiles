@@ -1,0 +1,8 @@
+# Set the layout for the current tab
+layout tall
+# Create the "main" window and run an editor in it to edit the project files
+launch --title "Build new features (Street Chat)" ssh -i ~/.ssh/toantk238_rsa -R 1234:127.0.0.1:1234 debian@51.77.220.65
+# Create a side window to run a shell to build or test project
+launch --title "Watching log (Street Chat)" ssh -i ~/.ssh/toantk238_rsa -R 1234:127.0.0.1:1234 debian@51.77.220.65
+# Create another side window to keep an eye on some useful log file
+# launch --title "Log for my project" /usr/bin/tail -f /path/to/project/log/file
