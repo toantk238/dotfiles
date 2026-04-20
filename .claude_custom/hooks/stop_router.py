@@ -7,6 +7,7 @@ from dataclasses import dataclass
 import json
 import os
 import sys
+import tempfile
 
 from common import (
     HookInput,
@@ -114,17 +115,40 @@ def parse_llm_output(output: str) -> StopDecision:
     return StopDecision(action=action, answer=answer)
 
 
+_STATE_FILE = os.path.join(tempfile.gettempdir(), "stop_router_last_text.json")
+
+
+def _load_state() -> dict[str, str]:
+    try:
+        with open(_STATE_FILE, encoding="utf-8") as f:
+            return json.load(f)
+    except Exception:
+        return {}
+
+
+def _save_state(state: dict[str, str]) -> None:
+    try:
+        with open(_STATE_FILE, "w", encoding="utf-8") as f:
+            json.dump(state, f)
+    except Exception as e:
+        logger.warning(f"Could not save state: {e}")
+
+
+def check_repeated_last_text(session_id: str, last_text: str) -> bool:
+    """Return True if last_text is the same as the previous one for this session."""
+    if not session_id or not last_text:
+        return False
+    state = _load_state()
+    prev = state.get(session_id)
+    state[session_id] = last_text
+    _save_state(state)
+    if prev and prev == last_text:
+        logger.info(f"Repeated last_text for session {session_id!r} — exiting to human")
+        return True
+    return False
+
+
 def handle_stop(last_text: str, original_request: str) -> None:
-    static_context = check_static_rules(last_text)
-    if static_context:
-        logger.info("Static rule matched: subagent-driven plan selection")
-        print(json.dumps({
-            "hookSpecificOutput": {
-                "hookEventName": "Stop",
-                "additionalContext": static_context,
-            }
-        }))
-        sys.exit(2)
 
     prompt = STOP_PROMPT_TEMPLATE.format(
         original_request=original_request[:1000],
@@ -141,7 +165,7 @@ def handle_stop(last_text: str, original_request: str) -> None:
 
     context = ""
     if decision.action == "PROCEED":
-        context = '[stop_router] Auto-approved: "Proceed". Please continue accordingly.'
+        context = '[stop_router] Auto-approved: "Your recommendation looks good. I agree.". Please continue accordingly.'
     elif decision.action == "ANSWER" and decision.answer:
         context = f'[stop_router] Auto-answered: "{decision.answer}". Please continue accordingly.'
     else:
@@ -175,11 +199,32 @@ def main():
         sys.exit(0)
 
     last_text = get_last_assistant_message(transcript_path)
+
     if not last_text:
         last_text = hook_input.get("last_assistant_message", "")
     logger.debug(f"last_text =\n{last_text}")
+
     if not last_text:
         logger.info("Early exit: no last_text found")
+        sys.exit(0)
+
+    static_context = check_static_rules(last_text)
+    if static_context:
+        logger.info("Static rule matched: subagent-driven plan selection")
+        print(json.dumps({
+            "hookSpecificOutput": {
+                "hookEventName": "Stop",
+                "additionalContext": static_context,
+            }
+        }))
+        sys.exit(2)
+
+    session_id = hook_input.get("session_id", "")
+    # Use the payload field for repeat detection — it's always current.
+    # The transcript-read last_text can be stale when the hook fires before the
+    # transcript write completes, causing false repeat positives.
+    repeat_check_text = hook_input.get("last_assistant_message", "") or last_text
+    if check_repeated_last_text(session_id, repeat_check_text):
         sys.exit(0)
 
     original_request = get_original_user_request(transcript_path)

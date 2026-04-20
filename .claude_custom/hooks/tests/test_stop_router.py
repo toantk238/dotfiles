@@ -348,10 +348,47 @@ def test_static_rule_missing_term_returns_none(missing_term):
     assert stop_router.check_static_rules(msg) is None
 
 
-def test_handle_stop_static_rule_exits_2_without_llm(capsys):
+def test_repeat_check_uses_payload_not_stale_transcript(tmp_path):
+    """Repeat detection must use payload last_assistant_message, not transcript.
+
+    Scenario: hook fires twice for the same session. Between invocations Claude sent
+    a new message, but the transcript hasn't been written yet. The transcript still
+    returns the old message — if we use that for repeat detection we get a false positive.
+    The payload field always reflects the current message and must be used instead.
+    """
+    stale_text = "All done — no further action needed."
+    new_text = "(No further action needed — waiting for your next request.)"
+
+    # Transcript only has the old (stale) message
+    path = _write_transcript(tmp_path, [
+        _msg("user", "build a tool"),
+        _msg("assistant", stale_text),
+    ])
+    session_id = "test-race-session"
+
+    # First invocation: stores stale_text in repeat-check state
+    with patch("stop_router.call_claude", return_value="ACTION: PROCEED\nANSWER: "):
+        with pytest.raises(SystemExit):
+            _run_main(path, {"session_id": session_id, "last_assistant_message": stale_text})
+
+    # Second invocation: transcript still returns stale_text, but payload has new_text.
+    # Should NOT trigger repeat detection — must proceed, not exit 0.
+    with patch("stop_router.call_claude", return_value="ACTION: PROCEED\nANSWER: "):
+        with pytest.raises(SystemExit) as exc:
+            _run_main(path, {"session_id": session_id, "last_assistant_message": new_text})
+
+    assert exc.value.code == 2, "False repeat detection: payload text differed but stale transcript matched"
+
+
+def test_main_static_rule_exits_2_without_llm(tmp_path, capsys):
+    """Static rule in main() must short-circuit the LLM call and return Subagent-Driven."""
+    path = _write_transcript(tmp_path, [
+        _msg("user", "build something"),
+        _msg("assistant", _PLAN_MSG),
+    ])
     with patch("stop_router.call_claude") as mock_llm:
         with pytest.raises(SystemExit) as exc:
-            stop_router.handle_stop(_PLAN_MSG, "build something")
+            _run_main(path)
     assert exc.value.code == 2
     mock_llm.assert_not_called()
     out = json.loads(capsys.readouterr().out)
