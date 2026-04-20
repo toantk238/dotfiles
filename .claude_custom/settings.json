@@ -29,6 +29,7 @@
     "disableBypassPermissionsMode": "disable",
     "additionalDirectories": []
   },
+  "model": "opusplan",
   "enableAllProjectMcpServers": true,
   "enabledMcpjsonServers": [
     "sequential-thinking",
@@ -72,10 +73,12 @@
     ],
     "PostToolUse": [
       {
+        "matcher": "Edit|Write|Bash",
         "hooks": [
           {
             "type": "command",
-            "command": "zsh -c \"source ~/.env.zsh; ~/.claude/hooks/.venv/bin/python ~/.claude/hooks/debug.py\""
+            "command": "code-review-graph update --skip-flows",
+            "timeout": 30
           }
         ]
       }
@@ -89,6 +92,18 @@
           }
         ]
       }
+    ],
+    "SessionStart": [
+      {
+        "matcher": "",
+        "hooks": [
+          {
+            "type": "command",
+            "command": "code-review-graph status",
+            "timeout": 10
+          }
+        ]
+      }
     ]
   },
   "enabledPlugins": {
@@ -96,8 +111,16 @@
     "clangd-lsp@claude-plugins-official": true,
     "pyright-lsp@claude-plugins-official": true,
     "figma@claude-plugins-official": true,
-    "document-skills@anthropic-agent-skills": true
+    "document-skills@anthropic-agent-skills": true,
+    "context-mode@context-mode": true
   },
-  "forceLoginMethod": "claudeai",
-  "model": "opusplan"
+  "extraKnownMarketplaces": {
+    "context-mode": {
+      "source": {
+        "source": "github",
+        "repo": "mksglu/context-mode"
+      }
+    }
+  },
+  "forceLoginMethod": "claudeai"
 }
