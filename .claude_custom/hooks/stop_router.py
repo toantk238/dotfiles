@@ -51,6 +51,10 @@ Claude's last message:
 
 Follow these steps in order to decide the best action:
 
+STEP 0 — Does Claude respond as it has completed the whole process or nothing to do more
+  → YES: ACTION = HUMAN_NEEDED.
+  → NO: go to STEP 1
+
 STEP 1 — Detect options:
 Does Claude's message contain a numbered or lettered list of 2 or more distinct options for the human to choose from?
   → YES: go to STEP 2
@@ -88,7 +92,7 @@ Only choose HUMAN_NEEDED when the human's unique input is truly necessary and ca
 
 Reply in this exact format:
 ACTION: <PROCEED | ANSWER | HUMAN_NEEDED>
-ANSWER: <your concise answer if ACTION is ANSWER, otherwise leave blank>
+ANSWER: <your concise answer if ACTION is ANSWER, reason if ACTION is HUMAN_NEEDED or PROCEED>
 """
 
 
