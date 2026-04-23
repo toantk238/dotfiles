@@ -28,10 +28,8 @@ class StopDecision:
 
 
 _PLAN_SELECTION_TERMS = [
-    "Plan complete and saved",
     "Subagent-Driven",
     "Inline Execution",
-    "Which approach?",
 ]
 
 
@@ -198,10 +196,10 @@ def main():
         logger.debug("Early exit: no transcript (nested session)")
         sys.exit(0)
 
-    last_text = get_last_assistant_message(transcript_path)
+    last_text = hook_input.get("last_assistant_message", "")
 
     if not last_text:
-        last_text = hook_input.get("last_assistant_message", "")
+        last_text = get_last_assistant_message(transcript_path)
     logger.debug(f"last_text =\n{last_text}")
 
     if not last_text:
