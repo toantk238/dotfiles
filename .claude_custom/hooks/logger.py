@@ -3,7 +3,6 @@ import logging
 import os
 from pathlib import Path
 
-LOG_FILE = Path(__file__).parent / "hooks.log"
 LOG_LEVEL = os.environ.get("HOOKS_LOG_LEVEL", "INFO").upper()
 
 
@@ -21,7 +20,8 @@ def get_logger(name: str) -> logging.Logger:
     )
 
     try:
-        file_handler = logging.FileHandler(LOG_FILE, encoding="utf-8")
+        log_file = Path(__file__).parent / f"{name}.log"
+        file_handler = logging.FileHandler(log_file, encoding="utf-8")
         file_handler.setFormatter(fmt)
         logger.addHandler(file_handler)
     except Exception as e:
