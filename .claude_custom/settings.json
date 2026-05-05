@@ -124,5 +124,7 @@
       }
     }
   },
-  "forceLoginMethod": "claudeai"
+  "forceLoginMethod": "claudeai",
+  "remoteControlAtStartup": true,
+  "agentPushNotifEnabled": true
 }
