@@ -28,10 +28,8 @@ class StopDecision:
 
 
 _PLAN_SELECTION_TERMS = [
-    "Plan complete and saved",
     "Subagent-Driven",
     "Inline Execution",
-    "Which approach?",
 ]
 
 
@@ -52,6 +50,10 @@ Claude's last message:
 {last_text}
 
 Follow these steps in order to decide the best action:
+
+STEP 0 — Does Claude respond as it has completed the whole process or nothing to do more
+  → YES: ACTION = HUMAN_NEEDED.
+  → NO: go to STEP 1
 
 STEP 1 — Detect options:
 Does Claude's message contain a numbered or lettered list of 2 or more distinct options for the human to choose from?
@@ -90,7 +92,7 @@ Only choose HUMAN_NEEDED when the human's unique input is truly necessary and ca
 
 Reply in this exact format:
 ACTION: <PROCEED | ANSWER | HUMAN_NEEDED>
-ANSWER: <your concise answer if ACTION is ANSWER, otherwise leave blank>
+ANSWER: <your concise answer if ACTION is ANSWER, reason if ACTION is HUMAN_NEEDED or PROCEED>
 """
 
 
@@ -198,10 +200,10 @@ def main():
         logger.debug("Early exit: no transcript (nested session)")
         sys.exit(0)
 
-    last_text = get_last_assistant_message(transcript_path)
+    last_text = hook_input.get("last_assistant_message", "")
 
     if not last_text:
-        last_text = hook_input.get("last_assistant_message", "")
+        last_text = get_last_assistant_message(transcript_path)
     logger.debug(f"last_text =\n{last_text}")
 
     if not last_text:
