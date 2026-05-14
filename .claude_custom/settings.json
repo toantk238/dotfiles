@@ -110,6 +110,14 @@
             "timeout": 10
           }
         ]
+      },
+      {
+        "hooks": [
+          {
+            "type": "command",
+            "command": "\"/Users/mbhealth/.claude/hooks/context-mode-cache-heal.mjs\""
+          }
+        ]
       }
     ]
   },
@@ -119,6 +127,7 @@
     "pyright-lsp@claude-plugins-official": true,
     "figma@claude-plugins-official": true,
     "document-skills@anthropic-agent-skills": true,
+    "typescript-lsp@claude-plugins-official": true,
     "context-mode@context-mode": true,
     "frontend-design@claude-plugins-official": true
   },
