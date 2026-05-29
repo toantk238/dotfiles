@@ -27,9 +27,9 @@ done
 TARGET="${ARGS[0]:-.}"
 
 declare -A DENSITY=(
-  [ldpi]=0.75 [mdpi]=1.0 [hdpi]=1.5 [xhdpi]=2.0 [xxhdpi]=3.0 [xxxhdpi]=4.0
+  [hdpi]=1.5 [xhdpi]=2.0 [xxhdpi]=3.0 [xxxhdpi]=4.0
 )
-ORDER=(ldpi mdpi hdpi xhdpi xxhdpi xxxhdpi)
+ORDER=(hdpi xhdpi xxhdpi xxxhdpi)
 
 # --- Resolve the source folder ---
 basename_t=$(basename "$TARGET")
