@@ -18,11 +18,12 @@
       "Exit_plan_mode",
       "Bash",
       "WebSearch",
-      "mcp__*",
       "mcp__plugin_context-mode_context-mode__*",
       "mcp__plugin_context-mode_context-mode__ctx_batch_execute",
       "mcp__code-review-graph__*",
       "mcp__code-review-graph__get_architecture_overview_tool",
+      "mcp__sequential-thinking__*",
+      "mcp__memory__*",
       "Skill(superpowers*)",
       "Skill(superpowers:writing-plans)",
       "Skill(superpowers:subagent-driven-development)"
