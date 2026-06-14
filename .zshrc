@@ -7,7 +7,11 @@ then
   source "/$HOME/.env.zsh"
 fi
 
-autoload -U compinit && compinit
+autoload -Uz compinit
+for dump in ~/.zcompdump(N.mh+24); do
+  compinit
+done
+compinit -C
 
 this_path="$HOME/.zshrc"
 real_path=$(realpath "$this_path")
@@ -193,5 +197,7 @@ source "$dot_dir/.pyenv.sh"
 source "$dot_dir/.nvm.sh"
 source "$dot_dir/.kompose.sh"
 source "$dot_dir/.kubectl.sh"
+
+# autoload -U compinit && compinit
 
 compdef -d ssh
