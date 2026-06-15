@@ -32,7 +32,7 @@ Input: {tool_input}
 
 Rules:
 - APPROVE all read operations (cat, ls, grep, find, git status/diff/log)
-- APPROVE file edits inside the project directory
+- APPROVE file edits, remove inside the project directory
 - APPROVE docker compose up/down/logs/ps, git add/commit
 - BLOCK rm -rf on anything outside /tmp or the project dir + associated dirs.
 - BLOCK git push --force, git reset --hard without explicit task context
