@@ -26,7 +26,8 @@
       "mcp__memory__*",
       "Skill(superpowers*)",
       "Skill(superpowers:writing-plans)",
-      "Skill(superpowers:subagent-driven-development)"
+      "Skill(superpowers:subagent-driven-development)",
+      "Agent"
     ],
     "deny": [
       "Bash(rm -rf /)",
