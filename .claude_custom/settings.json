@@ -23,9 +23,7 @@
       "mcp__sequential-thinking__*",
       "mcp__memory__*",
       "mcp__plugin_figma_figma__*",
-      "Skill(superpowers*)",
-      "Skill(superpowers:writing-plans)",
-      "Skill(superpowers:subagent-driven-development)",
+      "Skill(superpowers:*)",
       "Agent"
     ],
     "deny": [
