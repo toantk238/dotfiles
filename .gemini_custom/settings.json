@@ -1,0 +1,94 @@
+{
+  "colorScheme": "dark",
+  "enableTelemetry": false,
+  "model": "Gemini 3.5 Flash (Medium)",
+  "permissions": {
+    "allow": [
+      "command(npm test)",
+      "command(npm run)",
+      "command(git status)"
+    ]
+  },
+  "statusLine": {
+    "type": "",
+    "command": "",
+    "enabled": true
+  },
+  "trustedWorkspaces": [
+    "/home/freesky1102",
+    "/mnt/Data/Workspace/4.MobileHealth/4.Android/appointment-droid",
+    "/mnt/Data/Workspace/4.MobileHealth/2.Backend/mobile_ci_reporter",
+    "/mnt/Data/Workspace/4.MobileHealth/4.Android/android-doctor-app"
+  ],
+  "hooks": {
+    "Notification": [
+      {
+        "matcher": "",
+        "hooks": [
+          {
+            "type": "command",
+            "command": "source ~/.env.zsh; ~/.gemini/hooks/notify_slack.sh"
+          }
+        ]
+      }
+    ],
+    "PreToolUse": [
+      {
+        "matcher": "Bash",
+        "hooks": [
+          {
+            "type": "command",
+            "command": "zsh -c \"source ~/.env.zsh; ~/.gemini/hooks/.venv/bin/python ~/.gemini/hooks/pre_tool_reviewer.py\""
+          }
+        ]
+      }
+    ],
+    "Stop": [
+      {
+        "hooks": [
+          {
+            "type": "command",
+            "command": "zsh -c \"source ~/.env.zsh; ~/.gemini/hooks/.venv/bin/python ~/.gemini/hooks/stop_router.py\"",
+            "timeout": 30,
+            "statusMessage": "AI reviewing...",
+            "asyncRewake": true
+          }
+        ]
+      }
+    ],
+    "PostToolUse": [
+      {
+        "matcher": "Edit|Write|Bash",
+        "hooks": [
+          {
+            "type": "command",
+            "command": "code-review-graph update --skip-flows",
+            "timeout": 30
+          }
+        ]
+      }
+    ],
+    "UserPromptSubmit": [
+      {
+        "hooks": [
+          {
+            "type": "command",
+            "command": "zsh -c \"source ~/.env.zsh; ~/.gemini/hooks/.venv/bin/python ~/.gemini/hooks/debug.py\""
+          }
+        ]
+      }
+    ],
+    "SessionStart": [
+      {
+        "matcher": "",
+        "hooks": [
+          {
+            "type": "command",
+            "command": "code-review-graph status",
+            "timeout": 10
+          }
+        ]
+      }
+    ]
+  }
+}
