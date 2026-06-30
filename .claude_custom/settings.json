@@ -136,6 +136,7 @@
     }
   },
   "forceLoginMethod": "claudeai",
+  "tui": "default",
   "remoteControlAtStartup": true,
   "inputNeededNotifEnabled": true,
   "agentPushNotifEnabled": true
