@@ -7,6 +7,8 @@ AGY_HOOKS_DIR="$HOME/.gemini/hooks"
 
 echo "Installing .gemini_custom..."
 
+mkdir -p "$AGY_CLI_DIR"
+
 # Symlink settings.json
 if [ -f "$AGY_CLI_DIR/settings.json" ] && [ ! -L "$AGY_CLI_DIR/settings.json" ]; then
   cp "$AGY_CLI_DIR/settings.json" "$AGY_CLI_DIR/settings.json.backup.$(date +%Y%m%d_%H%M%S)"
