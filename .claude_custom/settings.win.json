@@ -22,8 +22,9 @@
       "mcp__code-review-graph__*",
       "mcp__sequential-thinking__*",
       "mcp__memory__*",
-      "mcp__plugin_figma_figma__*",
-      "Skill(superpowers:*)",
+      "Skill(superpowers*)",
+      "Skill(superpowers:writing-plans)",
+      "Skill(superpowers:subagent-driven-development)",
       "Agent"
     ],
     "deny": [
@@ -35,7 +36,6 @@
     "disableBypassPermissionsMode": "disable",
     "additionalDirectories": []
   },
-  "model": "opusplan",
   "enableAllProjectMcpServers": true,
   "enabledMcpjsonServers": [
     "sequential-thinking",
@@ -48,7 +48,8 @@
         "hooks": [
           {
             "type": "command",
-            "command": "source ~/.env.zsh; ~/.claude/notify_slack.sh"
+            "command": "if (Test-Path ~/.env.ps1) { . ~/.env.ps1 }; if (Test-Path ~/.claude/notify_slack.ps1) { . ~/.claude/notify_slack.ps1 }",
+            "shell": "powershell"
           }
         ]
       }
@@ -59,7 +60,8 @@
         "hooks": [
           {
             "type": "command",
-            "command": "zsh -c \"source ~/.env.zsh; ~/.claude/hooks/.venv/bin/python ~/.claude/hooks/pre_tool_reviewer.py\""
+            "command": "if (Test-Path ~/.env.ps1) { . ~/.env.ps1 }; $input | & ~/.claude/hooks/.venv/Scripts/python.exe ~/.claude/hooks/pre_tool_reviewer.py",
+            "shell": "powershell"
           }
         ]
       }
@@ -69,7 +71,8 @@
         "hooks": [
           {
             "type": "command",
-            "command": "zsh -c \"source ~/.env.zsh; ~/.claude/hooks/.venv/bin/python ~/.claude/hooks/stop_router.py\"",
+            "command": "if (Test-Path ~/.env.ps1) { . ~/.env.ps1 }; $input | & ~/.claude/hooks/.venv/Scripts/python.exe ~/.claude/hooks/stop_router.py; exit $LASTEXITCODE",
+            "shell": "powershell",
             "timeout": 30,
             "statusMessage": "AI reviewing...",
             "asyncRewake": true
@@ -79,12 +82,11 @@
     ],
     "PostToolUse": [
       {
-        "matcher": "Edit|Write|Bash",
         "hooks": [
           {
             "type": "command",
-            "command": "code-review-graph update --skip-flows",
-            "timeout": 30
+            "command": "if (Test-Path ~/.env.ps1) { . ~/.env.ps1 }; $input | & ~/.claude/hooks/.venv/Scripts/python.exe ~/.claude/hooks/debug.py",
+            "shell": "powershell"
           }
         ]
       }
@@ -94,50 +96,18 @@
         "hooks": [
           {
             "type": "command",
-            "command": "zsh -c \"source ~/.env.zsh; ~/.claude/hooks/.venv/bin/python ~/.claude/hooks/debug.py\""
-          }
-        ]
-      }
-    ],
-    "SessionStart": [
-      {
-        "matcher": "",
-        "hooks": [
-          {
-            "type": "command",
-            "command": "code-review-graph status",
-            "timeout": 10
+            "command": "if (Test-Path ~/.env.ps1) { . ~/.env.ps1 }; $input | & ~/.claude/hooks/.venv/Scripts/python.exe ~/.claude/hooks/debug.py",
+            "shell": "powershell"
           }
         ]
       }
     ]
   },
   "enabledPlugins": {
-    "superpowers@claude-plugins-official": true,
-    "clangd-lsp@claude-plugins-official": true,
-    "pyright-lsp@claude-plugins-official": true,
-    "figma@claude-plugins-official": true,
-    "document-skills@anthropic-agent-skills": true,
-    "context-mode@context-mode": true,
-    "frontend-design@claude-plugins-official": true
-  },
-  "extraKnownMarketplaces": {
-    "context-mode": {
-      "source": {
-        "source": "github",
-        "repo": "mksglu/context-mode"
-      }
-    },
-    "codeceptjs-skills": {
-      "source": {
-        "source": "github",
-        "repo": "codeceptjs/skills"
-      }
-    }
+    "superpowers@superpowers-marketplace": true
   },
   "forceLoginMethod": "claudeai",
-  "tui": "default",
   "remoteControlAtStartup": true,
-  "inputNeededNotifEnabled": true,
-  "agentPushNotifEnabled": true
+  "agentPushNotifEnabled": true,
+  "inputNeededNotifEnabled": true
 }

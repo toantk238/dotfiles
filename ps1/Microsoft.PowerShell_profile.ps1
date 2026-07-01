@@ -20,6 +20,7 @@ Set-Alias awk C:\Users\Rock\scoop\apps\msys2\current\usr\bin\awk.exe
 # $Env:DIRENV_BASH = "C:\Users\Rock\scoop\shims\bash.exe"
 # Invoke-Expression "$(direnv hook pwsh)"
 
+[Console]::OutputEncoding = [System.Text.Encoding]::UTF8
 oh-my-posh init pwsh | Invoke-Expression
 Import-Module git-aliases -DisableNameChecking
 

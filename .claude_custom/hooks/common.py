@@ -35,6 +35,7 @@ def call_claude(prompt: str, model: str = "claude-haiku-4-5-20251001", timeout: 
             input=prompt,
             capture_output=True,
             text=True,
+            encoding="utf-8",
             timeout=timeout,
             check=True
         )

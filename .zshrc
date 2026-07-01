@@ -195,6 +195,8 @@ source "$dot_dir/.nvm.sh"
 source "$dot_dir/.kompose.sh"
 source "$dot_dir/.kubectl.sh"
 
+# autoload -U compinit && compinit
+
 compdef -d ssh
 
 [ -f ~/.fzf.zsh ] && source ~/.fzf.zsh
