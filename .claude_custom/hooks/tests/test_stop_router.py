@@ -553,3 +553,37 @@ def test_has_incomplete_tasks_malformed_sibling_block_same_entry(tmp_path):
         ]}},
     ])
     assert common.has_incomplete_tasks(path) is True
+
+
+# ── main() incomplete-tasks gate ─────────────────────────────────────────────
+
+def test_main_skips_when_tasks_incomplete(tmp_path):
+    """Stop fires while a task is still pending/in_progress -> exit 0, LLM never called."""
+    path = _write_transcript(tmp_path, [
+        _msg("user", "build a tool"),
+        _task_create("toolu_1", "Step one"),
+        _task_create_result("toolu_1", "1", "Step one"),
+        _task_update("1", "in_progress"),
+        _msg("assistant", "Shall I proceed?"),
+    ])
+    with patch("stop_router.call_claude") as mock_llm:
+        with pytest.raises(SystemExit) as exc:
+            _run_main(path)
+    assert exc.value.code == 0
+    mock_llm.assert_not_called()
+
+
+def test_main_proceeds_when_tasks_all_completed(tmp_path):
+    """All tasks completed -> falls through to existing LLM-driven behavior."""
+    path = _write_transcript(tmp_path, [
+        _msg("user", "build a tool"),
+        _task_create("toolu_1", "Step one"),
+        _task_create_result("toolu_1", "1", "Step one"),
+        _task_update("1", "completed"),
+        _msg("assistant", "Shall I proceed?"),
+    ])
+    output = "ACTION: PROCEED\nANSWER: "
+    with patch("stop_router.call_claude", return_value=output):
+        with pytest.raises(SystemExit) as exc:
+            _run_main(path)
+    assert exc.value.code == 2

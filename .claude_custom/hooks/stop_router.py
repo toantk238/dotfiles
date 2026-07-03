@@ -14,6 +14,7 @@ from common import (
     call_claude,
     get_last_assistant_message,
     get_original_user_request,
+    has_incomplete_tasks,
 )
 from logger import get_logger
 
@@ -198,6 +199,10 @@ def main():
     # with a specific "nested session" log before making two file-open attempts.
     if not transcript_path or not os.path.exists(transcript_path):
         logger.debug("Early exit: no transcript (nested session)")
+        sys.exit(0)
+
+    if has_incomplete_tasks(transcript_path):
+        logger.info("Early exit: incomplete tasks present in task list")
         sys.exit(0)
 
     last_text = hook_input.get("last_assistant_message", "")
