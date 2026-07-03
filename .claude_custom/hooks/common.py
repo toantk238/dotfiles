@@ -148,7 +148,7 @@ def has_incomplete_tasks(transcript_path: str) -> bool:
                         status = task_input.get("status", "")
                         if task_id:
                             states[task_id] = status
-                except (TypeError, AttributeError, ValueError):
+                except Exception:
                     # Structural backstop: one malformed block must never
                     # abort processing of its sibling blocks in the same
                     # entry/turn. Skip it and keep replaying the rest so
@@ -165,7 +165,7 @@ def has_incomplete_tasks(transcript_path: str) -> bool:
                     m = _TASK_CREATED_RE.search(text)
                     if m:
                         states.setdefault(m.group(1), "pending")
-                except (TypeError, AttributeError, ValueError):
+                except Exception:
                     # Structural backstop: one malformed block must never
                     # abort processing of its sibling blocks in the same
                     # entry/turn. Skip it and keep replaying the rest so
@@ -180,6 +180,6 @@ def has_incomplete_tasks(transcript_path: str) -> bool:
         try:
             if status in _INCOMPLETE_TASK_STATUSES:
                 return True
-        except (TypeError, AttributeError, ValueError):
+        except Exception:
             continue
     return False
