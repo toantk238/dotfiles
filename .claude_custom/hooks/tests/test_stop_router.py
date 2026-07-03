@@ -531,3 +531,25 @@ def test_has_incomplete_tasks_malformed_tool_use_id_unhashable(tmp_path):
         _task_create_result("toolu_2", "2", "Task two"),
     ])
     assert common.has_incomplete_tasks(path) is True
+
+
+def test_has_incomplete_tasks_malformed_sibling_block_same_entry(tmp_path):
+    """A malformed tool_result block must not shadow a valid sibling block
+    in the SAME transcript entry (e.g. parallel tool calls produce one user
+    turn with multiple tool_result blocks).
+
+    The first block has a non-hashable 'tool_use_id' and would raise if
+    processed; the second, well-formed block confirms a real TaskCreate for
+    a task that is never updated, so it remains pending. Per-block (not
+    per-entry) error isolation must still detect it.
+    """
+    path = _write_transcript(tmp_path, [
+        _task_create("toolu_1", "Do the thing"),
+        {"message": {"role": "user", "content": [
+            {"type": "tool_result", "tool_use_id": ["not", "hashable"],
+             "content": "Task #99 created successfully: bogus"},
+            {"type": "tool_result", "tool_use_id": "toolu_1",
+             "content": "Task #1 created successfully: Do the thing"},
+        ]}},
+    ])
+    assert common.has_incomplete_tasks(path) is True

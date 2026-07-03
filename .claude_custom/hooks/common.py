@@ -125,14 +125,14 @@ def has_incomplete_tasks(transcript_path: str) -> bool:
     pending_create_ids: set[str] = set()
 
     for entry in read_transcript(transcript_path):
-        try:
-            msg = entry.get("message", {})
-            content = msg.get("content")
-            if not isinstance(content, list):
-                continue
-            role = msg.get("role")
-            if role == "assistant":
-                for block in content:
+        msg = entry.get("message", {})
+        content = msg.get("content")
+        if not isinstance(content, list):
+            continue
+        role = msg.get("role")
+        if role == "assistant":
+            for block in content:
+                try:
                     if not isinstance(block, dict):
                         continue
                     name = block.get("name")
@@ -148,8 +148,15 @@ def has_incomplete_tasks(transcript_path: str) -> bool:
                         status = task_input.get("status", "")
                         if task_id:
                             states[task_id] = status
-            elif role == "user":
-                for block in content:
+                except (TypeError, AttributeError, ValueError):
+                    # Structural backstop: one malformed block must never
+                    # abort processing of its sibling blocks in the same
+                    # entry/turn. Skip it and keep replaying the rest so
+                    # well-formed tasks elsewhere are still found.
+                    continue
+        elif role == "user":
+            for block in content:
+                try:
                     if not isinstance(block, dict) or block.get("type") != "tool_result":
                         continue
                     if block.get("tool_use_id") not in pending_create_ids:
@@ -158,11 +165,12 @@ def has_incomplete_tasks(transcript_path: str) -> bool:
                     m = _TASK_CREATED_RE.search(text)
                     if m:
                         states.setdefault(m.group(1), "pending")
-        except (TypeError, AttributeError, ValueError):
-            # Structural backstop: one malformed transcript entry must never
-            # abort the whole scan. Skip it and keep replaying the rest so
-            # well-formed tasks elsewhere in the transcript are still found.
-            continue
+                except (TypeError, AttributeError, ValueError):
+                    # Structural backstop: one malformed block must never
+                    # abort processing of its sibling blocks in the same
+                    # entry/turn. Skip it and keep replaying the rest so
+                    # well-formed tasks elsewhere are still found.
+                    continue
 
     # A stored status can itself be malformed (e.g. non-hashable) even though
     # the entry that set it parsed without error. Guard the membership check
