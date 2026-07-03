@@ -33,6 +33,30 @@ def _msg(role: str, text: str | list) -> dict:
     return {"message": {"role": role, "content": content}}
 
 
+def _task_create(tool_use_id: str, subject: str) -> dict:
+    """Assistant turn: a single TaskCreate tool_use block."""
+    return {"message": {"role": "assistant", "content": [
+        {"type": "tool_use", "id": tool_use_id, "name": "TaskCreate",
+         "input": {"subject": subject, "description": subject}},
+    ]}}
+
+
+def _task_create_result(tool_use_id: str, task_id: str, subject: str) -> dict:
+    """User turn: the tool_result for a TaskCreate call."""
+    return {"message": {"role": "user", "content": [
+        {"type": "tool_result", "tool_use_id": tool_use_id,
+         "content": f"Task #{task_id} created successfully: {subject}"},
+    ]}}
+
+
+def _task_update(task_id: str, status: str) -> dict:
+    """Assistant turn: a single TaskUpdate tool_use block."""
+    return {"message": {"role": "assistant", "content": [
+        {"type": "tool_use", "id": f"toolu_update_{task_id}_{status}", "name": "TaskUpdate",
+         "input": {"taskId": task_id, "status": status}},
+    ]}}
+
+
 # ── get_original_user_request ────────────────────────────────────────────────
 
 def test_get_original_user_request_basic(tmp_path):
@@ -393,3 +417,57 @@ def test_main_static_rule_exits_2_without_llm(tmp_path, capsys):
     mock_llm.assert_not_called()
     out = json.loads(capsys.readouterr().out)
     assert "Subagent-Driven" in out["hookSpecificOutput"]["additionalContext"]
+
+
+# ── has_incomplete_tasks ─────────────────────────────────────────────────────
+
+def test_has_incomplete_tasks_pending(tmp_path):
+    """A created task with no update at all is still pending -> incomplete."""
+    path = _write_transcript(tmp_path, [
+        _task_create("toolu_1", "Do the thing"),
+        _task_create_result("toolu_1", "1", "Do the thing"),
+    ])
+    assert common.has_incomplete_tasks(path) is True
+
+
+def test_has_incomplete_tasks_in_progress(tmp_path):
+    path = _write_transcript(tmp_path, [
+        _task_create("toolu_1", "Do the thing"),
+        _task_create_result("toolu_1", "1", "Do the thing"),
+        _task_update("1", "in_progress"),
+    ])
+    assert common.has_incomplete_tasks(path) is True
+
+
+def test_has_incomplete_tasks_all_completed(tmp_path):
+    path = _write_transcript(tmp_path, [
+        _task_create("toolu_1", "Task one"),
+        _task_create_result("toolu_1", "1", "Task one"),
+        _task_create("toolu_2", "Task two"),
+        _task_create_result("toolu_2", "2", "Task two"),
+        _task_update("1", "in_progress"),
+        _task_update("1", "completed"),
+        _task_update("2", "in_progress"),
+        _task_update("2", "completed"),
+    ])
+    assert common.has_incomplete_tasks(path) is False
+
+
+def test_has_incomplete_tasks_deleted_counts_as_done(tmp_path):
+    path = _write_transcript(tmp_path, [
+        _task_create("toolu_1", "Task one"),
+        _task_create_result("toolu_1", "1", "Task one"),
+        _task_create("toolu_2", "Task two"),
+        _task_create_result("toolu_2", "2", "Task two"),
+        _task_update("1", "completed"),
+        _task_update("2", "deleted"),
+    ])
+    assert common.has_incomplete_tasks(path) is False
+
+
+def test_has_incomplete_tasks_no_tasks(tmp_path):
+    path = _write_transcript(tmp_path, [
+        _msg("user", "build a tool"),
+        _msg("assistant", "sure, done"),
+    ])
+    assert common.has_incomplete_tasks(path) is False

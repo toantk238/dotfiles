@@ -2,6 +2,7 @@
 from dataclasses import dataclass
 import json
 import os
+import re
 import subprocess
 import sys
 from typing import Any, Iterator
@@ -106,3 +107,50 @@ def get_last_assistant_message(transcript_path: str) -> str | None:
             if text:
                 last_text = text
     return last_text
+
+
+_TASK_CREATED_RE = re.compile(r"Task #(\d+) created successfully")
+_INCOMPLETE_TASK_STATUSES = {"pending", "in_progress"}
+
+
+def has_incomplete_tasks(transcript_path: str) -> bool:
+    """True if any task created in this transcript hasn't reached completed/deleted.
+
+    Replays TaskCreate/TaskUpdate tool calls in order. Task ids are assigned
+    monotonically and never reused within a session, so a single forward pass
+    is sufficient. Any parsing failure is treated as "no incomplete tasks"
+    (fail open) rather than raising.
+    """
+    states: dict[str, str] = {}
+    pending_create_ids: set[str] = set()
+
+    for entry in read_transcript(transcript_path):
+        msg = entry.get("message", {})
+        content = msg.get("content")
+        if not isinstance(content, list):
+            continue
+        role = msg.get("role")
+        if role == "assistant":
+            for block in content:
+                if not isinstance(block, dict):
+                    continue
+                name = block.get("name")
+                if name == "TaskCreate":
+                    pending_create_ids.add(block.get("id"))
+                elif name == "TaskUpdate":
+                    task_id = str(block.get("input", {}).get("taskId", ""))
+                    status = block.get("input", {}).get("status", "")
+                    if task_id:
+                        states[task_id] = status
+        elif role == "user":
+            for block in content:
+                if not isinstance(block, dict) or block.get("type") != "tool_result":
+                    continue
+                if block.get("tool_use_id") not in pending_create_ids:
+                    continue
+                text = extract_text(block.get("content", ""))
+                m = _TASK_CREATED_RE.search(text)
+                if m:
+                    states.setdefault(m.group(1), "pending")
+
+    return any(status in _INCOMPLETE_TASK_STATUSES for status in states.values())
