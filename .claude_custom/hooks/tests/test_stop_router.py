@@ -555,6 +555,22 @@ def test_has_incomplete_tasks_malformed_sibling_block_same_entry(tmp_path):
     assert common.has_incomplete_tasks(path) is True
 
 
+def test_has_incomplete_tasks_malformed_entry_not_dict(tmp_path):
+    """A transcript line that parses to valid-but-non-dict JSON (e.g. a bare
+    scalar) must not raise. The malformed entry is skipped in isolation; a
+    genuinely incomplete task created afterward in a well-formed entry must
+    still be detected.
+    """
+    transcript = tmp_path / "session.jsonl"
+    lines = [
+        "42",
+        json.dumps(_task_create("toolu_1", "Do the thing")),
+        json.dumps(_task_create_result("toolu_1", "1", "Do the thing")),
+    ]
+    transcript.write_text("\n".join(lines), encoding="utf-8")
+    assert common.has_incomplete_tasks(str(transcript)) is True
+
+
 # ── main() incomplete-tasks gate ─────────────────────────────────────────────
 
 def test_main_skips_when_tasks_incomplete(tmp_path):

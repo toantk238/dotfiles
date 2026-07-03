@@ -125,6 +125,8 @@ def has_incomplete_tasks(transcript_path: str) -> bool:
     pending_create_ids: set[str] = set()
 
     for entry in read_transcript(transcript_path):
+        if not isinstance(entry, dict):
+            continue
         msg = entry.get("message", {})
         content = msg.get("content")
         if not isinstance(content, list):
