@@ -471,3 +471,29 @@ def test_has_incomplete_tasks_no_tasks(tmp_path):
         _msg("assistant", "sure, done"),
     ])
     assert common.has_incomplete_tasks(path) is False
+
+
+def test_has_incomplete_tasks_malformed_update_input_not_dict(tmp_path):
+    """A TaskUpdate block whose 'input' is present but not a dict must not raise.
+
+    No well-formed TaskCreate/TaskUpdate is present, so once the malformed
+    block is safely skipped there are no tracked task states at all.
+    """
+    path = _write_transcript(tmp_path, [
+        {"message": {"role": "assistant", "content": [
+            {"type": "tool_use", "id": "toolu_update_1", "name": "TaskUpdate",
+             "input": "not-a-dict"},
+        ]}},
+    ])
+    assert common.has_incomplete_tasks(path) is False
+
+
+def test_has_incomplete_tasks_malformed_create_id_not_string(tmp_path):
+    """A TaskCreate block whose 'id' is a non-string (unhashable) value must not raise."""
+    path = _write_transcript(tmp_path, [
+        {"message": {"role": "assistant", "content": [
+            {"type": "tool_use", "id": ["not", "a", "string"], "name": "TaskCreate",
+             "input": {"subject": "Do the thing", "description": "Do the thing"}},
+        ]}},
+    ])
+    assert common.has_incomplete_tasks(path) is False

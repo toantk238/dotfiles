@@ -136,10 +136,15 @@ def has_incomplete_tasks(transcript_path: str) -> bool:
                     continue
                 name = block.get("name")
                 if name == "TaskCreate":
-                    pending_create_ids.add(block.get("id"))
+                    block_id = block.get("id")
+                    if isinstance(block_id, str):
+                        pending_create_ids.add(block_id)
                 elif name == "TaskUpdate":
-                    task_id = str(block.get("input", {}).get("taskId", ""))
-                    status = block.get("input", {}).get("status", "")
+                    task_input = block.get("input", {})
+                    if not isinstance(task_input, dict):
+                        continue
+                    task_id = str(task_input.get("taskId", ""))
+                    status = task_input.get("status", "")
                     if task_id:
                         states[task_id] = status
         elif role == "user":
