@@ -497,3 +497,37 @@ def test_has_incomplete_tasks_malformed_create_id_not_string(tmp_path):
         ]}},
     ])
     assert common.has_incomplete_tasks(path) is False
+
+
+def test_has_incomplete_tasks_malformed_update_status_unhashable(tmp_path):
+    """A TaskUpdate block whose 'status' is a non-hashable value must not raise.
+
+    The malformed entry is skipped in isolation; a genuinely incomplete task
+    created afterward in a separate, well-formed entry must still be detected.
+    """
+    path = _write_transcript(tmp_path, [
+        {"message": {"role": "assistant", "content": [
+            {"type": "tool_use", "id": "toolu_update_1", "name": "TaskUpdate",
+             "input": {"taskId": "1", "status": ["not", "hashable"]}},
+        ]}},
+        _task_create("toolu_2", "Task two"),
+        _task_create_result("toolu_2", "2", "Task two"),
+    ])
+    assert common.has_incomplete_tasks(path) is True
+
+
+def test_has_incomplete_tasks_malformed_tool_use_id_unhashable(tmp_path):
+    """A tool_result block whose 'tool_use_id' is non-hashable must not raise.
+
+    The malformed entry is skipped in isolation; a genuinely incomplete task
+    created afterward in a separate, well-formed entry must still be detected.
+    """
+    path = _write_transcript(tmp_path, [
+        {"message": {"role": "user", "content": [
+            {"type": "tool_result", "tool_use_id": ["not", "hashable"],
+             "content": "Task #99 created successfully: bogus"},
+        ]}},
+        _task_create("toolu_2", "Task two"),
+        _task_create_result("toolu_2", "2", "Task two"),
+    ])
+    assert common.has_incomplete_tasks(path) is True

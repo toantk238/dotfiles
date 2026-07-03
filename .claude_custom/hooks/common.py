@@ -125,37 +125,53 @@ def has_incomplete_tasks(transcript_path: str) -> bool:
     pending_create_ids: set[str] = set()
 
     for entry in read_transcript(transcript_path):
-        msg = entry.get("message", {})
-        content = msg.get("content")
-        if not isinstance(content, list):
-            continue
-        role = msg.get("role")
-        if role == "assistant":
-            for block in content:
-                if not isinstance(block, dict):
-                    continue
-                name = block.get("name")
-                if name == "TaskCreate":
-                    block_id = block.get("id")
-                    if isinstance(block_id, str):
-                        pending_create_ids.add(block_id)
-                elif name == "TaskUpdate":
-                    task_input = block.get("input", {})
-                    if not isinstance(task_input, dict):
+        try:
+            msg = entry.get("message", {})
+            content = msg.get("content")
+            if not isinstance(content, list):
+                continue
+            role = msg.get("role")
+            if role == "assistant":
+                for block in content:
+                    if not isinstance(block, dict):
                         continue
-                    task_id = str(task_input.get("taskId", ""))
-                    status = task_input.get("status", "")
-                    if task_id:
-                        states[task_id] = status
-        elif role == "user":
-            for block in content:
-                if not isinstance(block, dict) or block.get("type") != "tool_result":
-                    continue
-                if block.get("tool_use_id") not in pending_create_ids:
-                    continue
-                text = extract_text(block.get("content", ""))
-                m = _TASK_CREATED_RE.search(text)
-                if m:
-                    states.setdefault(m.group(1), "pending")
+                    name = block.get("name")
+                    if name == "TaskCreate":
+                        block_id = block.get("id")
+                        if isinstance(block_id, str):
+                            pending_create_ids.add(block_id)
+                    elif name == "TaskUpdate":
+                        task_input = block.get("input", {})
+                        if not isinstance(task_input, dict):
+                            continue
+                        task_id = str(task_input.get("taskId", ""))
+                        status = task_input.get("status", "")
+                        if task_id:
+                            states[task_id] = status
+            elif role == "user":
+                for block in content:
+                    if not isinstance(block, dict) or block.get("type") != "tool_result":
+                        continue
+                    if block.get("tool_use_id") not in pending_create_ids:
+                        continue
+                    text = extract_text(block.get("content", ""))
+                    m = _TASK_CREATED_RE.search(text)
+                    if m:
+                        states.setdefault(m.group(1), "pending")
+        except (TypeError, AttributeError, ValueError):
+            # Structural backstop: one malformed transcript entry must never
+            # abort the whole scan. Skip it and keep replaying the rest so
+            # well-formed tasks elsewhere in the transcript are still found.
+            continue
 
-    return any(status in _INCOMPLETE_TASK_STATUSES for status in states.values())
+    # A stored status can itself be malformed (e.g. non-hashable) even though
+    # the entry that set it parsed without error. Guard the membership check
+    # per-value so one bad status doesn't hide a genuinely incomplete task
+    # recorded elsewhere in states.
+    for status in states.values():
+        try:
+            if status in _INCOMPLETE_TASK_STATUSES:
+                return True
+        except (TypeError, AttributeError, ValueError):
+            continue
+    return False
