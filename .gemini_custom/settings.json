@@ -4,9 +4,16 @@
   "model": "Gemini 3.5 Flash (Medium)",
   "permissions": {
     "allow": [
-      "command(npm test)",
-      "command(npm run)",
-      "command(git status)"
+      "command(npm)",
+      "command(cat)",
+      "command(git)",
+      "command(ls)",
+      "command(find)",
+      "command(grep)",
+      "command(task-brief)",
+      "command(review-package)",
+      "command(pytest)",
+      "command(python)"
     ]
   },
   "statusLine": {
@@ -15,10 +22,6 @@
     "enabled": true
   },
   "trustedWorkspaces": [
-    "/home/freesky1102",
-    "/mnt/Data/Workspace/4.MobileHealth/4.Android/appointment-droid",
-    "/mnt/Data/Workspace/4.MobileHealth/2.Backend/mobile_ci_reporter",
-    "/mnt/Data/Workspace/4.MobileHealth/4.Android/android-doctor-app"
   ],
   "hooks": {
     "Notification": [
