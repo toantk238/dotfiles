@@ -603,3 +603,43 @@ def test_main_proceeds_when_tasks_all_completed(tmp_path):
         with pytest.raises(SystemExit) as exc:
             _run_main(path)
     assert exc.value.code == 2
+
+
+# ── main() background-tasks gate ─────────────────────────────────────────────
+
+def test_main_skips_when_background_tasks_running(tmp_path):
+    """Stop fires while a background task is running -> exit 0, LLM never called."""
+    path = _write_transcript(tmp_path, [
+        _msg("user", "build a tool"),
+        _msg("assistant", "Starting exploration agent."),
+    ])
+    payload = {
+        "background_tasks": [
+            {"id": "task_1", "status": "running", "type": "subagent"}
+        ]
+    }
+    with patch("stop_router.call_claude") as mock_llm:
+        with pytest.raises(SystemExit) as exc:
+            _run_main(path, payload)
+    assert exc.value.code == 0
+    mock_llm.assert_not_called()
+
+
+def test_main_proceeds_when_background_tasks_completed_or_failed(tmp_path):
+    """Stop fires but no background tasks are running -> proceeds to LLM."""
+    path = _write_transcript(tmp_path, [
+        _msg("user", "build a tool"),
+        _msg("assistant", "Ready to start?"),
+    ])
+    payload = {
+        "background_tasks": [
+            {"id": "task_1", "status": "completed", "type": "subagent"},
+            {"id": "task_2", "status": "failed", "type": "subagent"}
+        ]
+    }
+    output = "ACTION: PROCEED\nANSWER: "
+    with patch("stop_router.call_claude", return_value=output) as mock_llm:
+        with pytest.raises(SystemExit) as exc:
+            _run_main(path, payload)
+    assert exc.value.code == 2
+    mock_llm.assert_called_once()
