@@ -37,7 +37,7 @@ _PLAN_SELECTION_TERMS = [
 def check_static_rules(last_text: str) -> str | None:
     """Return an inject-context string if a known deterministic pattern matches, else None."""
     if all(term in last_text for term in _PLAN_SELECTION_TERMS):
-        return '[stop_router] Auto-answered: "Option 1: Subagent-Driven". Please continue accordingly.'
+        return 'Option 1: Subagent-Driven. Please continue accordingly.'
     return None
 
 
@@ -168,9 +168,9 @@ def handle_stop(last_text: str, original_request: str) -> None:
 
     context = ""
     if decision.action == "PROCEED":
-        context = '[stop_router] Auto-approved: "Your recommendation looks good. I agree.". Please continue accordingly.'
+        context = 'Your recommendation looks good. I agree. Please continue accordingly.'
     elif decision.action == "ANSWER" and decision.answer:
-        context = f'[stop_router] Auto-answered: "{decision.answer}". Please continue accordingly.'
+        context = f'{decision.answer}. Please continue accordingly.'
     else:
         logger.info(f"Passing to human (action={decision.action})")
         sys.exit(0)
