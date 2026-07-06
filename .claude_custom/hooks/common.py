@@ -78,7 +78,9 @@ def read_transcript(transcript_path: str) -> Iterator[dict[str, Any]]:
                 if not line:
                     continue
                 try:
-                    yield json.loads(line)
+                    val = json.loads(line)
+                    if isinstance(val, dict):
+                        yield val
                 except json.JSONDecodeError:
                     continue
     except Exception as e:

@@ -659,3 +659,20 @@ def test_main_proceeds_when_background_tasks_is_none_or_invalid(tmp_path):
                 _run_main(path, payload)
         assert exc.value.code == 2
         mock_llm.assert_called_once()
+
+
+def test_helpers_handle_non_dict_transcript_entries(tmp_path):
+    """Helper functions handle transcripts containing non-dictionary entries without crashing."""
+    transcript = tmp_path / "session.jsonl"
+    lines = [
+        "42",
+        '"just-a-string"',
+        "true",
+        json.dumps({"message": {"role": "user", "content": [{"type": "text", "text": "original request"}]}}),
+        "null",
+        json.dumps({"message": {"role": "assistant", "content": [{"type": "text", "text": "final response"}]}}),
+    ]
+    transcript.write_text("\n".join(lines), encoding="utf-8")
+    
+    assert common.get_original_user_request(str(transcript)) == "original request"
+    assert common.get_last_assistant_message(str(transcript)) == "final response"
