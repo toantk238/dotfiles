@@ -643,3 +643,19 @@ def test_main_proceeds_when_background_tasks_completed_or_failed(tmp_path):
             _run_main(path, payload)
     assert exc.value.code == 2
     mock_llm.assert_called_once()
+
+
+def test_main_proceeds_when_background_tasks_is_none_or_invalid(tmp_path):
+    """Stop fires and background_tasks is None or a non-list -> proceeds to LLM (fails open)."""
+    path = _write_transcript(tmp_path, [
+        _msg("user", "build a tool"),
+        _msg("assistant", "Ready to start?"),
+    ])
+    output = "ACTION: PROCEED\nANSWER: "
+    for invalid_val in [None, "not-a-list", 123, {"key": "val"}]:
+        payload = {"background_tasks": invalid_val}
+        with patch("stop_router.call_claude", return_value=output) as mock_llm:
+            with pytest.raises(SystemExit) as exc:
+                _run_main(path, payload)
+        assert exc.value.code == 2
+        mock_llm.assert_called_once()
