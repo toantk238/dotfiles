@@ -205,6 +205,12 @@ def main():
         logger.info("Early exit: incomplete tasks present in task list")
         sys.exit(0)
 
+    # Check if there are any running background tasks (like subagents) in hook input
+    background_tasks = hook_input.get("background_tasks", [])
+    if any(task.get("status") == "running" for task in background_tasks if isinstance(task, dict)):
+        logger.info("Early exit: running background tasks/agents present in hook input")
+        sys.exit(0)
+
     last_text = hook_input.get("last_assistant_message", "")
 
     if not last_text:
