@@ -605,6 +605,42 @@ def test_main_proceeds_when_tasks_all_completed(tmp_path):
     assert exc.value.code == 2
 
 
+def test_main_proceeds_when_tasks_incomplete_but_payload_reports_no_background_tasks(tmp_path):
+    """Regression: pending/in_progress plan tasks in transcript must NOT block when the
+    hook payload explicitly reports background_tasks: [] (authoritative empty list).
+
+    This was the false-positive bug: sequential workflow plan steps (future tasks)
+    were left as pending/in_progress when Claude paused to ask the user a question.
+    has_incomplete_tasks() returned True even though no background subagent was running,
+    because background_tasks wasn't consulted first.
+    """
+    path = _write_transcript(tmp_path, [
+        _msg("user", "build a k8s dev env"),
+        _task_create("toolu_1", "Explore repos"),
+        _task_create_result("toolu_1", "1", "Explore repos"),
+        _task_create("toolu_2", "Ask clarifying questions"),
+        _task_create_result("toolu_2", "2", "Ask clarifying questions"),
+        _task_create("toolu_3", "Propose approaches"),
+        _task_create_result("toolu_3", "3", "Propose approaches"),
+        _task_update("1", "completed"),
+        _task_update("2", "completed"),
+        _task_update("3", "in_progress"),
+        # Claude stops here to present the approaches and ask for user input.
+        # Task 3 is in_progress (Claude is on it) and no future tasks updated yet.
+        _msg("assistant", "Here are the three approaches. Which do you prefer?"),
+    ])
+    # Payload reports no background tasks — no subagents are actually running.
+    payload = {"background_tasks": []}
+    output = "ACTION: HUMAN_NEEDED\nANSWER: user must choose approach"
+    with patch("stop_router.call_claude", return_value=output):
+        with pytest.raises(SystemExit) as exc:
+            _run_main(path, payload)
+    # Should reach the LLM (HUMAN_NEEDED → exit 0), NOT short-circuit at has_incomplete_tasks
+    assert exc.value.code == 0, (
+        "False positive: hook exited before reaching LLM due to stale plan tasks in transcript"
+    )
+
+
 # ── main() background-tasks gate ─────────────────────────────────────────────
 
 def test_main_skips_when_background_tasks_running(tmp_path):

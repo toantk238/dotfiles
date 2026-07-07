@@ -201,15 +201,21 @@ def main():
         logger.debug("Early exit: no transcript (nested session)")
         sys.exit(0)
 
-    if has_incomplete_tasks(transcript_path):
-        logger.info("Early exit: incomplete tasks present in task list")
-        sys.exit(0)
-
-    # Check if there are any running background tasks (like subagents) in hook input
+    # background_tasks from the hook payload is the authoritative source for running
+    # subagents/background work. When present as a list (even empty), trust it over the
+    # transcript-based heuristic, which can generate false positives for sequential plan
+    # tasks that are merely pending/in_progress as future steps.
     background_tasks = hook_input.get("background_tasks")
     if isinstance(background_tasks, list):
+        # Authoritative path: payload tells us exactly what is running.
         if any(task.get("status") == "running" for task in background_tasks if isinstance(task, dict)):
             logger.info("Early exit: running background tasks/agents present in hook input")
+            sys.exit(0)
+    else:
+        # Fallback path: background_tasks field absent (older Claude version) —
+        # use transcript heuristic to detect running work.
+        if has_incomplete_tasks(transcript_path):
+            logger.info("Early exit: incomplete tasks present in task list (fallback heuristic)")
             sys.exit(0)
 
     last_text = hook_input.get("last_assistant_message", "")
