@@ -29,14 +29,14 @@ class StopDecision:
 
 
 _PLAN_SELECTION_TERMS = [
-    "Subagent-Driven",
-    "Inline Execution",
+    "subagent-driven",
+    "inline execution",
 ]
 
 
 def check_static_rules(last_text: str) -> str | None:
     """Return an inject-context string if a known deterministic pattern matches, else None."""
-    if all(term in last_text for term in _PLAN_SELECTION_TERMS):
+    if all(term in last_text.lower() for term in _PLAN_SELECTION_TERMS):
         return 'Option 1: Subagent-Driven. Please continue accordingly.'
     return None
 
