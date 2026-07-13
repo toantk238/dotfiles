@@ -33,11 +33,18 @@ _PLAN_SELECTION_TERMS = [
     "inline execution",
 ]
 
+_SPEC_WRITTEN = [
+    "spec written and committed",
+    "review it and let me know"
+]
+
 
 def check_static_rules(last_text: str) -> str | None:
     """Return an inject-context string if a known deterministic pattern matches, else None."""
     if all(term in last_text.lower() for term in _PLAN_SELECTION_TERMS):
         return 'Option 1: Subagent-Driven. Please continue accordingly.'
+    if all(term in last_text.lower() for term in _SPEC_WRITTEN):
+        return 'Specs are accepted. Please continue.'
     return None
 
 
