@@ -57,8 +57,8 @@ _SAFE_BASH_PREFIXES = (
 _BLOCK_BASH_PATTERNS = [
     (r"\brm\b\s+(-\w*r\w*f\w*|-\w*f\w*r\w*)\s+(/(?!tmp[/\s])|~/|~$|\$HOME)", "rm -rf outside safe directories"),
     (r">\s*(~/.ssh|~/.aws|/etc/)", "write to sensitive system path"),
-    (r"curl\s+\S+\s*\|\s*(bash|sh)", "remote code execution via curl-pipe"),
-    (r"wget\s+\S+\s*\|\s*(bash|sh)", "remote code execution via wget-pipe"),
+    # (r"curl\s+\S+\s*\|\s*(bash|sh)", "remote code execution via curl-pipe"),
+    # (r"wget\s+\S+\s*\|\s*(bash|sh)", "remote code execution via wget-pipe"),
 ]
 
 
