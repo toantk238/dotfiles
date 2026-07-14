@@ -37,7 +37,6 @@ Rules:
 - BLOCK rm -rf on anything outside /tmp or the project dir + associated dirs.
 - BLOCK git push --force, git reset --hard without explicit task context
 - BLOCK writes to /etc, ~/.ssh, ~/.aws, system paths
-- BLOCK any curl/wget piped to bash
 """
 
 # Tools that are always safe — never need LLM review

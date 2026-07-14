@@ -237,7 +237,7 @@ def main():
 
     static_context = check_static_rules(last_text)
     if static_context:
-        logger.info("Static rule matched: subagent-driven plan selection")
+        logger.info(f"Static rule matched: {static_context}")
         print(json.dumps({
             "hookSpecificOutput": {
                 "hookEventName": "Stop",
