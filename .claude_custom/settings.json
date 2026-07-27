@@ -54,6 +54,17 @@
     ],
     "PreToolUse": [
       {
+        "matcher": "AskUserQuestion",
+        "hooks": [
+          {
+            "type": "command",
+            "command": "zsh -c \"source ~/.env.zsh; ~/.claude/hooks/.venv/bin/python ~/.claude/hooks/ask_user_question_handler.py\"",
+            "timeout": 30
+          }
+        ]
+      },
+      {
+        "matcher": "^(?!AskUserQuestion$)",
         "hooks": [
           {
             "type": "command",
@@ -135,7 +146,10 @@
     }
   },
   "forceLoginMethod": "claudeai",
+  "outputStyle": "proactive",
+  "askUserQuestionTimeout": "60s",
   "tui": "default",
+  "verbose": false,
   "remoteControlAtStartup": true,
   "inputNeededNotifEnabled": true,
   "agentPushNotifEnabled": true
