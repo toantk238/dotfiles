@@ -1,5 +1,11 @@
 [mgr]
 show_hidden = true
+sort_by        = "natural"
+linemode = "size"
+sort_sensitive = false
+sort_reverse   = false
+sort_dir_first = true
+sort_translit  = false
 
 # [[plugin.prepend_previewers]]
 # name = "*"
@@ -25,3 +31,4 @@ run  = 'piper -- CLICOLOR_FORCE=1 glow -w=$w -s=dark "$1"'
 [[plugin.prepend_previewers]]
 url  = "*/"
 run  = 'piper -- eza -TL=3 --color=always --icons=always --group-directories-first --no-quotes "$1"'
+
