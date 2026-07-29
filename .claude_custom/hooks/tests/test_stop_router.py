@@ -33,6 +33,30 @@ def _msg(role: str, text: str | list) -> dict:
     return {"message": {"role": role, "content": content}}
 
 
+def _task_create(tool_use_id: str, subject: str) -> dict:
+    """Assistant turn: a single TaskCreate tool_use block."""
+    return {"message": {"role": "assistant", "content": [
+        {"type": "tool_use", "id": tool_use_id, "name": "TaskCreate",
+         "input": {"subject": subject, "description": subject}},
+    ]}}
+
+
+def _task_create_result(tool_use_id: str, task_id: str, subject: str) -> dict:
+    """User turn: the tool_result for a TaskCreate call."""
+    return {"message": {"role": "user", "content": [
+        {"type": "tool_result", "tool_use_id": tool_use_id,
+         "content": f"Task #{task_id} created successfully: {subject}"},
+    ]}}
+
+
+def _task_update(task_id: str, status: str) -> dict:
+    """Assistant turn: a single TaskUpdate tool_use block."""
+    return {"message": {"role": "assistant", "content": [
+        {"type": "tool_use", "id": f"toolu_update_{task_id}_{status}", "name": "TaskUpdate",
+         "input": {"taskId": task_id, "status": status}},
+    ]}}
+
+
 # ── get_original_user_request ────────────────────────────────────────────────
 
 def test_get_original_user_request_basic(tmp_path):
@@ -393,3 +417,298 @@ def test_main_static_rule_exits_2_without_llm(tmp_path, capsys):
     mock_llm.assert_not_called()
     out = json.loads(capsys.readouterr().out)
     assert "Subagent-Driven" in out["hookSpecificOutput"]["additionalContext"]
+
+
+# ── has_incomplete_tasks ─────────────────────────────────────────────────────
+
+def test_has_incomplete_tasks_pending(tmp_path):
+    """A created task with no update at all is still pending -> incomplete."""
+    path = _write_transcript(tmp_path, [
+        _task_create("toolu_1", "Do the thing"),
+        _task_create_result("toolu_1", "1", "Do the thing"),
+    ])
+    assert common.has_incomplete_tasks(path) is True
+
+
+def test_has_incomplete_tasks_in_progress(tmp_path):
+    path = _write_transcript(tmp_path, [
+        _task_create("toolu_1", "Do the thing"),
+        _task_create_result("toolu_1", "1", "Do the thing"),
+        _task_update("1", "in_progress"),
+    ])
+    assert common.has_incomplete_tasks(path) is True
+
+
+def test_has_incomplete_tasks_all_completed(tmp_path):
+    path = _write_transcript(tmp_path, [
+        _task_create("toolu_1", "Task one"),
+        _task_create_result("toolu_1", "1", "Task one"),
+        _task_create("toolu_2", "Task two"),
+        _task_create_result("toolu_2", "2", "Task two"),
+        _task_update("1", "in_progress"),
+        _task_update("1", "completed"),
+        _task_update("2", "in_progress"),
+        _task_update("2", "completed"),
+    ])
+    assert common.has_incomplete_tasks(path) is False
+
+
+def test_has_incomplete_tasks_deleted_counts_as_done(tmp_path):
+    path = _write_transcript(tmp_path, [
+        _task_create("toolu_1", "Task one"),
+        _task_create_result("toolu_1", "1", "Task one"),
+        _task_create("toolu_2", "Task two"),
+        _task_create_result("toolu_2", "2", "Task two"),
+        _task_update("1", "completed"),
+        _task_update("2", "deleted"),
+    ])
+    assert common.has_incomplete_tasks(path) is False
+
+
+def test_has_incomplete_tasks_no_tasks(tmp_path):
+    path = _write_transcript(tmp_path, [
+        _msg("user", "build a tool"),
+        _msg("assistant", "sure, done"),
+    ])
+    assert common.has_incomplete_tasks(path) is False
+
+
+def test_has_incomplete_tasks_malformed_update_input_not_dict(tmp_path):
+    """A TaskUpdate block whose 'input' is present but not a dict must not raise.
+
+    No well-formed TaskCreate/TaskUpdate is present, so once the malformed
+    block is safely skipped there are no tracked task states at all.
+    """
+    path = _write_transcript(tmp_path, [
+        {"message": {"role": "assistant", "content": [
+            {"type": "tool_use", "id": "toolu_update_1", "name": "TaskUpdate",
+             "input": "not-a-dict"},
+        ]}},
+    ])
+    assert common.has_incomplete_tasks(path) is False
+
+
+def test_has_incomplete_tasks_malformed_create_id_not_string(tmp_path):
+    """A TaskCreate block whose 'id' is a non-string (unhashable) value must not raise."""
+    path = _write_transcript(tmp_path, [
+        {"message": {"role": "assistant", "content": [
+            {"type": "tool_use", "id": ["not", "a", "string"], "name": "TaskCreate",
+             "input": {"subject": "Do the thing", "description": "Do the thing"}},
+        ]}},
+    ])
+    assert common.has_incomplete_tasks(path) is False
+
+
+def test_has_incomplete_tasks_malformed_update_status_unhashable(tmp_path):
+    """A TaskUpdate block whose 'status' is a non-hashable value must not raise.
+
+    The malformed entry is skipped in isolation; a genuinely incomplete task
+    created afterward in a separate, well-formed entry must still be detected.
+    """
+    path = _write_transcript(tmp_path, [
+        {"message": {"role": "assistant", "content": [
+            {"type": "tool_use", "id": "toolu_update_1", "name": "TaskUpdate",
+             "input": {"taskId": "1", "status": ["not", "hashable"]}},
+        ]}},
+        _task_create("toolu_2", "Task two"),
+        _task_create_result("toolu_2", "2", "Task two"),
+    ])
+    assert common.has_incomplete_tasks(path) is True
+
+
+def test_has_incomplete_tasks_malformed_tool_use_id_unhashable(tmp_path):
+    """A tool_result block whose 'tool_use_id' is non-hashable must not raise.
+
+    The malformed entry is skipped in isolation; a genuinely incomplete task
+    created afterward in a separate, well-formed entry must still be detected.
+    """
+    path = _write_transcript(tmp_path, [
+        {"message": {"role": "user", "content": [
+            {"type": "tool_result", "tool_use_id": ["not", "hashable"],
+             "content": "Task #99 created successfully: bogus"},
+        ]}},
+        _task_create("toolu_2", "Task two"),
+        _task_create_result("toolu_2", "2", "Task two"),
+    ])
+    assert common.has_incomplete_tasks(path) is True
+
+
+def test_has_incomplete_tasks_malformed_sibling_block_same_entry(tmp_path):
+    """A malformed tool_result block must not shadow a valid sibling block
+    in the SAME transcript entry (e.g. parallel tool calls produce one user
+    turn with multiple tool_result blocks).
+
+    The first block has a non-hashable 'tool_use_id' and would raise if
+    processed; the second, well-formed block confirms a real TaskCreate for
+    a task that is never updated, so it remains pending. Per-block (not
+    per-entry) error isolation must still detect it.
+    """
+    path = _write_transcript(tmp_path, [
+        _task_create("toolu_1", "Do the thing"),
+        {"message": {"role": "user", "content": [
+            {"type": "tool_result", "tool_use_id": ["not", "hashable"],
+             "content": "Task #99 created successfully: bogus"},
+            {"type": "tool_result", "tool_use_id": "toolu_1",
+             "content": "Task #1 created successfully: Do the thing"},
+        ]}},
+    ])
+    assert common.has_incomplete_tasks(path) is True
+
+
+def test_has_incomplete_tasks_malformed_entry_not_dict(tmp_path):
+    """A transcript line that parses to valid-but-non-dict JSON (e.g. a bare
+    scalar) must not raise. The malformed entry is skipped in isolation; a
+    genuinely incomplete task created afterward in a well-formed entry must
+    still be detected.
+    """
+    transcript = tmp_path / "session.jsonl"
+    lines = [
+        "42",
+        json.dumps(_task_create("toolu_1", "Do the thing")),
+        json.dumps(_task_create_result("toolu_1", "1", "Do the thing")),
+    ]
+    transcript.write_text("\n".join(lines), encoding="utf-8")
+    assert common.has_incomplete_tasks(str(transcript)) is True
+
+
+# ── main() incomplete-tasks gate ─────────────────────────────────────────────
+
+def test_main_skips_when_tasks_incomplete(tmp_path):
+    """Stop fires while a task is still pending/in_progress -> exit 0, LLM never called."""
+    path = _write_transcript(tmp_path, [
+        _msg("user", "build a tool"),
+        _task_create("toolu_1", "Step one"),
+        _task_create_result("toolu_1", "1", "Step one"),
+        _task_update("1", "in_progress"),
+        _msg("assistant", "Shall I proceed?"),
+    ])
+    with patch("stop_router.call_claude") as mock_llm:
+        with pytest.raises(SystemExit) as exc:
+            _run_main(path)
+    assert exc.value.code == 0
+    mock_llm.assert_not_called()
+
+
+def test_main_proceeds_when_tasks_all_completed(tmp_path):
+    """All tasks completed -> falls through to existing LLM-driven behavior."""
+    path = _write_transcript(tmp_path, [
+        _msg("user", "build a tool"),
+        _task_create("toolu_1", "Step one"),
+        _task_create_result("toolu_1", "1", "Step one"),
+        _task_update("1", "completed"),
+        _msg("assistant", "Shall I proceed?"),
+    ])
+    output = "ACTION: PROCEED\nANSWER: "
+    with patch("stop_router.call_claude", return_value=output):
+        with pytest.raises(SystemExit) as exc:
+            _run_main(path)
+    assert exc.value.code == 2
+
+
+def test_main_proceeds_when_tasks_incomplete_but_payload_reports_no_background_tasks(tmp_path):
+    """Regression: pending/in_progress plan tasks in transcript must NOT block when the
+    hook payload explicitly reports background_tasks: [] (authoritative empty list).
+
+    This was the false-positive bug: sequential workflow plan steps (future tasks)
+    were left as pending/in_progress when Claude paused to ask the user a question.
+    has_incomplete_tasks() returned True even though no background subagent was running,
+    because background_tasks wasn't consulted first.
+    """
+    path = _write_transcript(tmp_path, [
+        _msg("user", "build a k8s dev env"),
+        _task_create("toolu_1", "Explore repos"),
+        _task_create_result("toolu_1", "1", "Explore repos"),
+        _task_create("toolu_2", "Ask clarifying questions"),
+        _task_create_result("toolu_2", "2", "Ask clarifying questions"),
+        _task_create("toolu_3", "Propose approaches"),
+        _task_create_result("toolu_3", "3", "Propose approaches"),
+        _task_update("1", "completed"),
+        _task_update("2", "completed"),
+        _task_update("3", "in_progress"),
+        # Claude stops here to present the approaches and ask for user input.
+        # Task 3 is in_progress (Claude is on it) and no future tasks updated yet.
+        _msg("assistant", "Here are the three approaches. Which do you prefer?"),
+    ])
+    # Payload reports no background tasks — no subagents are actually running.
+    payload = {"background_tasks": []}
+    output = "ACTION: HUMAN_NEEDED\nANSWER: user must choose approach"
+    with patch("stop_router.call_claude", return_value=output):
+        with pytest.raises(SystemExit) as exc:
+            _run_main(path, payload)
+    # Should reach the LLM (HUMAN_NEEDED → exit 0), NOT short-circuit at has_incomplete_tasks
+    assert exc.value.code == 0, (
+        "False positive: hook exited before reaching LLM due to stale plan tasks in transcript"
+    )
+
+
+# ── main() background-tasks gate ─────────────────────────────────────────────
+
+def test_main_skips_when_background_tasks_running(tmp_path):
+    """Stop fires while a background task is running -> exit 0, LLM never called."""
+    path = _write_transcript(tmp_path, [
+        _msg("user", "build a tool"),
+        _msg("assistant", "Starting exploration agent."),
+    ])
+    payload = {
+        "background_tasks": [
+            {"id": "task_1", "status": "running", "type": "subagent"}
+        ]
+    }
+    with patch("stop_router.call_claude") as mock_llm:
+        with pytest.raises(SystemExit) as exc:
+            _run_main(path, payload)
+    assert exc.value.code == 0
+    mock_llm.assert_not_called()
+
+
+def test_main_proceeds_when_background_tasks_completed_or_failed(tmp_path):
+    """Stop fires but no background tasks are running -> proceeds to LLM."""
+    path = _write_transcript(tmp_path, [
+        _msg("user", "build a tool"),
+        _msg("assistant", "Ready to start?"),
+    ])
+    payload = {
+        "background_tasks": [
+            {"id": "task_1", "status": "completed", "type": "subagent"},
+            {"id": "task_2", "status": "failed", "type": "subagent"}
+        ]
+    }
+    output = "ACTION: PROCEED\nANSWER: "
+    with patch("stop_router.call_claude", return_value=output) as mock_llm:
+        with pytest.raises(SystemExit) as exc:
+            _run_main(path, payload)
+    assert exc.value.code == 2
+    mock_llm.assert_called_once()
+
+
+def test_main_proceeds_when_background_tasks_is_none_or_invalid(tmp_path):
+    """Stop fires and background_tasks is None or a non-list -> proceeds to LLM (fails open)."""
+    path = _write_transcript(tmp_path, [
+        _msg("user", "build a tool"),
+        _msg("assistant", "Ready to start?"),
+    ])
+    output = "ACTION: PROCEED\nANSWER: "
+    for invalid_val in [None, "not-a-list", 123, {"key": "val"}]:
+        payload = {"background_tasks": invalid_val}
+        with patch("stop_router.call_claude", return_value=output) as mock_llm:
+            with pytest.raises(SystemExit) as exc:
+                _run_main(path, payload)
+        assert exc.value.code == 2
+        mock_llm.assert_called_once()
+
+
+def test_helpers_handle_non_dict_transcript_entries(tmp_path):
+    """Helper functions handle transcripts containing non-dictionary entries without crashing."""
+    transcript = tmp_path / "session.jsonl"
+    lines = [
+        "42",
+        '"just-a-string"',
+        "true",
+        json.dumps({"message": {"role": "user", "content": [{"type": "text", "text": "original request"}]}}),
+        "null",
+        json.dumps({"message": {"role": "assistant", "content": [{"type": "text", "text": "final response"}]}}),
+    ]
+    transcript.write_text("\n".join(lines), encoding="utf-8")
+    
+    assert common.get_original_user_request(str(transcript)) == "original request"
+    assert common.get_last_assistant_message(str(transcript)) == "final response"

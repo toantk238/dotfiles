@@ -1,14 +1,14 @@
 #!/usr/bin/env python3
 """
 PreToolUse hook — auto-review every tool call before execution.
-Reviewer Claude approves or blocks. No human needed.
+Reviewer AGY approves or blocks. No human needed.
 """
 from dataclasses import dataclass
 import json
 import re
 import sys
 
-from common import HookInput, call_claude
+from common import HookInput, call_agy
 from logger import get_logger
 
 logger = get_logger("pre_tool_reviewer")
@@ -37,6 +37,7 @@ Rules:
 - BLOCK rm -rf on anything outside /tmp or the project dir + associated dirs.
 - BLOCK git push --force, git reset --hard without explicit task context
 - BLOCK writes to /etc, ~/.ssh, ~/.aws, system paths
+- BLOCK any curl/wget piped to bash
 """
 
 # Tools that are always safe — never need LLM review
@@ -57,8 +58,8 @@ _SAFE_BASH_PREFIXES = (
 _BLOCK_BASH_PATTERNS = [
     (r"\brm\b\s+(-\w*r\w*f\w*|-\w*f\w*r\w*)\s+(/(?!tmp[/\s])|~/|~$|\$HOME)", "rm -rf outside safe directories"),
     (r">\s*(~/.ssh|~/.aws|/etc/)", "write to sensitive system path"),
-    # (r"curl\s+\S+\s*\|\s*(bash|sh)", "remote code execution via curl-pipe"),
-    # (r"wget\s+\S+\s*\|\s*(bash|sh)", "remote code execution via wget-pipe"),
+    (r"curl\s+\S+\s*\|\s*(bash|sh)", "remote code execution via curl-pipe"),
+    (r"wget\s+\S+\s*\|\s*(bash|sh)", "remote code execution via wget-pipe"),
 ]
 
 
@@ -102,7 +103,7 @@ def review(tool_name: str, tool_input: dict) -> ReviewVerdict:
     prompt = REVIEW_PROMPT_TEMPLATE.format(tool_name=tool_name, tool_input=formatted_input)
 
     try:
-        verdict_text = call_claude(prompt)
+        verdict_text = call_agy(prompt)
     except Exception as e:
         logger.error(f"Review failed due to error: {e}")
         sys.exit(2)

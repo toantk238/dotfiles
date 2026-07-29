@@ -11,10 +11,9 @@ import tempfile
 
 from common import (
     HookInput,
-    call_claude,
+    call_agy,
     get_last_assistant_message,
     get_original_user_request,
-    has_incomplete_tasks,
 )
 from logger import get_logger
 
@@ -29,42 +28,35 @@ class StopDecision:
 
 
 _PLAN_SELECTION_TERMS = [
-    "subagent-driven",
-    "inline execution",
-]
-
-_SPEC_WRITTEN = [
-    "spec written and committed",
-    "review it and let me know"
+    "Subagent-Driven",
+    "Inline Execution",
 ]
 
 
 def check_static_rules(last_text: str) -> str | None:
     """Return an inject-context string if a known deterministic pattern matches, else None."""
-    if all(term in last_text.lower() for term in _PLAN_SELECTION_TERMS):
-        return 'Option 1: Subagent-Driven. Please continue accordingly.'
-    if all(term in last_text.lower() for term in _SPEC_WRITTEN):
-        return 'Specs are accepted. Please continue.'
+    if all(term in last_text for term in _PLAN_SELECTION_TERMS):
+        return '[stop_router] Auto-answered: "Option 1: Subagent-Driven". Please continue accordingly.'
     return None
 
 
 STOP_PROMPT_TEMPLATE = """You are an autonomous decision agent for a developer's coding assistant.
-Claude (the assistant) has stopped and is waiting for input.
+The assistant has stopped and is waiting for input.
 
 Original user request:
 {original_request}
 
-Claude's last message:
+Assistant's last message:
 {last_text}
 
 Follow these steps in order to decide the best action:
 
-STEP 0 — Does Claude respond as it has completed the whole process or nothing to do more
+STEP 0 — Does the assistant respond as it has completed the whole process or nothing to do more
   → YES: ACTION = HUMAN_NEEDED.
   → NO: go to STEP 1
 
 STEP 1 — Detect options:
-Does Claude's message contain a numbered or lettered list of 2 or more distinct options for the human to choose from?
+Does the message contain a numbered or lettered list of 2 or more distinct options for the human to choose from?
   → YES: go to STEP 2
   → NO: go to STEP 3
 
@@ -73,20 +65,18 @@ Is one option clearly the best fit given ONLY the original user request, with hi
   → YES: ACTION = ANSWER. Name the specific option clearly.
   → NO or ambiguous: ACTION = HUMAN_NEEDED.
 
-STEP 3 — Does Claude need the human's UNIQUE input that cannot be inferred?
-Only flag HUMAN_NEEDED if the human must supply something Claude cannot determine:
+STEP 3 — Does the assistant need the human's UNIQUE input that cannot be inferred?
+Only flag HUMAN_NEEDED if the human must supply something that cannot be determined:
 personal preferences with no context clues, specific business/security decisions, or approval
 before modifying/deleting data the human hasn't mentioned.
   → YES: ACTION = HUMAN_NEEDED.
   → NO: go to STEP 4
-  Note: Rhetorical confirmations after completing work ("Does this look right?", "Any feedback?",
-  "Does this look good?") are NOT genuine preference requests — treat them as green-light asks
-  and go to STEP 4. Only intercept with HUMAN_NEEDED if genuinely unknowable.
+  Note: Rhetorical confirmations after completing work ("Does this look right?", "Any feedback?") are NOT
+  genuine preference requests — treat them as green-light asks and go to STEP 4.
 
-STEP 4 — Is Claude proposing or completing work and asking for a green light?
+STEP 4 — Is the assistant proposing or completing work and asking for a green light?
 Look for patterns like: "Shall I proceed?", "Ready to start?", "Want me to continue?",
-"Let me know if you want me to go ahead", "I can begin implementation",
-or any completion message followed by a confirmation ask ("Does this look right?", "Any feedback?").
+or any completion message followed by a confirmation ask.
   → YES: ACTION = PROCEED.
   → NO: go to STEP 5
 
@@ -96,7 +86,7 @@ Can you answer with reasonable confidence using the original request and common 
   → NO: ACTION = HUMAN_NEEDED.
 
 When in doubt between PROCEED and HUMAN_NEEDED, prefer PROCEED.
-Only choose HUMAN_NEEDED when the human's unique input is truly necessary and cannot be inferred from context.
+Only choose HUMAN_NEEDED when the human's unique input is truly necessary.
 
 Reply in this exact format:
 ACTION: <PROCEED | ANSWER | HUMAN_NEEDED>
@@ -105,7 +95,7 @@ ANSWER: <your concise answer if ACTION is ANSWER, reason if ACTION is HUMAN_NEED
 
 
 def parse_llm_output(output: str) -> StopDecision:
-    """Parse AI output for ACTION and ANSWER lines. ANSWER may span multiple lines."""
+    """Parse AI output for ACTION and ANSWER lines."""
     logger.debug(f"LLM raw output:\n{output}")
     action = "HUMAN_NEEDED"
     answer_lines: list[str] = []
@@ -125,7 +115,7 @@ def parse_llm_output(output: str) -> StopDecision:
     return StopDecision(action=action, answer=answer)
 
 
-_STATE_FILE = os.path.join(tempfile.gettempdir(), "stop_router_last_text.json")
+_STATE_FILE = os.path.join(tempfile.gettempdir(), "stop_router_agy_last_text.json")
 
 
 def _load_state() -> dict[str, str]:
@@ -159,14 +149,13 @@ def check_repeated_last_text(session_id: str, last_text: str) -> bool:
 
 
 def handle_stop(last_text: str, original_request: str) -> None:
-
     prompt = STOP_PROMPT_TEMPLATE.format(
         original_request=original_request[:1000],
         last_text=last_text[:2000]
     )
 
     try:
-        output = call_claude(prompt, timeout=30)
+        output = call_agy(prompt, timeout=30)
     except Exception as e:
         logger.warning(f"LLM call failed, falling back to human: {e}")
         sys.exit(0)
@@ -175,9 +164,9 @@ def handle_stop(last_text: str, original_request: str) -> None:
 
     context = ""
     if decision.action == "PROCEED":
-        context = 'Your recommendation looks good. I agree. Please continue accordingly.'
+        context = '[stop_router] Auto-approved: "Your recommendation looks good. I agree.". Please continue accordingly.'
     elif decision.action == "ANSWER" and decision.answer:
-        context = f'{decision.answer}. Please continue accordingly.'
+        context = f'[stop_router] Auto-answered: "{decision.answer}". Please continue accordingly.'
     else:
         logger.info(f"Passing to human (action={decision.action})")
         sys.exit(0)
@@ -202,28 +191,9 @@ def main():
     logger.debug(f"input = {json.dumps(hook_input.data, indent=2)}")
 
     transcript_path = hook_input.get("transcript_path", "")
-    # Check existence here (not just inside read_transcript) so we can exit early
-    # with a specific "nested session" log before making two file-open attempts.
     if not transcript_path or not os.path.exists(transcript_path):
         logger.debug("Early exit: no transcript (nested session)")
         sys.exit(0)
-
-    # background_tasks from the hook payload is the authoritative source for running
-    # subagents/background work. When present as a list (even empty), trust it over the
-    # transcript-based heuristic, which can generate false positives for sequential plan
-    # tasks that are merely pending/in_progress as future steps.
-    background_tasks = hook_input.get("background_tasks")
-    if isinstance(background_tasks, list):
-        # Authoritative path: payload tells us exactly what is running.
-        if any(task.get("status") == "running" for task in background_tasks if isinstance(task, dict)):
-            logger.info("Early exit: running background tasks/agents present in hook input")
-            sys.exit(0)
-    else:
-        # Fallback path: background_tasks field absent (older Claude version) —
-        # use transcript heuristic to detect running work.
-        if has_incomplete_tasks(transcript_path):
-            logger.info("Early exit: incomplete tasks present in task list (fallback heuristic)")
-            sys.exit(0)
 
     last_text = hook_input.get("last_assistant_message", "")
 
@@ -237,7 +207,7 @@ def main():
 
     static_context = check_static_rules(last_text)
     if static_context:
-        logger.info(f"Static rule matched: {static_context}")
+        logger.info("Static rule matched: subagent-driven plan selection")
         print(json.dumps({
             "hookSpecificOutput": {
                 "hookEventName": "Stop",
@@ -247,9 +217,6 @@ def main():
         sys.exit(2)
 
     session_id = hook_input.get("session_id", "")
-    # Use the payload field for repeat detection — it's always current.
-    # The transcript-read last_text can be stale when the hook fires before the
-    # transcript write completes, causing false repeat positives.
     repeat_check_text = hook_input.get("last_assistant_message", "") or last_text
     if check_repeated_last_text(session_id, repeat_check_text):
         sys.exit(0)
