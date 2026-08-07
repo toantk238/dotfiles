@@ -118,6 +118,14 @@
             "timeout": 10
           }
         ]
+      },
+      {
+        "hooks": [
+          {
+            "type": "command",
+            "command": "zsh -c \"source ~/.env.zsh; ~/.claude/hooks/context-mode-cache-heal.mjs\""
+          }
+        ]
       }
     ]
   },
@@ -146,10 +154,11 @@
     }
   },
   "forceLoginMethod": "claudeai",
-  "outputStyle": "proactive",
+  "outputStyle": "default",
   "askUserQuestionTimeout": "60s",
   "tui": "default",
   "verbose": false,
+  "autoCompactEnabled": true,
   "remoteControlAtStartup": true,
   "inputNeededNotifEnabled": true,
   "agentPushNotifEnabled": true
