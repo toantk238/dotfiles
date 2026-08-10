@@ -254,6 +254,10 @@ if exists lazydocker; then
   alias lzd="lazydocker"
 fi
 
+if exists atuin; then
+  eval "$(atuin init zsh)"
+fi
+
 alias gdiff="yes | git difftool --tool=intelliJ HEAD"
 alias ssys="sudo systemctl"
 # alias n="nnn"

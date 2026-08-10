@@ -7,7 +7,8 @@ export FZF_DEFAULT_OPTS='--height 70% --layout=reverse --border'
 
 export FZF_ALT_C_COMMAND='fd --type directory'
 
-export RG_FZF_OPTS=$(cat <<END
+export RG_FZF_OPTS=$(
+  cat <<END
 -i \\
 -g '!Pods/' \\
 -g '!Text.swift' \\
@@ -19,13 +20,15 @@ END
 )
 
 function rg_fzf() {
-  rg_cmd=$(cat <<END
+  rg_cmd=$(
+    cat <<END
 rg --color=always --line-number \\
 --no-heading "${*:-}" \\
 $RG_FZF_OPTS
 END
   )
-  fzf_cmd=$(cat <<END
+  fzf_cmd=$(
+    cat <<END
 fzf --ansi \\
 			--color "hl:-1:underline,hl+:-1:underline:reverse" \\
 			--delimiter : \
@@ -35,13 +38,13 @@ fzf --ansi \\
 			--bind 'change:top' \\
       --bind 'enter:become(nvim {1} +{2})'
 END
-)
+  )
 
-  full_cmd=$(cat <<END
+  full_cmd=$(
+    cat <<END
 $rg_cmd |
 $fzf_cmd
 END
- )
+  )
   eval "$full_cmd"
 }
-

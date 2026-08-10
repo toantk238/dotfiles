@@ -1,18 +1,18 @@
 if [ -f /usr/share/nnn/quitcd/quitcd.bash_sh_zsh ]; then
-	source /usr/share/nnn/quitcd/quitcd.bash_sh_zsh
+  source /usr/share/nnn/quitcd/quitcd.bash_sh_zsh
 fi
 
 if [ -f ~/.config/nnn/quitcd/quitcd.bash_sh_zsh ]; then
-	source ~/.config/nnn/quitcd/quitcd.bash_sh_zsh
+  source ~/.config/nnn/quitcd/quitcd.bash_sh_zsh
 fi
 
 [ -n "$NNNLVL" ] && PS1="N$NNNLVL $PS1"
 export NNN_FIFO=/tmp/nnn.fifo
 NNN_FCOLORS='c1e2272e006033f7c6d6abc4'
 nnn_cd() {
-	if ! [ -z "$NNN_PIPE" ]; then
-		printf "%s\0" "0c${PWD}" ! >"${NNN_PIPE}" &
-	fi
+  if ! [ -z "$NNN_PIPE" ]; then
+    printf "%s\0" "0c${PWD}" ! >"${NNN_PIPE}" &
+  fi
 }
 
 trap nnn_cd EXIT

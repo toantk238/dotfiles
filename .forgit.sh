@@ -6,9 +6,9 @@ export FORGIT_FZF_DEFAULT_OPTS="
 --height '80%'
 "
 if exists wl-copy; then
-	export FORGIT_COPY_CMD='wl-copy'
+  export FORGIT_COPY_CMD='wl-copy'
 elif exists lemonade; then
-	export FORGIT_COPY_CMD='lemonade copy --host=127.0.0.1'
+  export FORGIT_COPY_CMD='lemonade copy --host=127.0.0.1'
 fi
 
 if exists delta; then
