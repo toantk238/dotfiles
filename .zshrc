@@ -196,6 +196,7 @@ source "$dot_dir/.pyenv.sh"
 source "$dot_dir/.nvm.sh"
 source "$dot_dir/.kompose.sh"
 source "$dot_dir/.kubectl.sh"
+source "$dot_dir/.atuin.sh"
 
 # autoload -U compinit && compinit
 
