@@ -156,7 +156,7 @@ invert = true
 
 ## Defaults to true. If enabled, upon hitting enter Atuin will immediately execute the command. Press tab to return to the shell and edit.
 # This applies for new installs. Old installs will keep the old behaviour unless configured otherwise.
-enter_accept = true
+enter_accept = false
 
 # Use vi keybindings (matches zsh vi-mode)
 keymap_mode = "auto"
@@ -308,6 +308,9 @@ enabled = true
 [theme]
 # Catppuccin Mocha (blue accent) — theme file in ./themes/
 name = "catppuccin-mocha-blue"
+
+[tmux]
+enabled = true
 
 [search]
 ## The list of enabled filter modes, in order of priority.

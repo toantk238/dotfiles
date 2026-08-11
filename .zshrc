@@ -197,6 +197,7 @@ source "$dot_dir/.nvm.sh"
 source "$dot_dir/.kompose.sh"
 source "$dot_dir/.kubectl.sh"
 source "$dot_dir/.atuin.sh"
+source "$dot_dir/.cargo.sh"
 
 # autoload -U compinit && compinit
 
