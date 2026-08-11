@@ -77,7 +77,7 @@
 # inline_height_shell_up_key_binding = 0
 
 ## Invert the UI - put the search bar at the top , Default to `false`
-# invert = false
+invert = true
 
 ## enable or disable showing a preview of the selected command
 ## useful when the command is longer than the terminal width and is cut off
@@ -275,10 +275,18 @@ records = true
 
 [daemon]
 ## Enables using the daemon to sync. Requires the daemon to be running in the background. Start it with `atuin daemon`
-# Daemon keeps a hot in-memory search index (frizbee engine + frecency
-# ranking since 18.19) — faster Ctrl+R. The process is managed by
-# launchd: `brew services start atuin` (per machine — the test suite
-# asserts the socket is live whenever this is enabled).
+# IMPORTANT: with this enabled, `atuin history end` writes ONLY through the
+# daemon socket. If the daemon is not running, every command silently fails
+# to record. Keep the supervisor below alive whenever this is true.
+#
+# On this machine (Arch, systemd) the daemon runs as a systemd --user unit:
+#   ~/.config/systemd/user/atuin-daemon.service
+#   systemctl --user enable --now atuin-daemon.service
+#   systemctl --user status atuin-daemon.service    # health check
+# Socket: $XDG_RUNTIME_DIR/atuin.sock (/run/user/1000/atuin.sock)
+#
+# Set to false to go back to the default direct-to-sqlite path, which needs
+# no supervisor and cannot fail this way.
 enabled = true
 
 ## How often the daemon should sync in seconds
