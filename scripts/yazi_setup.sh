@@ -5,9 +5,9 @@ ya pkg add yazi-rs/plugins:git
 ya pkg add yazi-rs/plugins:piper
 ya pkg add yazi-rs/flavors:dracula
 ya pkg add yazi-rs/plugins:types
+ya pkg add Lil-Dank/lazygit
 
 git clone https://github.com/DreamMaoMao/fg.yazi.git ~/.config/yazi/plugins/fg.yazi
-
 
 git clone https://github.com/Sonico98/yazi-prompt.sh ./yazi-prompt && \
 chmod +x ./yazi-prompt/zsh/p10k/yazi_p10k.zsh && \
