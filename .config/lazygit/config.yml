@@ -4,7 +4,9 @@ gui:
     'master': '#24b372'
     'staging': '#66D9EF'
     'feature': '#A6E22E'
+    'feat': '#A6E22E'
     'hotfix': '#CB064D'
+    'fix': '#CB064D'
     'fixbug': '#CB064D'
   nerdFontsVersion: "3"
   scrollHeight: 5 # how many lines you scroll by
