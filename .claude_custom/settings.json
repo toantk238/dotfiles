@@ -31,11 +31,11 @@
       "Bash(sudo rm -rf :*)",
       "Bash(dd if=/dev/zero of=*)"
     ],
-    "defaultMode": "acceptEdits",
+    "defaultMode": "auto",
     "disableBypassPermissionsMode": "disable",
     "additionalDirectories": []
   },
-  "model": "opusplan",
+  "model": "claude-fable-5[1m]",
   "enableAllProjectMcpServers": true,
   "enabledMcpjsonServers": [
     "sequential-thinking",

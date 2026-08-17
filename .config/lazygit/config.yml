@@ -8,6 +8,7 @@ gui:
     'hotfix': '#CB064D'
     'fix': '#CB064D'
     'fixbug': '#CB064D'
+    'bugfix': '#CB064D'
   nerdFontsVersion: "3"
   scrollHeight: 5 # how many lines you scroll by
 git:
