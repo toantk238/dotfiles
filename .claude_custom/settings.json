@@ -157,6 +157,7 @@
   "outputStyle": "default",
   "askUserQuestionTimeout": "60s",
   "tui": "default",
+  "editorMode": "normal",
   "verbose": false,
   "autoCompactEnabled": true,
   "remoteControlAtStartup": true,
