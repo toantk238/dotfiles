@@ -8,4 +8,3 @@ if exists yazi; then
   }
   alias n=y
 fi
-

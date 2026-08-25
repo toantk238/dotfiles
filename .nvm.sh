@@ -40,10 +40,22 @@ else
     _nvm_setup_nvmrc_hook
   }
 
-  nvm() { _nvm_lazy_load; nvm "$@"; }
-  node() { _nvm_lazy_load; node "$@"; }
-  npm() { _nvm_lazy_load; npm "$@"; }
-  npx() { _nvm_lazy_load; npx "$@"; }
+  nvm() {
+    _nvm_lazy_load
+    nvm "$@"
+  }
+  node() {
+    _nvm_lazy_load
+    node "$@"
+  }
+  npm() {
+    _nvm_lazy_load
+    npm "$@"
+  }
+  npx() {
+    _nvm_lazy_load
+    npx "$@"
+  }
 fi
 
 [ -s "$HOME/.bun/_bun" ] && source "$HOME/.bun/_bun"

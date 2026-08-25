@@ -31,11 +31,11 @@
       "Bash(sudo rm -rf :*)",
       "Bash(dd if=/dev/zero of=*)"
     ],
-    "defaultMode": "acceptEdits",
+    "defaultMode": "auto",
     "disableBypassPermissionsMode": "disable",
     "additionalDirectories": []
   },
-  "model": "opusplan",
+  "model": "claude-fable-5[1m]",
   "enableAllProjectMcpServers": true,
   "enabledMcpjsonServers": [
     "sequential-thinking",
@@ -158,9 +158,12 @@
   "outputStyle": "default",
   "askUserQuestionTimeout": "60s",
   "tui": "default",
+  "editorMode": "normal",
   "verbose": false,
   "autoCompactEnabled": true,
   "remoteControlAtStartup": true,
   "inputNeededNotifEnabled": true,
-  "agentPushNotifEnabled": true
+  "agentPushNotifEnabled": true,
+  "autoUpdatesChannel": "stable",
+  "minimumVersion": "2.1.241"
 }
