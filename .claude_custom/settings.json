@@ -162,5 +162,7 @@
   "autoCompactEnabled": true,
   "remoteControlAtStartup": true,
   "inputNeededNotifEnabled": true,
-  "agentPushNotifEnabled": true
+  "agentPushNotifEnabled": true,
+  "autoUpdatesChannel": "stable",
+  "minimumVersion": "2.1.241"
 }
