@@ -1,12 +1,14 @@
 #!/usr/bin/env python3
 """
 Move Android string resources from one module to another.
+Scans every XML file with <string> items in each values folder (not just
+strings.xml); the destination file mirrors the source filename (created if
+missing, appended otherwise).
 Handles all language variants and preserves CDATA sections, special characters.
 Uses regex-based approach to preserve exact formatting.
 """
 
 import argparse
-import os
 from pathlib import Path
 import re
 import sys
@@ -29,9 +31,22 @@ class StringMover:
         self.source_module = Path(source_module)
         self.dest_module = Path(dest_module)
 
-    def get_strings_xml_path(self, module: Path, lang_folder: str) -> Path:
-        """Get the path to strings.xml for a given module and language folder."""
-        return module / 'src' / 'main' / 'res' / lang_folder / 'strings.xml'
+    def get_res_dir(self, module: Path, lang_folder: str) -> Path:
+        """Get the path to the resource folder for a given module and language folder."""
+        return module / 'src' / 'main' / 'res' / lang_folder
+
+    def find_source_xml_files(self, lang_folder: str) -> List[Path]:
+        """List all XML files in the source language folder that contain <string> items."""
+        res_dir = self.get_res_dir(self.source_module, lang_folder)
+        if not res_dir.is_dir():
+            return []
+
+        xml_files = []
+        for xml_file in sorted(res_dir.glob('*.xml')):
+            content = self.read_file(xml_file)
+            if content and re.search(r'<string\s+name=', content):
+                xml_files.append(xml_file)
+        return xml_files
 
     def read_file(self, file_path: Path) -> Optional[str]:
         """Read file content as text."""
@@ -103,42 +118,50 @@ class StringMover:
         pos = match.start()
         return content[:pos] + string_element + content[pos:]
 
-    def move_key(self, key: str, lang_folder: str) -> bool:
-        """Move a single key for a specific language folder."""
-        source_path = self.get_strings_xml_path(self.source_module, lang_folder)
-        dest_path = self.get_strings_xml_path(self.dest_module, lang_folder)
+    def move_key(self, key: str, lang_folder: str) -> Optional[str]:
+        """
+        Move a single key for a specific language folder.
+        Searches every XML file with <string> items in the source folder.
+        The destination file keeps the same filename as the source file:
+        created if it doesn't exist, appended to otherwise.
+        Returns the filename the key was moved in, or None if not found.
+        """
+        for source_path in self.find_source_xml_files(lang_folder):
+            source_content = self.read_file(source_path)
+            if source_content is None:
+                continue
 
-        # Read source file
-        source_content = self.read_file(source_path)
-        if source_content is None:
-            return False
+            # Find the string element in this source file
+            string_element = self.find_string_element(source_content, key)
+            if string_element is None:
+                continue
 
-        # Find the string element in source
-        string_element = self.find_string_element(source_content, key)
-        if string_element is None:
-            return False
+            # Remove from source
+            new_source_content = self.remove_string_element(source_content, key)
+            if new_source_content is None:
+                continue
 
-        # Remove from source
-        new_source_content = self.remove_string_element(source_content, key)
-        if new_source_content is None:
-            return False
+            # Destination mirrors the source filename
+            dest_path = self.get_res_dir(self.dest_module, lang_folder) / source_path.name
 
-        # Read destination (or create empty)
-        dest_content = self.read_file(dest_path)
-        if dest_content is None:
-            dest_content = '<?xml version="1.0" encoding="utf-8"?>\n<resources>\n</resources>\n'
+            # Read destination (or create empty)
+            dest_content = self.read_file(dest_path)
+            if dest_content is None:
+                dest_content = '<?xml version="1.0" encoding="utf-8"?>\n<resources>\n</resources>\n'
 
-        # Remove existing key from destination if present (overwrite)
-        dest_content = self.remove_string_element(dest_content, key) or dest_content
+            # Remove existing key from destination if present (overwrite)
+            dest_content = self.remove_string_element(dest_content, key) or dest_content
 
-        # Insert into destination
-        new_dest_content = self.insert_string_element(dest_content, string_element)
+            # Insert into destination
+            new_dest_content = self.insert_string_element(dest_content, string_element)
 
-        # Write both files
-        self.write_file(source_path, new_source_content)
-        self.write_file(dest_path, new_dest_content)
+            # Write both files
+            self.write_file(source_path, new_source_content)
+            self.write_file(dest_path, new_dest_content)
 
-        return True
+            return source_path.name
+
+        return None
 
     def move_keys(self, keys: List[str]):
         """Move multiple keys across all language folders."""
@@ -152,11 +175,11 @@ class StringMover:
             results[key] = []
 
             for lang_folder in LANGUAGE_FOLDERS:
-                success = self.move_key(key, lang_folder)
+                moved_file = self.move_key(key, lang_folder)
 
-                if success:
-                    results[key].append(lang_folder)
-                    print(f"  ✓ {lang_folder:<20} - Moved successfully")
+                if moved_file:
+                    results[key].append(f"{lang_folder}/{moved_file}")
+                    print(f"  ✓ {lang_folder:<20} - Moved successfully ({moved_file})")
                 else:
                     print(f"  ✗ {lang_folder:<20} - Not found or error")
 
@@ -165,10 +188,10 @@ class StringMover:
         print("SUMMARY")
         print(f"{'='*60}")
 
-        for key, lang_folders in results.items():
-            if lang_folders:
+        for key, moved_locations in results.items():
+            if moved_locations:
                 print(f"✓ {key}")
-                print(f"  Moved in: {', '.join(lang_folders)}")
+                print(f"  Moved in: {', '.join(moved_locations)}")
             else:
                 print(f"✗ {key}")
                 print(f"  Not found in any language")
@@ -188,6 +211,10 @@ Examples:
 
 Language folders handled:
   values, values-zh, values-zh-rTW, values-vi, values-in
+
+All XML files containing <string> items are scanned (not just strings.xml).
+The destination file keeps the same filename as the source file: it is
+created if missing, otherwise the string is appended to it.
 
 Note: This script preserves CDATA sections and special characters exactly.
 """
