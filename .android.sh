@@ -7,13 +7,13 @@ export PATH=$ANDROID_HOME/cmdline-tools/latest/bin:$PATH
 export PATH=$ANDROID_HOME/emulator:$PATH
 
 adba() {
-	IFS=$'\n' all_devices=($(adb devices | grep -v devices))
+  IFS=$'\n' all_devices=($(adb devices | grep -v devices))
   devices=()
-	for line in $all_devices; do
-		device_serial=$(echo "$line" | awk '{print $1}')
+  for line in $all_devices; do
+    device_serial=$(echo "$line" | awk '{print $1}')
     input_cli=$(echo "$@")
     devices+=("adb -s $device_serial $input_cli")
-	done
+  done
 
   full_cmd=$(join_by ' & ' $devices)
   echo "full_cmd=$full_cmd"

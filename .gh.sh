@@ -1,10 +1,10 @@
 ghcs() {
-	FUNCNAME="$funcstack[1]"
-	TARGET="shell"
-	local GH_DEBUG="$GH_DEBUG"
-	local GH_HOST="$GH_HOST"
+  FUNCNAME="$funcstack[1]"
+  TARGET="shell"
+  local GH_DEBUG="$GH_DEBUG"
+  local GH_HOST="$GH_HOST"
 
-	read -r -d '' __USAGE <<-EOF
+  read -r -d '' __USAGE <<-EOF
 	Wrapper around \`gh copilot suggest\` to suggest a command based on a natural language description of the desired output effort.
 	Supports executing suggested commands if applicable.
 
@@ -40,57 +40,57 @@ ghcs() {
 	 $ $FUNCNAME "Convert MOV to animated PNG"
 	EOF
 
-	local OPT OPTARG OPTIND
-	while getopts "dht:-:" OPT; do
-		if [ "$OPT" = "-" ]; then     # long option: reformulate OPT and OPTARG
-			OPT="${OPTARG%%=*}"       # extract long option name
-			OPTARG="${OPTARG#"$OPT"}" # extract long option argument (may be empty)
-			OPTARG="${OPTARG#=}"      # if long option argument, remove assigning `=`
-		fi
+  local OPT OPTARG OPTIND
+  while getopts "dht:-:" OPT; do
+    if [ "$OPT" = "-" ]; then   # long option: reformulate OPT and OPTARG
+      OPT="${OPTARG%%=*}"       # extract long option name
+      OPTARG="${OPTARG#"$OPT"}" # extract long option argument (may be empty)
+      OPTARG="${OPTARG#=}"      # if long option argument, remove assigning `=`
+    fi
 
-		case "$OPT" in
-			debug | d)
-				GH_DEBUG=api
-				;;
+    case "$OPT" in
+    debug | d)
+      GH_DEBUG=api
+      ;;
 
-			help | h)
-				echo "$__USAGE"
-				return 0
-				;;
+    help | h)
+      echo "$__USAGE"
+      return 0
+      ;;
 
-			hostname)
-				GH_HOST="$OPTARG"
-				;;
+    hostname)
+      GH_HOST="$OPTARG"
+      ;;
 
-			target | t)
-				TARGET="$OPTARG"
-				;;
-		esac
-	done
+    target | t)
+      TARGET="$OPTARG"
+      ;;
+    esac
+  done
 
-	# shift so that $@, $1, etc. refer to the non-option arguments
-	shift "$((OPTIND-1))"
+  # shift so that $@, $1, etc. refer to the non-option arguments
+  shift "$((OPTIND - 1))"
 
-	TMPFILE="$(mktemp -t gh-copilotXXXXXX)"
-	trap 'rm -f "$TMPFILE"' EXIT
-	if GH_DEBUG="$GH_DEBUG" GH_HOST="$GH_HOST" gh copilot suggest -t "$TARGET" "$@" --shell-out "$TMPFILE"; then
-		if [ -s "$TMPFILE" ]; then
-			FIXED_CMD="$(cat $TMPFILE)"
-			print -s -- "$FIXED_CMD"
-			echo
-			eval -- "$FIXED_CMD"
-		fi
-	else
-		return 1
-	fi
+  TMPFILE="$(mktemp -t gh-copilotXXXXXX)"
+  trap 'rm -f "$TMPFILE"' EXIT
+  if GH_DEBUG="$GH_DEBUG" GH_HOST="$GH_HOST" gh copilot suggest -t "$TARGET" "$@" --shell-out "$TMPFILE"; then
+    if [ -s "$TMPFILE" ]; then
+      FIXED_CMD="$(cat $TMPFILE)"
+      print -s -- "$FIXED_CMD"
+      echo
+      eval -- "$FIXED_CMD"
+    fi
+  else
+    return 1
+  fi
 }
 
 ghce() {
-	FUNCNAME="$funcstack[1]"
-	local GH_DEBUG="$GH_DEBUG"
-	local GH_HOST="$GH_HOST"
+  FUNCNAME="$funcstack[1]"
+  local GH_DEBUG="$GH_DEBUG"
+  local GH_HOST="$GH_HOST"
 
-	read -r -d '' __USAGE <<-EOF
+  read -r -d '' __USAGE <<-EOF
 	Wrapper around \`gh copilot explain\` to explain a given input command in natural language.
 
 	USAGE
@@ -113,32 +113,32 @@ ghce() {
 	$ $FUNCNAME 'bfg --strip-blobs-bigger-than 50M'
 	EOF
 
-	local OPT OPTARG OPTIND
-	while getopts "dh-:" OPT; do
-		if [ "$OPT" = "-" ]; then     # long option: reformulate OPT and OPTARG
-			OPT="${OPTARG%%=*}"       # extract long option name
-			OPTARG="${OPTARG#"$OPT"}" # extract long option argument (may be empty)
-			OPTARG="${OPTARG#=}"      # if long option argument, remove assigning `=`
-		fi
+  local OPT OPTARG OPTIND
+  while getopts "dh-:" OPT; do
+    if [ "$OPT" = "-" ]; then   # long option: reformulate OPT and OPTARG
+      OPT="${OPTARG%%=*}"       # extract long option name
+      OPTARG="${OPTARG#"$OPT"}" # extract long option argument (may be empty)
+      OPTARG="${OPTARG#=}"      # if long option argument, remove assigning `=`
+    fi
 
-		case "$OPT" in
-			debug | d)
-				GH_DEBUG=api
-				;;
+    case "$OPT" in
+    debug | d)
+      GH_DEBUG=api
+      ;;
 
-			help | h)
-				echo "$__USAGE"
-				return 0
-				;;
+    help | h)
+      echo "$__USAGE"
+      return 0
+      ;;
 
-			hostname)
-				GH_HOST="$OPTARG"
-				;;
-		esac
-	done
+    hostname)
+      GH_HOST="$OPTARG"
+      ;;
+    esac
+  done
 
-	# shift so that $@, $1, etc. refer to the non-option arguments
-	shift "$((OPTIND-1))"
+  # shift so that $@, $1, etc. refer to the non-option arguments
+  shift "$((OPTIND - 1))"
 
-	GH_DEBUG="$GH_DEBUG" GH_HOST="$GH_HOST" gh copilot explain "$@"
+  GH_DEBUG="$GH_DEBUG" GH_HOST="$GH_HOST" gh copilot explain "$@"
 }

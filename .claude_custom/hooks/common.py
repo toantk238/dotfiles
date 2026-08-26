@@ -99,6 +99,50 @@ def get_original_user_request(transcript_path: str) -> str | None:
     return None
 
 
+_SYSTEM_REMINDER_RE = re.compile(r"<system-reminder>.*?</system-reminder>", re.DOTALL)
+
+# Prefixes that mark a "user" transcript entry as machine-generated rather than
+# something the human actually typed (slash-command plumbing, hook output, ...).
+_SYNTHETIC_USER_PREFIXES = (
+    "<command-name>", "<command-message>", "<command-args>",
+    "<local-command-stdout>", "<local-command-stderr>",
+    "<bash-input>", "<bash-stdout>", "<bash-stderr>",
+    "<user-prompt-submit-hook>", "<task-notification>",
+    "Caveat:", "[Request interrupted",
+)
+
+
+def iter_human_user_turns(transcript_path: str) -> Iterator[tuple[str, str]]:
+    """Yield (timestamp, text) for transcript turns the human actually typed.
+
+    Skips tool results, sidechain (subagent) entries, meta entries and the
+    synthetic `<command-*>` / hook plumbing that also lands in the transcript
+    with role="user". Timestamps are the raw ISO strings from the transcript
+    ("" when absent).
+    """
+    for entry in read_transcript(transcript_path):
+        if entry.get("isMeta") or entry.get("isSidechain"):
+            continue
+        msg = entry.get("message", {})
+        if not isinstance(msg, dict) or msg.get("role") != "user":
+            continue
+        content = msg.get("content")
+        if isinstance(content, list) and any(
+            isinstance(b, dict) and b.get("type") == "tool_result" for b in content
+        ):
+            continue
+        text = _SYSTEM_REMINDER_RE.sub("", extract_text(content)).strip()
+        if not text or text.startswith(_SYNTHETIC_USER_PREFIXES):
+            continue
+        yield str(entry.get("timestamp", "")), text
+
+
+def get_recent_user_turns(transcript_path: str, limit: int = 5) -> list[tuple[str, str]]:
+    """The last `limit` human-typed turns, oldest first."""
+    turns = list(iter_human_user_turns(transcript_path))
+    return turns[-limit:] if limit > 0 else turns
+
+
 def get_last_assistant_message(transcript_path: str) -> str | None:
     """Return the text content of the last assistant turn in the transcript."""
     last_text = None

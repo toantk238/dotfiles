@@ -2,8 +2,15 @@
 # Initialization code that may require console input (password prompts, [y/n]
 # confirmations, etc.) must go above this block; everything else may go below.
 
-# (( ${+commands[direnv]} )) && emulate zsh -c "$(direnv export zsh)"
-autoload -U compinit && compinit
+if [ -f "/$HOME/.env.zsh" ]; then
+  source "/$HOME/.env.zsh"
+fi
+
+autoload -Uz compinit
+for dump in ~/.zcompdump(N.mh+24); do
+  compinit
+done
+compinit -C
 
 this_path="$HOME/.zshrc"
 real_path=$(realpath "$this_path")
@@ -31,7 +38,7 @@ if [[ -r "${XDG_CACHE_HOME:-$HOME/.cache}/p10k-instant-prompt-${(%):-%n}.zsh" ]]
   source "${XDG_CACHE_HOME:-$HOME/.cache}/p10k-instant-prompt-${(%):-%n}.zsh"
 fi
 
-(( ${+commands[direnv]} )) && emulate zsh -c "$(direnv hook zsh)"
+((${+commands[direnv]})) && emulate zsh -c "$(direnv hook zsh)"
 
 source "$dot_dir/.environment.sh"
 source "$dot_dir/.zoxide.sh"
@@ -174,7 +181,7 @@ export PATH=$DOT_DIR/git:$PATH
 
 # ensure compatibility tmux <-> direnv
 if [ -n "$TMUX" ] && [ -n "$DIRENV_DIR" ]; then
-    direnv reload
+  direnv reload
 fi
 
 export DISABLE_AUTO_TITLE='true'
@@ -194,6 +201,8 @@ source "$dot_dir/.pyenv.sh"
 source "$dot_dir/.nvm.sh"
 source "$dot_dir/.kompose.sh"
 source "$dot_dir/.kubectl.sh"
+source "$dot_dir/.atuin.sh"
+source "$dot_dir/.cargo.sh"
 
 # autoload -U compinit && compinit
 
