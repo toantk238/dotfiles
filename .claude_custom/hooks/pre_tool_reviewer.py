@@ -1,12 +1,13 @@
 #!/usr/bin/env python3
 """
-PreToolUse hook — auto-review every tool call before execution.
-Reviewer Claude approves or blocks. No human needed.
+PreToolUse hook — allow every tool call except a small set of BLOCK rules.
 
-The reviewer is deliberately biased toward the human: anything the user asked
-for or approved in their own words wins over the reviewer's opinion (except a
-tiny set of catastrophic commands). Approvals are remembered per session so the
-same call is never blocked after having been approved once.
+Policy:
+  * Every tool, MCP tool and skill is approved by default. No LLM review.
+  * A few catastrophic Bash commands are always blocked (_CRITICAL_BASH_PATTERNS).
+  * A few dangerous Bash commands are blocked unless the user authorised them
+    in their own words (_BLOCK_BASH_PATTERNS) — approvals are remembered per
+    session so the same call is never blocked after having been approved once.
 """
 from dataclasses import dataclass, field
 from datetime import datetime, timedelta, timezone
@@ -17,7 +18,7 @@ import os
 import re
 import sys
 
-from common import HookInput, call_claude, get_recent_user_turns
+from common import HookInput, get_recent_user_turns
 from logger import get_logger
 
 logger = get_logger("pre_tool_reviewer")
@@ -38,45 +39,6 @@ class ReviewVerdict:
     reason: str = ""
     raw_verdict: str = ""
 
-
-REVIEW_PROMPT_TEMPLATE = """You are a strict security reviewer for an automated coding agent.
-A tool is about to execute. Reply ONLY with:
-- APPROVE  — if this is safe and expected for a dev/homelab workflow
-- BLOCK: <reason>  — if this is destructive, irreversible, or looks wrong
-
-Tool: {tool_name}
-Input: {tool_input}
-
-What the user themselves said recently (oldest first):
-{user_context}
-
-Rules:
-- The user is the authority. APPROVE anything they asked for, agreed to, or
-  approved in the messages above — even if it looks risky out of context.
-  Their explicit instruction overrides every rule below.
-- APPROVE all read operations (cat, ls, grep, find, git status/diff/log)
-- APPROVE file edits, remove inside the project directory, .git/sdd (related to superpower skills/agent)
-- APPROVE docker compose up/down/logs/ps, git add/commit
-- BLOCK rm -rf on anything outside /tmp or the project dir + associated dirs.
-- BLOCK git push --force, git reset --hard without explicit task context
-- BLOCK writes to /etc, ~/.ssh, ~/.aws, system paths
-- When genuinely unsure, APPROVE. Blocking work the user already asked for is
-  worse than letting a reversible command through.
-"""
-
-# Tools that are always safe — never need LLM review
-_ALWAYS_APPROVE_TOOLS = {
-    "Read", "Glob", "Grep", "WebFetch", "WebSearch",
-    "TodoRead", "TaskGet", "TaskList", "TaskOutput",
-}
-
-# Bash command prefixes that are read-only and always safe
-_SAFE_BASH_PREFIXES = (
-    "git status", "git log", "git diff", "git show", "git branch",
-    "git remote", "ls", "cat ",  # cat reads are intentionally fast-approved (sensitive reads still go through LLM if chained)
-    "find ", "which ", "echo ",
-    "head ", "tail ", "wc ", "pwd", "env", "printenv",
-)
 
 # Catastrophic and unrecoverable — blocked even when the user says "go ahead".
 _CRITICAL_BASH_PATTERNS = [
@@ -279,34 +241,17 @@ def critical_block_reason(tool_name: str, tool_input: dict) -> str | None:
     return None
 
 
-def fast_path_decision(tool_name: str, tool_input: dict) -> str | None:
-    """
-    Rule-based pre-filter for obvious approve/block decisions.
-
-    Returns:
-      'APPROVE'         — deterministically safe, skip LLM
-      'BLOCK: <reason>' — deterministically dangerous, skip LLM
-      None              — unclear, fall through to LLM
-    """
+def block_decision(tool_name: str, tool_input: dict) -> str | None:
+    """Deterministic BLOCK rules. Returns 'BLOCK: <reason>' or None (allowed)."""
     critical = critical_block_reason(tool_name, tool_input)
     if critical:
         return f"BLOCK: {critical}"
 
-    if tool_name in _ALWAYS_APPROVE_TOOLS:
-        return "APPROVE"
-
     if tool_name == "Bash":
-        command = tool_input.get("command", "")
-
+        command = tool_input.get("command", "") or ""
         for pattern, reason in _BLOCK_BASH_PATTERNS:
             if re.search(pattern, command):
                 return f"BLOCK: {reason}"
-
-        stripped = command.strip()
-        if any(stripped.startswith(prefix) for prefix in _SAFE_BASH_PREFIXES):
-            # Reject compound commands — shell operators could chain dangerous commands after a safe prefix
-            if not re.search(r'[;&|`]|\$\(', command):
-                return "APPROVE"
 
     return None
 
@@ -332,40 +277,14 @@ def review(tool_name: str, tool_input: dict, context: ReviewContext | None = Non
         context.remember_approval(signature)
         return ReviewVerdict(approved=True, reason="", raw_verdict="APPROVE")
 
-    fast = fast_path_decision(tool_name, tool_input)
-    if fast is not None:
-        approved = fast == "APPROVE"
-        reason = "" if approved else fast.removeprefix("BLOCK: ")
-        logger.info(f"[fast-path] {'APPROVED' if approved else 'BLOCKED'}  tool={tool_name} reason={reason}")
-        return ReviewVerdict(approved=approved, reason=reason, raw_verdict=fast)
+    block = block_decision(tool_name, tool_input)
+    if block is not None:
+        reason = block.removeprefix("BLOCK: ")
+        logger.info(f"[rule] BLOCKED  tool={tool_name} reason={reason}")
+        return ReviewVerdict(approved=False, reason=reason, raw_verdict=block)
 
-    formatted_input = json.dumps(tool_input, indent=2)
-    prompt = REVIEW_PROMPT_TEMPLATE.format(
-        tool_name=tool_name,
-        tool_input=formatted_input,
-        user_context=context.user_context_text(),
-    )
-
-    try:
-        verdict_text = call_claude(prompt)
-    except Exception as e:
-        logger.error(f"Review failed due to error, failing open (approve): {e}")
-        return ReviewVerdict(approved=True, reason="", raw_verdict=f"APPROVE (reviewer error: {e})")
-
-    logger.debug(f"Reviewer tool {tool_name}: {formatted_input}")
-    logger.debug(f"Reviewer verdict: {verdict_text}")
-
-    approved = verdict_text.startswith("APPROVE")
-    reason = ""
-    if not approved:
-        if ":" in verdict_text:
-            reason = verdict_text.split(":", 1)[1].strip()
-        else:
-            reason = verdict_text or "no reason provided"
-    else:
-        context.remember_approval(signature)
-
-    return ReviewVerdict(approved=approved, reason=reason, raw_verdict=verdict_text)
+    logger.info(f"[default] APPROVED  tool={tool_name}")
+    return ReviewVerdict(approved=True, raw_verdict="APPROVE")
 
 
 def main():

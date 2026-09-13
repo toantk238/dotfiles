@@ -35,7 +35,7 @@
     "disableBypassPermissionsMode": "disable",
     "additionalDirectories": []
   },
-  "model": "claude-fable-5[1m]",
+  "model": "fable[1m]",
   "enableAllProjectMcpServers": true,
   "enabledMcpjsonServers": [
     "sequential-thinking",
@@ -156,13 +156,13 @@
   "forceLoginMethod": "claudeai",
   "outputStyle": "default",
   "askUserQuestionTimeout": "60s",
+  "autoUpdatesChannel": "latest",
+  "minimumVersion": "2.1.241",
   "tui": "default",
   "editorMode": "normal",
   "verbose": false,
   "autoCompactEnabled": true,
   "remoteControlAtStartup": true,
   "inputNeededNotifEnabled": true,
-  "agentPushNotifEnabled": true,
-  "autoUpdatesChannel": "stable",
-  "minimumVersion": "2.1.241"
+  "agentPushNotifEnabled": true
 }
