@@ -1,4 +1,7 @@
-#!/usr/bin/env python3
+#!/bin/sh
+# Polyglot header: sh re-executes this file with the scripts/ project venv via uv,
+# so the CLI works from any cwd. Python sees the next line as a string literal.
+''''exec uv run --quiet --project "$(dirname "$(readlink -f "$0")")" python "$0" "$@" # '''
 """
 Move Android string resources from one module to another.
 Scans every XML file with <string> items in each values folder (not just

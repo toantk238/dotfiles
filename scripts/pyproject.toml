@@ -1,0 +1,20 @@
+[project]
+name = "scripts"
+version = "0.1.0"
+description = "Handy scripts that fit my life"
+readme = "README.md"
+authors = [
+    { name = "rock-tran", email = "rock.tran@manadr.com" }
+]
+requires-python = ">=3.14"
+dependencies = [
+    "lxml>=6.1.3",
+    "openpyxl>=3.1.5",
+]
+
+[project.scripts]
+scripts = "scripts:main"
+
+[build-system]
+requires = ["uv_build>=0.12.13,<0.13.0"]
+build-backend = "uv_build"
