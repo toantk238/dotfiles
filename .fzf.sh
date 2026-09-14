@@ -1,7 +1,25 @@
 #!/bin/zsh
 #
 #export FZF_DEFAULT_COMMAND="rg --no-ignore --hidden --files -g '!.git/' "
-export FZF_DEFAULT_COMMAND="fd --type f -HI --exclude .git --exclude .gradle --exclude .transforms --exclude .idea --exclude node_modules --exclude __pycache__ --exclude .mypy_cache --exclude Localizable.strings --exclude Generated"
+# One exclusion per line - add/remove entries here
+FZF_EXCLUDES=(
+  .git
+  .gradle
+  .transforms
+  .idea
+  node_modules
+  __pycache__
+  .mypy_cache
+  Localizable.strings
+  Generated
+  build # Android build folder
+)
+
+FZF_DEFAULT_COMMAND="fd --type f -HI"
+for ex in "${FZF_EXCLUDES[@]}"; do
+  FZF_DEFAULT_COMMAND+=" --exclude $ex"
+done
+export FZF_DEFAULT_COMMAND
 
 export FZF_DEFAULT_OPTS='--height 70% --layout=reverse --border'
 
