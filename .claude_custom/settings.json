@@ -24,7 +24,8 @@
       "mcp__memory__*",
       "mcp__plugin_figma_figma__*",
       "Skill(superpowers:*)",
-      "Agent"
+      "Agent",
+      "mcp__codegraph__*"
     ],
     "deny": [
       "Bash(rm -rf /)",
@@ -103,7 +104,7 @@
         "hooks": [
           {
             "type": "command",
-            "command": "zsh -c \"source ~/.env.zsh; ~/.claude/hooks/.venv/bin/python ~/.claude/hooks/debug.py\""
+            "command": "codegraph prompt-hook"
           }
         ]
       }
