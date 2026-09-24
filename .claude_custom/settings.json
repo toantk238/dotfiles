@@ -48,7 +48,12 @@
         "hooks": [
           {
             "type": "command",
-            "command": "source ~/.env.zsh; ~/.claude/notify_slack.sh"
+            "command": "source ~/.env.zsh; ~/.claude/hooks/notify_slack.sh"
+          },
+          {
+            "type": "command",
+            "command": "~/.claude/hooks/.venv/bin/python ~/.claude/hooks/notify_desktop.py",
+            "timeout": 10
           }
         ]
       }
