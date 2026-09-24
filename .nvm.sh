@@ -40,19 +40,19 @@ else
     _nvm_setup_nvmrc_hook
   }
 
-  nvm() {
+  function nvm {
     _nvm_lazy_load
     nvm "$@"
   }
-  node() {
+  function node {
     _nvm_lazy_load
     node "$@"
   }
-  npm() {
+  function npm {
     _nvm_lazy_load
     npm "$@"
   }
-  npx() {
+  function npx {
     _nvm_lazy_load
     npx "$@"
   }

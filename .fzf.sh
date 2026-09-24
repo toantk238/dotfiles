@@ -12,7 +12,7 @@ FZF_EXCLUDES=(
   .mypy_cache
   Localizable.strings
   Generated
-  build # Android build folder
+  # build # Android build folder
 )
 
 FZF_DEFAULT_COMMAND="fd --type f -HI"
