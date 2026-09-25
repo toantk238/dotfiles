@@ -11,6 +11,10 @@ sort_translit  = false
 # name = "*"
 # run  = 'piper -- echo "$1"'
 #
+[opener]
+open = [
+    { run = 'xdg-open "%s1"', desc = "Open", for = "linux" }
+]
 
 [[plugin.prepend_fetchers]]
 id    = "git"
