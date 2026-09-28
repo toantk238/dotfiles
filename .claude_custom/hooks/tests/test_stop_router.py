@@ -174,8 +174,9 @@ def test_handle_stop_proceed(capsys):
         with pytest.raises(SystemExit) as exc:
             stop_router.handle_stop("ready to proceed?", "build a tool")
     assert exc.value.code == 2
-    out = json.loads(capsys.readouterr().out)
-    assert "Auto-approved" in out["hookSpecificOutput"]["additionalContext"]
+    out = capsys.readouterr().err.strip()
+    assert out == \
+        "Your recommendation looks good. I agree. Please continue accordingly."
 
 
 def test_handle_stop_answer(capsys):
@@ -184,8 +185,8 @@ def test_handle_stop_answer(capsys):
         with pytest.raises(SystemExit) as exc:
             stop_router.handle_stop("Should I?", "build a tool")
     assert exc.value.code == 2
-    out = json.loads(capsys.readouterr().out)
-    assert "Auto-answered: \"Yes, do it.\"" in out["hookSpecificOutput"]["additionalContext"]
+    out = capsys.readouterr().err.strip()
+    assert out == "Yes, do it.. Please continue accordingly."
 
 
 def test_handle_stop_human_needed():
@@ -243,13 +244,13 @@ def test_main_proceeds_with_valid_transcript(tmp_path):
     assert exc.value.code == 2
 
 
-def test_main_uses_transcript_message_not_payload_field(tmp_path):
-    """Full message from transcript is used even when payload has a truncated version."""
-    full_text = "FULL_SENTINEL: Shall I proceed with the implementation?"
-    truncated = "TRUNCATED_SENTINEL: cut off here"
+def test_main_uses_payload_message_over_transcript(tmp_path):
+    """Payload last_assistant_message is current; the transcript copy can be stale."""
+    stale_text = "STALE_SENTINEL: Shall I proceed with the implementation?"
+    payload_text = "PAYLOAD_SENTINEL: Shall I proceed with step 2?"
     path = _write_transcript(tmp_path, [
         _msg("user", "build a tool"),
-        _msg("assistant", full_text),
+        _msg("assistant", stale_text),
     ])
     captured_prompt = []
 
@@ -259,10 +260,10 @@ def test_main_uses_transcript_message_not_payload_field(tmp_path):
 
     with patch("stop_router.call_claude", side_effect=fake_claude):
         with pytest.raises(SystemExit):
-            _run_main(path, {"last_assistant_message": truncated})
+            _run_main(path, {"last_assistant_message": payload_text})
 
-    assert full_text in captured_prompt[0]
-    assert truncated not in captured_prompt[0]
+    assert payload_text in captured_prompt[0]
+    assert stale_text not in captured_prompt[0]
 
 
 def test_main_falls_back_to_payload_when_transcript_has_no_assistant_turn(tmp_path):
@@ -326,8 +327,8 @@ def test_handle_stop_multi_choice_clear_winner(capsys):
                 "I want subagent-driven execution for isolation"
             )
     assert exc.value.code == 2
-    out = json.loads(capsys.readouterr().out)
-    assert "Option 2" in out["hookSpecificOutput"]["additionalContext"]
+    out = capsys.readouterr().err.strip()
+    assert "Option 2" in out
 
 
 def test_handle_stop_human_directed_approval_question():
@@ -362,10 +363,8 @@ def test_static_rule_plan_selection_matches():
 
 
 @pytest.mark.parametrize("missing_term", [
-    "Plan complete and saved",
     "Subagent-Driven",
     "Inline Execution",
-    "Which approach?",
 ])
 def test_static_rule_missing_term_returns_none(missing_term):
     msg = _PLAN_MSG.replace(missing_term, "REMOVED")
@@ -415,8 +414,8 @@ def test_main_static_rule_exits_2_without_llm(tmp_path, capsys):
             _run_main(path)
     assert exc.value.code == 2
     mock_llm.assert_not_called()
-    out = json.loads(capsys.readouterr().out)
-    assert "Subagent-Driven" in out["hookSpecificOutput"]["additionalContext"]
+    out = capsys.readouterr().err.strip()
+    assert "Subagent-Driven" in out
 
 
 # ── has_incomplete_tasks ─────────────────────────────────────────────────────
@@ -712,3 +711,66 @@ def test_helpers_handle_non_dict_transcript_entries(tmp_path):
     
     assert common.get_original_user_request(str(transcript)) == "original request"
     assert common.get_last_assistant_message(str(transcript)) == "final response"
+
+
+# ── prompt context ──────────────────────────────────────────────────────────
+
+def test_main_prompt_includes_latest_user_turn(tmp_path):
+    """The latest human turn is passed alongside the first one."""
+    path = _write_transcript(tmp_path, [
+        _msg("user", "FIRST_REQUEST: why does X fail?"),
+        _msg("assistant", "Options A or B?"),
+        _msg("user", "LATEST_REQUEST: A"),
+        _msg("assistant", "Applied A."),
+    ])
+    captured_prompt = []
+
+    def fake_claude(prompt, **kwargs):
+        captured_prompt.append(prompt)
+        return "ACTION: HUMAN_NEEDED\nANSWER: done"
+
+    with patch("stop_router.call_claude", side_effect=fake_claude):
+        with pytest.raises(SystemExit):
+            _run_main(path)
+
+    assert "FIRST_REQUEST" in captured_prompt[0]
+    assert "LATEST_REQUEST" in captured_prompt[0]
+
+
+def test_handle_stop_keeps_tail_of_long_message():
+    """The closing question of a long message must survive truncation."""
+    long_text = "HEAD_SENTINEL " + "x" * 5000 + " TAIL_SENTINEL: want it committed?"
+    captured_prompt = []
+
+    def fake_claude(prompt, **kwargs):
+        captured_prompt.append(prompt)
+        return "ACTION: HUMAN_NEEDED\nANSWER: "
+
+    with patch("stop_router.call_claude", side_effect=fake_claude):
+        with pytest.raises(SystemExit):
+            stop_router.handle_stop(long_text, "build a tool", "commit?")
+
+    assert "TAIL_SENTINEL" in captured_prompt[0]
+    assert "HEAD_SENTINEL" not in captured_prompt[0]
+
+
+def test_static_rule_ignores_mere_mention_of_options():
+    """Naming both options without the plan's choice prompt must not trigger the rule."""
+    msg = "The shortcut fires on subagent-driven + inline execution in any capitalization."
+    assert stop_router.check_static_rules(msg) is None
+
+
+def test_repeat_check_runs_before_static_rule(tmp_path):
+    """A repeated message that matches a static rule must not re-trigger it."""
+    path = _write_transcript(tmp_path, [
+        _msg("user", "build a tool"),
+        _msg("assistant", _PLAN_MSG),
+    ])
+    extra = {"session_id": "loop-test", "last_assistant_message": _PLAN_MSG}
+    with patch.object(stop_router, "_STATE_FILE", str(tmp_path / "state.json")):
+        with pytest.raises(SystemExit) as first:
+            _run_main(path, extra)
+        with pytest.raises(SystemExit) as second:
+            _run_main(path, extra)
+    assert first.value.code == 2
+    assert second.value.code == 0

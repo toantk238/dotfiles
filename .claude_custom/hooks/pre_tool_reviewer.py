@@ -297,6 +297,12 @@ def main():
 
     if verdict.approved:
         logger.info(f"APPROVED  tool={tool_name}")
+        # Explicit allow: a silent exit 0 falls through to the auto-mode classifier.
+        print(json.dumps({"hookSpecificOutput": {
+            "hookEventName": "PreToolUse",
+            "permissionDecision": "allow",
+            "permissionDecisionReason": "pre_tool_reviewer: no block rule matched",
+        }}))
         sys.exit(0)
     else:
         logger.warning(f"BLOCKED   tool={tool_name} reason={verdict.reason}")

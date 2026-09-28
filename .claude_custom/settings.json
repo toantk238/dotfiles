@@ -86,8 +86,7 @@
             "type": "command",
             "command": "zsh -c \"source ~/.env.zsh; ~/.claude/hooks/.venv/bin/python ~/.claude/hooks/stop_router.py\"",
             "timeout": 30,
-            "statusMessage": "AI reviewing...",
-            "asyncRewake": true
+            "statusMessage": "AI reviewing..."
           }
         ]
       }

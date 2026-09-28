@@ -14,6 +14,7 @@ from common import (
     call_claude,
     get_last_assistant_message,
     get_original_user_request,
+    get_recent_user_turns,
     has_incomplete_tasks,
 )
 from logger import get_logger
@@ -32,6 +33,11 @@ _PLAN_SELECTION_TERMS = [
     "subagent-driven",
     "inline execution",
 ]
+# At least one must also appear, so a message that merely mentions the two options doesn't match.
+_PLAN_SELECTION_ASKS = [
+    "which approach",
+    "execution option",
+]
 
 _SPEC_WRITTEN = [
     "spec written and committed",
@@ -41,7 +47,9 @@ _SPEC_WRITTEN = [
 
 def check_static_rules(last_text: str) -> str | None:
     """Return an inject-context string if a known deterministic pattern matches, else None."""
-    if all(term in last_text.lower() for term in _PLAN_SELECTION_TERMS):
+    lowered = last_text.lower()
+    if all(term in lowered for term in _PLAN_SELECTION_TERMS) and \
+            any(ask in lowered for ask in _PLAN_SELECTION_ASKS):
         return 'Option 1: Subagent-Driven. Please continue accordingly.'
     if all(term in last_text.lower() for term in _SPEC_WRITTEN):
         return 'Specs are accepted. Please continue.'
@@ -51,17 +59,28 @@ def check_static_rules(last_text: str) -> str | None:
 STOP_PROMPT_TEMPLATE = """You are an autonomous decision agent for a developer's coding assistant.
 Claude (the assistant) has stopped and is waiting for input.
 
-Original user request:
+Original user request (first message of the session):
 {original_request}
 
-Claude's last message:
+Latest user message (what Claude is acting on right now):
+{latest_request}
+
+Claude's last message (may be truncated at the start):
 {last_text}
 
 Follow these steps in order to decide the best action:
 
-STEP 0 — Does Claude respond as it has completed the whole process or nothing to do more
-  → YES: ACTION = HUMAN_NEEDED.
-  → NO: go to STEP 1
+STEP 0 — Is Claude finished with what the latest user message asked for?
+Treat it as finished when Claude's message reports results ("Done", "Applied", "Fixed",
+"Tested", "Here's why…", a summary of changes or findings) or answers a question,
+EVEN IF it ends with an optional offer of further or new work, such as:
+"tell me if you want it committed", "want me to also…?", "I can push/deploy/publish it",
+"let me know if you'd like…", "should I commit this?".
+Such offers are NOT requests for a green light — the human decides on them.
+Never approve committing, pushing, deploying, publishing, deleting or other irreversible or
+outward-facing actions that the user did not already ask for.
+  → YES (finished, or only optional follow-ups remain): ACTION = HUMAN_NEEDED.
+  → NO (Claude stopped before completing the requested task): go to STEP 1
 
 STEP 1 — Detect options:
 Does Claude's message contain a numbered or lettered list of 2 or more distinct options for the human to choose from?
@@ -83,10 +102,10 @@ before modifying/deleting data the human hasn't mentioned.
   "Does this look good?") are NOT genuine preference requests — treat them as green-light asks
   and go to STEP 4. Only intercept with HUMAN_NEEDED if genuinely unknowable.
 
-STEP 4 — Is Claude proposing or completing work and asking for a green light?
+STEP 4 — Is Claude asking for a green light to do work the user already requested?
 Look for patterns like: "Shall I proceed?", "Ready to start?", "Want me to continue?",
-"Let me know if you want me to go ahead", "I can begin implementation",
-or any completion message followed by a confirmation ask ("Does this look right?", "Any feedback?").
+"Let me know if you want me to go ahead", "I can begin implementation" — where the work
+is part of the latest user request and not yet done (e.g. a plan or spec awaiting approval).
   → YES: ACTION = PROCEED.
   → NO: go to STEP 5
 
@@ -95,8 +114,9 @@ Can you answer with reasonable confidence using the original request and common 
   → YES: ACTION = ANSWER with a concise answer.
   → NO: ACTION = HUMAN_NEEDED.
 
-When in doubt between PROCEED and HUMAN_NEEDED, prefer PROCEED.
-Only choose HUMAN_NEEDED when the human's unique input is truly necessary and cannot be inferred from context.
+For unfinished requested work, when in doubt between PROCEED and HUMAN_NEEDED, prefer PROCEED.
+For finished work (STEP 0), always choose HUMAN_NEEDED — never invent a next task.
+Use ANSWER only to supply an actual answer Claude asked for, never to comment on Claude's message.
 
 Reply in this exact format:
 ACTION: <PROCEED | ANSWER | HUMAN_NEEDED>
@@ -158,11 +178,13 @@ def check_repeated_last_text(session_id: str, last_text: str) -> bool:
     return False
 
 
-def handle_stop(last_text: str, original_request: str) -> None:
+def handle_stop(last_text: str, original_request: str, latest_request: str = "") -> None:
 
+    # Keep the tail of the last message: the closing question/offer is what matters.
     prompt = STOP_PROMPT_TEMPLATE.format(
         original_request=original_request[:1000],
-        last_text=last_text[:2000]
+        latest_request=(latest_request or original_request)[:1000],
+        last_text=last_text[-3000:]
     )
 
     try:
@@ -179,17 +201,20 @@ def handle_stop(last_text: str, original_request: str) -> None:
     elif decision.action == "ANSWER" and decision.answer:
         context = f'{decision.answer}. Please continue accordingly.'
     else:
-        logger.info(f"Passing to human (action={decision.action})")
+        logger.info(f"Passing to human (action={decision.action}) reason={decision.answer!r}")
         sys.exit(0)
 
-    logger.info(f"Decision: action={decision.action} context={context}")
+    logger.info(f"Decision: action={decision.action} context={context} reason={decision.answer!r}")
+    continue_with(context)
 
-    print(json.dumps({
-        "hookSpecificOutput": {
-            "hookEventName": "Stop",
-            "additionalContext": context,
-        }
-    }))
+
+def continue_with(context: str) -> None:
+    """Block the stop and hand `context` to Claude as the user's delegated reply.
+
+    Sync Stop hook: exit 2 feeds stderr to Claude as "Stop hook feedback".
+    (An asyncRewake hook would instead arrive tagged "NOT USER INPUT" and be ignored.)
+    """
+    print(context, file=sys.stderr)
     sys.exit(2)
 
 
@@ -235,31 +260,29 @@ def main():
         logger.info("Early exit: no last_text found")
         sys.exit(0)
 
-    static_context = check_static_rules(last_text)
-    if static_context:
-        logger.info(f"Static rule matched: {static_context}")
-        print(json.dumps({
-            "hookSpecificOutput": {
-                "hookEventName": "Stop",
-                "additionalContext": static_context,
-            }
-        }))
-        sys.exit(2)
-
     session_id = hook_input.get("session_id", "")
     # Use the payload field for repeat detection — it's always current.
     # The transcript-read last_text can be stale when the hook fires before the
     # transcript write completes, causing false repeat positives.
+    # Runs before the static rules so a misfiring rule can't loop forever.
     repeat_check_text = hook_input.get("last_assistant_message", "") or last_text
     if check_repeated_last_text(session_id, repeat_check_text):
         sys.exit(0)
+
+    static_context = check_static_rules(last_text)
+    if static_context:
+        logger.info(f"Static rule matched: {static_context}")
+        continue_with(static_context)
 
     original_request = get_original_user_request(transcript_path)
     if not original_request:
         logger.info("Early exit: no original_request in transcript")
         sys.exit(0)
 
-    handle_stop(last_text, original_request)
+    recent_turns = get_recent_user_turns(transcript_path, limit=1)
+    latest_request = recent_turns[-1][1] if recent_turns else ""
+
+    handle_stop(last_text, original_request, latest_request)
 
 
 if __name__ == "__main__":
