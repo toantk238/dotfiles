@@ -24,7 +24,8 @@
       "mcp__memory__*",
       "mcp__plugin_figma_figma__*",
       "Skill(superpowers:*)",
-      "Agent"
+      "Agent",
+      "mcp__codegraph__*"
     ],
     "deny": [
       "Bash(rm -rf /)",
@@ -35,7 +36,7 @@
     "disableBypassPermissionsMode": "disable",
     "additionalDirectories": []
   },
-  "model": "claude-fable-5[1m]",
+  "model": "fable[1m]",
   "enableAllProjectMcpServers": true,
   "enabledMcpjsonServers": [
     "sequential-thinking",
@@ -47,7 +48,12 @@
         "hooks": [
           {
             "type": "command",
-            "command": "source ~/.env.zsh; ~/.claude/notify_slack.sh"
+            "command": "source ~/.env.zsh; ~/.claude/hooks/notify_slack.sh"
+          },
+          {
+            "type": "command",
+            "command": "~/.claude/hooks/.venv/bin/python ~/.claude/hooks/notify_desktop.py",
+            "timeout": 10
           }
         ]
       }
@@ -80,8 +86,7 @@
             "type": "command",
             "command": "zsh -c \"source ~/.env.zsh; ~/.claude/hooks/.venv/bin/python ~/.claude/hooks/stop_router.py\"",
             "timeout": 30,
-            "statusMessage": "AI reviewing...",
-            "asyncRewake": true
+            "statusMessage": "AI reviewing..."
           }
         ]
       }
@@ -103,7 +108,7 @@
         "hooks": [
           {
             "type": "command",
-            "command": "zsh -c \"source ~/.env.zsh; ~/.claude/hooks/.venv/bin/python ~/.claude/hooks/debug.py\""
+            "command": "codegraph prompt-hook"
           }
         ]
       }
@@ -157,13 +162,13 @@
   "forceLoginMethod": "claudeai",
   "outputStyle": "default",
   "askUserQuestionTimeout": "60s",
+  "autoUpdatesChannel": "latest",
+  "minimumVersion": "2.1.241",
   "tui": "default",
   "editorMode": "normal",
   "verbose": false,
   "autoCompactEnabled": true,
   "remoteControlAtStartup": true,
   "inputNeededNotifEnabled": true,
-  "agentPushNotifEnabled": true,
-  "autoUpdatesChannel": "stable",
-  "minimumVersion": "2.1.241"
+  "agentPushNotifEnabled": true
 }

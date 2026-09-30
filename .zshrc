@@ -172,7 +172,7 @@ source "$dot_dir/.rvm.sh"
 source "$dot_dir/.sesh.sh"
 source "$dot_dir/.claude.sh"
 
-export PATH=$DOT_DIR/git:$PATH
+export PATH=$DOT_DIR/git:$DOT_DIR/scripts/bin:$PATH
 
 # ensure compatibility tmux <-> direnv
 if [ -n "$TMUX" ] && [ -n "$DIRENV_DIR" ]; then

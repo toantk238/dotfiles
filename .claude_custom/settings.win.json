@@ -56,11 +56,22 @@
     ],
     "PreToolUse": [
       {
-        "matcher": "Bash",
+        "matcher": "AskUserQuestion",
         "hooks": [
           {
             "type": "command",
-            "command": "if (Test-Path ~/.env.ps1) { . ~/.env.ps1 }; $input | & ~/.claude/hooks/.venv/Scripts/python.exe ~/.claude/hooks/pre_tool_reviewer.py",
+            "command": "if (Test-Path ~/.env.ps1) { . ~/.env.ps1 }; $input | & ~/.claude/hooks/.venv/Scripts/python.exe ~/.claude/hooks/ask_user_question_handler.py; exit $LASTEXITCODE",
+            "shell": "powershell",
+            "timeout": 30
+          }
+        ]
+      },
+      {
+        "matcher": "^(?!AskUserQuestion$)",
+        "hooks": [
+          {
+            "type": "command",
+            "command": "if (Test-Path ~/.env.ps1) { . ~/.env.ps1 }; $input | & ~/.claude/hooks/.venv/Scripts/python.exe ~/.claude/hooks/pre_tool_reviewer.py; exit $LASTEXITCODE",
             "shell": "powershell"
           }
         ]
