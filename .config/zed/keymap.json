@@ -1,0 +1,36 @@
+// Zed keymap
+//
+// For information on binding keys, see the Zed
+// documentation: https://zed.dev/docs/key-bindings
+//
+// To see the default key bindings run `zed: open default keymap`
+// from the command palette.
+[
+  {
+    "context": "Workspace",
+    "bindings": {
+      // "shift shift": "file_finder::Toggle"
+    }
+  },
+  {
+    "context": "Editor",
+    "bindings": {
+      // "j k": ["workspace::SendKeystrokes", "escape"]
+    }
+  },
+  {
+    "context": "vim_mode == normal && !menu",
+    "bindings": {
+      "space f f": "file_finder::Toggle",
+      "tab": "pane::ActivateNextItem", // NvChad: next buffer
+      "shift-tab": "pane::ActivatePreviousItem",
+      // Mirrors ~/.config/nvim/lua/mymappings.lua
+      "space m e": "pane::CloseOtherItems", // :Bdelete other
+      "space c f": "workspace::CopyRelativePath",
+      "space c shift-f": "workspace::CopyPath",
+      "space c a": "editor::ToggleCodeActions",
+      "space g b": "git::Blame"
+      // "shift-y": ["workspace::SendKeystrokes", "y $"] // Use neovim's yank behavior: yank to end of line.
+    }
+  }
+]
