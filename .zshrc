@@ -201,4 +201,4 @@ source "$dot_dir/.cargo.sh"
 
 # autoload -U compinit && compinit
 
-compdef -d ssh
+compdef -d ssh glow
