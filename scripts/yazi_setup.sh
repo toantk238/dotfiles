@@ -8,6 +8,8 @@ ya pkg add yazi-rs/plugins:types
 ya pkg add Lil-Dank/lazygit
 
 git clone https://github.com/DreamMaoMao/fg.yazi.git ~/.config/yazi/plugins/fg.yazi
+# Quote file path when opening in nvim/helix, so paths with spaces work
+sed -i '/os.execute/s/\.\.file_url)$/..ya.quote(file_url))/' ~/.config/yazi/plugins/fg.yazi/main.lua
 
 git clone https://github.com/Sonico98/yazi-prompt.sh ./yazi-prompt && \
 chmod +x ./yazi-prompt/zsh/p10k/yazi_p10k.zsh && \
