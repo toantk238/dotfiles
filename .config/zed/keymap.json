@@ -19,6 +19,13 @@
     }
   },
   {
+    // ctrl-n again from the tree closes it, like NvimTreeToggle
+    "context": "ProjectPanel && not_editing",
+    "bindings": {
+      "ctrl-n": "workspace::ToggleLeftDock"
+    }
+  },
+  {
     "context": "vim_mode == normal && !menu",
     "bindings": {
       "space f f": "file_finder::Toggle",
@@ -29,7 +36,16 @@
       "space c f": "workspace::CopyRelativePath",
       "space c shift-f": "workspace::CopyPath",
       "space c a": "editor::ToggleCodeActions",
-      "space g b": "git::Blame"
+      "space g b": "git::Blame",
+      "space x": "pane::CloseActiveItem", // close this buffer
+      // Telescope live_grep with the same rg -g excludes
+      "space f w": [
+        "pane::DeploySearch",
+        {
+          "excluded_files": "**/jquery/**, **/bootstrap/**, **/font-awesome/**, **/js/**, **/DerivedData/**, **/Localizable.strings, **/Generated/**, **/*.lock"
+        }
+      ],
+      "ctrl-n": "project_panel::ToggleFocus" // NvimTreeToggle
       // "shift-y": ["workspace::SendKeystrokes", "y $"] // Use neovim's yank behavior: yank to end of line.
     }
   }
