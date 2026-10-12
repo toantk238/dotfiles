@@ -1,5 +1,11 @@
+# `use nvm <version>` in .envrc — served by mise, falls back to nvm
 use_nvm() {
   local node_version=$1
+
+  if has mise; then
+    mise install -q "node@$node_version" && PATH_add "$(mise where "node@$node_version")/bin"
+    return
+  fi
 
   nvm_sh=~/.nvm/nvm.sh
   if [[ -e $nvm_sh ]]; then

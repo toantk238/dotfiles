@@ -6,6 +6,7 @@
 	editor = nvim
 	autocrlf = input
 	pager = delta
+	untrackedCache = true
 
 [delta]
 	line-numbers = true
@@ -19,9 +20,11 @@
 
 [merge]
 	tool = intelliJ
+	conflictStyle = zdiff3
 
 [diff]
 	tool = intelliJ
+	algorithm = histogram
 	colorMoved = default
 	prompt = false
 
@@ -72,6 +75,29 @@
 
 [pull]
 	rebase = true
+
+[rebase]
+	autoStash = true
+	autoSquash = true
+	updateRefs = true
+
+[rerere]
+	enabled = true
+
+[fetch]
+	prune = true
+
+[branch]
+	sort = -committerdate
+
+[tag]
+	sort = version:refname
+
+[commit]
+	verbose = true
+
+[help]
+	autocorrect = prompt
 [lfs]
 	locksverify = true
 [lfs "ssh"]

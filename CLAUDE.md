@@ -24,8 +24,14 @@ pyinstaller gittool.spec
 
 ### System Setup
 ```bash
+# Symlink configs into $HOME (dotbot, idempotent; mapping in install.conf.yaml)
+./install.sh
+
 # Install all development tools on Linux (Arch-based)
 ./scripts/linux.sh
+
+# One-off: move node/lua versions from nvm/luaenv to mise
+./scripts/migrate_to_mise.sh
 
 # Set up Lua environment
 ./luaenv/install.sh
@@ -62,7 +68,7 @@ pyinstaller gittool.spec
 
 ### Key Design Patterns
 1. **Modular Shell Configuration**: Each tool has its own `.zsh` file that's conditionally sourced
-2. **Environment Management**: Uses pyenv, nvm, goenv, and luaenv for language version management
+2. **Environment Management**: Uses mise for node/go/lua/ruby (falls back to nvm/goenv/luaenv/rvm when mise is absent) and pyenv for python (pyenv-virtualenv envs)
 3. **Tool Integration**: Heavy use of modern CLI tools (fzf, ripgrep, eza, delta) with custom configurations
 4. **Script Organization**: Utility scripts grouped by functionality (Android, system, development)
 

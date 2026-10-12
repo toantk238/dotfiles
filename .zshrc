@@ -6,11 +6,7 @@ if [ -f "/$HOME/.env.zsh" ]; then
   source "/$HOME/.env.zsh"
 fi
 
-autoload -Uz compinit
-for dump in ~/.zcompdump(N.mh+24); do
-  compinit
-done
-compinit -C
+# compinit is run once by oh-my-zsh (cached in $ZSH_COMPDUMP)
 
 this_path="$HOME/.zshrc"
 real_path=$(realpath "$this_path")
@@ -112,6 +108,8 @@ fi
 
 fpath+=${ZSH_CUSTOM:-${ZSH:-~/.oh-my-zsh}/custom}/plugins/zsh-completions/src
 source $ZSH/oh-my-zsh.sh
+# before the per-tool files so their own compdefs (e.g. just) take precedence
+source "$dot_dir/.carapace.sh"
 # compdef _gnu_generic flutter
 
 # User configuration
@@ -151,7 +149,7 @@ source $ZSH/oh-my-zsh.sh
 # source <(kubectl completion zsh)
 
 source "$dot_dir/.p10k.sh"
-source "$dot_dir/.nnn.sh"
+# source "$dot_dir/.nnn.sh" # replaced by yazi
 source "$dot_dir/.pet.sh"
 source "$dot_dir/.scrcpy.sh"
 source "$dot_dir/.fzf.sh"
@@ -161,14 +159,11 @@ source "$dot_dir/.lspconfig.sh"
 source "$dot_dir/.nvim.sh"
 source "$dot_dir/.tmux.sh"
 source "$dot_dir/.android.sh"
-source "$dot_dir/.luaenv.sh"
-source "$dot_dir/.ranger.sh"
-source "$dot_dir/.goenv.sh"
+# source "$dot_dir/.ranger.sh" # replaced by yazi
 source "$dot_dir/.just.sh"
 source "$dot_dir/.ssh.sh"
 source "$dot_dir/.gh.sh"
 source "$dot_dir/.yazi.sh"
-source "$dot_dir/.rvm.sh"
 source "$dot_dir/.sesh.sh"
 source "$dot_dir/.claude.sh"
 
@@ -192,8 +187,18 @@ fi
 [ -f $HOME/.config/broot/launcher/bash/br ] && source $HOME/.config/broot/launcher/bash/br
 [ -f $HOME/.cargo/env ] && source $HOME/.cargo/env
 
+# Version managers: mise handles node/go/lua/ruby (reads .nvmrc/.tool-versions),
+# pyenv stays for python because of pyenv-virtualenv envs.
+# Falls back to the legacy per-language managers when mise is not installed.
+if exists mise; then
+  source "$dot_dir/.mise.sh"
+else
+  source "$dot_dir/.luaenv.sh"
+  source "$dot_dir/.goenv.sh"
+  source "$dot_dir/.rvm.sh"
+  source "$dot_dir/.nvm.sh"
+fi
 source "$dot_dir/.pyenv.sh"
-source "$dot_dir/.nvm.sh"
 source "$dot_dir/.kompose.sh"
 source "$dot_dir/.kubectl.sh"
 source "$dot_dir/.atuin.sh"
@@ -201,4 +206,4 @@ source "$dot_dir/.cargo.sh"
 
 # autoload -U compinit && compinit
 
-compdef -d ssh glow
+compdef -d ssh
