@@ -10,16 +10,15 @@ This is a personal dotfiles repository containing shell configurations, developm
 
 ### Git Tool Development
 ```bash
-# Build the custom git helper tool
-cd git
-pip install -r common/requirements.txt
-pyinstaller gittool.spec
+# No setup needed: git/gittool re-execs itself via `uv run --project git/`,
+# so uv creates/syncs git/.venv on first run. Symlinked to ~/.local/bin/gittool.
+gittool sync <path>
+gittool verify_before_push <path>
+gittool merge <path> -b <branch>
+gittool resolve_conflicts <path>
 
-# Git tool usage
-./dist/gittool sync <path>
-./dist/gittool verify_before_push <path>
-./dist/gittool merge <path> -b <branch>
-./dist/gittool resolve_conflicts <path>
+# Manage deps (pyproject.toml + uv.lock in git/)
+uv add --project git <pkg>
 ```
 
 ### System Setup
@@ -58,13 +57,13 @@ pyinstaller gittool.spec
 - **`scripts/`**: Utility scripts for various development tasks
 
 ### Git Tool Architecture (`git/` directory)
-- **`gittool.py`**: Main entry point for the custom git helper
-- **`common/`**: Core functionality modules
-  - `big_repo.py`: Handle large repositories
-  - `git_submodule.py`: Submodule management
-  - `git_util.py`: Git utilities
-  - `log.py`: Logging functionality
-- **Build output**: `dist/gittool` (executable), `build/` (temporary files)
+- **`gittool`**: Main entry point (sh/python polyglot that runs itself via uv)
+- **`helper/`**: Core functionality modules (pygit2-based)
+  - `big_repo.py`: Main repo + submodules orchestration
+  - `repo.py` / `submodule.py`: Repo and submodule wrappers
+  - `utils.py`: Git utilities
+  - `log.py`: Logging (`LOG_LEVEL` env var)
+- **Deps**: `pyproject.toml` + `uv.lock` (no PyInstaller build anymore)
 
 ### Key Design Patterns
 1. **Modular Shell Configuration**: Each tool has its own `.zsh` file that's conditionally sourced
@@ -78,4 +77,4 @@ pyinstaller gittool.spec
 - Git is configured with IntelliJ IDEA integration and delta for diffs
 - Neovim is the primary editor with extensive plugin configuration
 - Android development tools are prominently featured with custom scripts
-- The custom git tool is built with Python and PyInstaller for distribution
+- The custom git tool is a Python script run through uv (no build step)
