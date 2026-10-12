@@ -25,6 +25,7 @@
     ~/.config/organize: .config/organize
     ~/.config/pet: .config/pet
     ~/.config/ripgrep: .config/ripgrep
+    ~/.config/topgrade.toml: .config/topgrade.toml
     ~/.config/yazi: .config/yazi
     ~/.config/zed: .config/zed
     ~/.config/zsh: .config/zsh

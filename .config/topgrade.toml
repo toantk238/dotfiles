@@ -1,0 +1,23 @@
+# topgrade config (linked to ~/.config/topgrade.toml by install.sh)
+# Full reference: topgrade --config-reference
+
+[misc]
+# Ask for the sudo password once, up front
+pre_sudo = true
+
+# containers: would `docker pull` every local image (incl. k3d test builds)
+disable = ["containers"]
+
+# Steps that fail are just reported, no interactive "retry?" prompt
+no_retry = true
+
+# Clean package caches / old versions after upgrading
+cleanup = true
+
+[linux]
+# Show the AUR/pacman news + diff prompts from yay as usual
+arch_package_manager = "yay"
+
+# Custom steps run after the built-ins
+# [commands]
+# "gittool sync" = "gittool sync ~/Workspace/some-repo"
