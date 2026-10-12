@@ -27,6 +27,7 @@
 	algorithm = histogram
 	colorMoved = default
 	prompt = false
+	submodule = log
 
 [difftool]
 	prompt = false
@@ -60,6 +61,8 @@
 	lg = !"git lg1"
 	dt = difftool --dir-diff
 	ds = diff --submodule=diff
+	sf = submodule foreach --recursive
+	sst = submodule status --recursive
 
 [filter "lfs"]
 	clean = git-lfs clean -- %f
@@ -69,6 +72,8 @@
 
 [push]
 	autoSetupRemote = true
+	# refuse to push a superproject whose submodule commits aren't on any remote
+	recurseSubmodules = check
 
 [safe]
 	directory = *
@@ -86,6 +91,16 @@
 
 [fetch]
 	prune = true
+	recurseSubmodules = on-demand
+	parallel = 0
+
+[submodule]
+	fetchJobs = 0
+	# recurse = true is deliberately off: recursive checkout/pull detach
+	# submodule HEADs, which breaks the same-branch-everywhere gittool flow.
+
+[status]
+	submoduleSummary = true
 
 [branch]
 	sort = -committerdate
