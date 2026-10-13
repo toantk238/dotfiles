@@ -1,6 +1,6 @@
 from pygit2 import Branch, Commit, Repository, Oid
 from pygit2.index import ConflictCollection
-from pygit2.repository import BranchType
+from pygit2.enums import BranchType
 
 from .utils import equals_commit, get_active_branch, iMap, is_any_changes, branches_containing_commit, remove_duplicate, run_command
 from .log import logger

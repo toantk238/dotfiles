@@ -246,7 +246,6 @@ if exists btop; then
 fi
 
 if exists glow; then
-  eval "$(glow completion zsh)"
   alias glow="glow --pager"
 fi
 
@@ -262,7 +261,7 @@ fi
 alias gdiff="yes | git difftool --tool=intelliJ HEAD"
 alias ssys="sudo systemctl"
 # alias n="nnn"
-alias ncp="cat ${NNN_SEL:-${XDG_CONFIG_HOME:-$HOME/.config}/nnn/.selection} | tr '\0' '\n'"
+# alias ncp="cat ${NNN_SEL:-${XDG_CONFIG_HOME:-$HOME/.config}/nnn/.selection} | tr '\0' '\n'"
 alias nv="nvim"
 # alias docker-compose="handle_docker_compose"
 alias lc="lemonade copy --host=127.0.0.1"

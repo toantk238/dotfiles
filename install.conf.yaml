@@ -1,0 +1,50 @@
+# Bootstrap: ./install.sh  (dotbot, idempotent — safe to re-run)
+- defaults:
+    link:
+      create: true   # create parent dirs
+      relink: true   # replace stale symlinks
+      force: false   # never clobber real files
+
+- clean: ['~', '~/.config', '~/.local/bin']
+
+- link:
+    ~/.zshrc: .zshrc
+    ~/.gitconfig: .gitconfig
+    ~/.ideavimrc: .ideavimrc
+    ~/.tmux.conf.local: .tmux.conf.local
+    ~/.ssh/config: .ssh/config
+    ~/kitty-sessions: kitty-sessions
+
+    ~/.config/atuin: .config/atuin
+    ~/.config/broot: .config/broot
+    ~/.config/direnv: .config/direnv
+    ~/.config/kitty: .config/kitty
+    ~/.config/lazydocker: .config/lazydocker
+    ~/.config/lazygit: .config/lazygit
+    ~/.config/mise: .config/mise
+    ~/.config/organize: .config/organize
+    ~/.config/pet: .config/pet
+    ~/.config/ripgrep: .config/ripgrep
+    ~/.config/topgrade.toml: .config/topgrade.toml
+    ~/.config/yazi: .config/yazi
+    ~/.config/zed: .config/zed
+    ~/.config/zsh: .config/zsh
+
+    ~/.claude/hooks: .claude_custom/hooks
+    ~/.claude/settings.json: .claude_custom/settings.json
+    ~/.claude/skills/justfile-param-completion: .claude_custom/skills/justfile-param-completion
+    ~/.gemini/hooks: .gemini_custom/hooks
+
+    ~/.local/bin/android_resize_img.sh: scripts/android/android_resize_img.sh
+    ~/.local/bin/check_drawable_missing.py: scripts/android/check_drawable_missing.py
+    ~/.local/bin/gittool: git/gittool
+    ~/.local/bin/img_to_base64: scripts/img_to_base64.py
+    ~/.local/bin/move_android_string: scripts/android/move_android_string.py
+    ~/.local/bin/repack_aar: scripts/repack_aar
+    ~/.local/bin/shorten_r_usages.py: scripts/android/shorten_r_usages.py
+
+- shell:
+    - command: '[ -d ~/.oh-my-zsh ] || sh -c "$(curl -fsSL https://raw.githubusercontent.com/ohmyzsh/ohmyzsh/master/tools/install.sh)" "" --unattended --keep-zshrc'
+      description: oh-my-zsh
+    - command: '[ -d ~/.tmux/.git ] || { git clone https://github.com/gpakosz/.tmux.git ~/.tmux && ln -s .tmux/.tmux.conf ~/.tmux.conf; }'
+      description: oh-my-tmux

@@ -1,5 +1,9 @@
+# shellcheck shell=bash
+# Sourced by zsh (.zshrc); uses zsh-only $funcstack and print -s.
+
 ghcs() {
-  FUNCNAME="$funcstack[1]"
+  # shellcheck disable=SC2154
+  local fn_name="${funcstack[1]}"
   TARGET="shell"
   local GH_DEBUG="$GH_DEBUG"
   local GH_HOST="$GH_HOST"
@@ -9,7 +13,7 @@ ghcs() {
 	Supports executing suggested commands if applicable.
 
 	USAGE
-	 $FUNCNAME [flags] <prompt>
+	 $fn_name [flags] <prompt>
 
 	FLAGS
 	 -d, --debug           Enable debugging
@@ -21,23 +25,23 @@ ghcs() {
 	EXAMPLES
 
 	- Guided experience
-	 $ $FUNCNAME
+	 $ $fn_name
 
 	- Git use cases
-	 $ $FUNCNAME -t git "Undo the most recent local commits"
-	 $ $FUNCNAME -t git "Clean up local branches"
-	 $ $FUNCNAME -t git "Setup LFS for images"
+	 $ $fn_name -t git "Undo the most recent local commits"
+	 $ $fn_name -t git "Clean up local branches"
+	 $ $fn_name -t git "Setup LFS for images"
 
 	- Working with the GitHub CLI in the terminal
-	 $ $FUNCNAME -t gh "Create pull request"
-	 $ $FUNCNAME -t gh "List pull requests waiting for my review"
-	 $ $FUNCNAME -t gh "Summarize work I have done in issues and pull requests for promotion"
+	 $ $fn_name -t gh "Create pull request"
+	 $ $fn_name -t gh "List pull requests waiting for my review"
+	 $ $fn_name -t gh "Summarize work I have done in issues and pull requests for promotion"
 
 	- General use cases
-	 $ $FUNCNAME "Kill processes holding onto deleted files"
-	 $ $FUNCNAME "Test whether there are SSL/TLS issues with github.com"
-	 $ $FUNCNAME "Convert SVG to PNG and resize"
-	 $ $FUNCNAME "Convert MOV to animated PNG"
+	 $ $fn_name "Kill processes holding onto deleted files"
+	 $ $fn_name "Test whether there are SSL/TLS issues with github.com"
+	 $ $fn_name "Convert SVG to PNG and resize"
+	 $ $fn_name "Convert MOV to animated PNG"
 	EOF
 
   local OPT OPTARG OPTIND
@@ -75,7 +79,7 @@ ghcs() {
   trap 'rm -f "$TMPFILE"' EXIT
   if GH_DEBUG="$GH_DEBUG" GH_HOST="$GH_HOST" gh copilot suggest -t "$TARGET" "$@" --shell-out "$TMPFILE"; then
     if [ -s "$TMPFILE" ]; then
-      FIXED_CMD="$(cat $TMPFILE)"
+      FIXED_CMD="$(cat "$TMPFILE")"
       print -s -- "$FIXED_CMD"
       echo
       eval -- "$FIXED_CMD"
@@ -86,7 +90,8 @@ ghcs() {
 }
 
 ghce() {
-  FUNCNAME="$funcstack[1]"
+  # shellcheck disable=SC2154
+  local fn_name="${funcstack[1]}"
   local GH_DEBUG="$GH_DEBUG"
   local GH_HOST="$GH_HOST"
 
@@ -94,7 +99,7 @@ ghce() {
 	Wrapper around \`gh copilot explain\` to explain a given input command in natural language.
 
 	USAGE
-	 $FUNCNAME [flags] <command>
+	 $fn_name [flags] <command>
 
 	FLAGS
 	 -d, --debug      Enable debugging
@@ -104,13 +109,13 @@ ghce() {
 	EXAMPLES
 
 	# View disk usage, sorted by size
-	$ $FUNCNAME 'du -sh | sort -h'
+	$ $fn_name 'du -sh | sort -h'
 
 	# View git repository history as text graphical representation
-	$ $FUNCNAME 'git log --oneline --graph --decorate --all'
+	$ $fn_name 'git log --oneline --graph --decorate --all'
 
 	# Remove binary objects larger than 50 megabytes from git history
-	$ $FUNCNAME 'bfg --strip-blobs-bigger-than 50M'
+	$ $fn_name 'bfg --strip-blobs-bigger-than 50M'
 	EOF
 
   local OPT OPTARG OPTIND

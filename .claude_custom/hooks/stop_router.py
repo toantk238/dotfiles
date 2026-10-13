@@ -6,6 +6,7 @@ Uses a single LLM call to decide the action.
 from dataclasses import dataclass
 import json
 import os
+import re
 import sys
 import tempfile
 
@@ -29,15 +30,15 @@ class StopDecision:
     answer: str = ""
 
 
-_PLAN_SELECTION_TERMS = [
-    "subagent-driven",
-    "inline execution",
+# Each option must head its own list item ("1. Subagent-Driven", "- Native:"), as in the real
+# choice prompt — not just be named in prose. "Inline Execution" was later renamed "Native".
+_LIST_ITEM = r"^\s*(?:[-*\u2022]|\d+[.)]|[a-z][.)])\s*(?:\*\*)?"
+_PLAN_SELECTION_OPTIONS = [
+    re.compile(_LIST_ITEM + r"subagent-driven", re.MULTILINE),
+    re.compile(_LIST_ITEM + r"(?:inline execution|native)\b", re.MULTILINE),
 ]
-# At least one must also appear, so a message that merely mentions the two options doesn't match.
-_PLAN_SELECTION_ASKS = [
-    "which approach",
-    "execution option",
-]
+# The choice prompt must also appear as an actual question (same line, ending in "?").
+_PLAN_SELECTION_ASK = re.compile(r"\b(?:which approach|which way|execution option)[^\n.]*\?")
 
 _SPEC_WRITTEN = [
     "spec written and committed",
@@ -48,8 +49,8 @@ _SPEC_WRITTEN = [
 def check_static_rules(last_text: str) -> str | None:
     """Return an inject-context string if a known deterministic pattern matches, else None."""
     lowered = last_text.lower()
-    if all(term in lowered for term in _PLAN_SELECTION_TERMS) and \
-            any(ask in lowered for ask in _PLAN_SELECTION_ASKS):
+    if all(option.search(lowered) for option in _PLAN_SELECTION_OPTIONS) and \
+            _PLAN_SELECTION_ASK.search(lowered):
         return 'Option 1: Subagent-Driven. Please continue accordingly.'
     if all(term in last_text.lower() for term in _SPEC_WRITTEN):
         return 'Specs are accepted. Please continue.'

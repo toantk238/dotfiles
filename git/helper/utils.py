@@ -1,9 +1,15 @@
 from collections.abc import Callable
 from pygit2 import Branch, Object, Repository
+from pygit2.enums import FileStatus
 from .log import logger
 from typing import TypeVar, Optional
 import subprocess
 T = TypeVar('T')
+
+WT_CHANGES = (FileStatus.WT_MODIFIED | FileStatus.WT_DELETED | FileStatus.WT_TYPECHANGE
+              | FileStatus.WT_RENAMED)
+INDEX_CHANGES = (FileStatus.INDEX_NEW | FileStatus.INDEX_MODIFIED | FileStatus.INDEX_DELETED
+                 | FileStatus.INDEX_RENAMED | FileStatus.INDEX_TYPECHANGE)
 
 
 def run_command(**kwargs):
@@ -23,10 +29,11 @@ def get_active_branch(repo: Repository):
 
 
 def is_any_changes(repo: Repository):
-    unstagedFiles = [item.a_path for item in repo.index.diff(None)]
-    stagedFiles = [item.a_path for item in repo.index.diff("HEAD")]
+    status = repo.status(untracked_files="no")
+    unstagedFiles = [path for path, flags in status.items() if flags & WT_CHANGES]
+    stagedFiles = [path for path, flags in status.items() if flags & INDEX_CHANGES]
 
-    logger.debug(f"Check changes in repo {repo.working_tree_dir}")
+    logger.debug(f"Check changes in repo {repo.workdir}")
     logger.debug(f"Unstaged files: {unstagedFiles}")
     logger.debug(f"stagedFiles : {stagedFiles}")
 

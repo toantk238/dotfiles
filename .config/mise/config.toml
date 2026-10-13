@@ -1,0 +1,10 @@
+# Global mise config (linked to ~/.config/mise/config.toml by install.sh)
+# Python is intentionally left to pyenv (pyenv-virtualenv envs).
+
+[tools]
+node = "24"
+lua = "5.1.5"
+
+[settings]
+# Honour .nvmrc / .node-version files in projects, like nvm did
+idiomatic_version_file_enable_tools = ["node"]

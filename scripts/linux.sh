@@ -19,12 +19,12 @@ apps=(
 
  # Terminal
  zsh fd ripgrep fzf uctags-git tmux lsd eza btop direnv kitty
- bat tmuxp tldr nnn-nerd autojump jq
+ bat tmuxp tldr yazi zoxide atuin jq go-yq xh
+ just sesh-bin carapace-bin watchexec topgrade-bin
 
  # Development
  neovim 
- pyenv pyenv-virtualenv python-pip 
- npm yarn nodejs 
+ mise pyenv pyenv-virtualenv python-pip uv
 
  # Git
  git-delta lazygit forgit git-lfs github-cli

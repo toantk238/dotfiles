@@ -1,2 +1,0 @@
-PyInstaller
-pygit2==1.15.1

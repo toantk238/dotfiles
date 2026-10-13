@@ -371,6 +371,47 @@ def test_static_rule_missing_term_returns_none(missing_term):
     assert stop_router.check_static_rules(msg) is None
 
 
+_PLAN_MSG_NATIVE = (
+    "Which way should I run it?\n"
+    "  - Subagent-driven: a fresh agent implements each task and a separate reviewer checks it "
+    "before the next one starts, with a whole-branch review at the end. Most thorough, but costs "
+    "a fresh context per task and per review.\n"
+    "  - Native: I implement every task myself in this session, then one reviewer on the strongest "
+    "model checks the whole branch. Cheapest and fastest, but there's no independent review until the end.\n"
+)
+
+
+def test_static_rule_plan_selection_native_wording_matches():
+    result = stop_router.check_static_rules(_PLAN_MSG_NATIVE)
+    assert result is not None
+    assert "Subagent-Driven" in result
+
+
+def test_static_rule_native_wording_without_ask_returns_none():
+    msg = _PLAN_MSG_NATIVE.replace("Which way should I run it?", "")
+    assert stop_router.check_static_rules(msg) is None
+
+
+def test_static_rule_ignores_ask_phrase_outside_a_question():
+    """A summary that quotes the ask phrase (not as a question) must not trigger the rule."""
+    msg = (
+        "The hook now accepts \"Native\" alongside \"Inline Execution\" next to Subagent-driven.\n"
+        "- \"which way\" now counts as asking you to choose, alongside \"which approach\".\n"
+        "Nothing is committed yet."
+    )
+    assert stop_router.check_static_rules(msg) is None
+
+
+def test_static_rule_ignores_quoted_question_in_prose():
+    """A summary quoting the full question while naming the options in prose must not match."""
+    msg = (
+        "Fixed in stop_router.py. Your \"Which way should I run it?\" message still triggers.\n"
+        "The hook accepts \"Native\" alongside \"Inline Execution\" next to Subagent-driven.\n"
+        "- **Option names:** the second option may now be called Native.\n"
+    )
+    assert stop_router.check_static_rules(msg) is None
+
+
 def test_repeat_check_uses_payload_not_stale_transcript(tmp_path):
     """Repeat detection must use payload last_assistant_message, not transcript.
 
