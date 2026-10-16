@@ -358,8 +358,40 @@ _PLAN_MSG = (
 def test_static_rule_plan_selection_matches():
     result = stop_router.check_static_rules(_PLAN_MSG)
     assert result is not None
-    assert "Option 1" in result
-    assert "Subagent-Driven" in result
+    assert result.startswith("Subagent-Driven, as you recommended")
+
+
+def test_static_rule_follows_recommended_tag_on_native():
+    msg = _PLAN_MSG.replace(" (recommended)", "").replace(
+        "Inline Execution —", "Inline Execution (recommended) —")
+    result = stop_router.check_static_rules(msg)
+    assert result is not None
+    assert result.startswith("Inline Execution, as you recommended")
+
+
+_PLAN_MSG_PROSE_RECOMMEND = (
+    "Please review the plans. Which execution approach would you prefer?\n"
+    "  - Subagent-driven: a fresh agent implements each task and a fresh reviewer checks it "
+    "before the next one starts, with a whole-branch review at the end.\n"
+    "  - Native: I implement every task myself in this session, with one review of the whole "
+    "branch at the end.\n\n"
+    "  I recommend {choice}. There are 38 tasks across three repos.\n"
+)
+
+
+@pytest.mark.parametrize("choice, expected", [
+    ("subagent-driven", "Subagent-Driven"),
+    ("native", "Native"),
+    ("**Native**", "Native"),
+])
+def test_static_rule_follows_prose_recommendation(choice, expected):
+    result = stop_router.check_static_rules(_PLAN_MSG_PROSE_RECOMMEND.format(choice=choice))
+    assert result == f"{expected}, as you recommended. Please continue accordingly."
+
+
+def test_static_rule_defaults_to_subagent_without_recommendation():
+    msg = _PLAN_MSG_PROSE_RECOMMEND.format(choice="nothing").replace("I recommend nothing.", "")
+    assert stop_router.check_static_rules(msg) == "Subagent-Driven. Please continue accordingly."
 
 
 @pytest.mark.parametrize("missing_term", [

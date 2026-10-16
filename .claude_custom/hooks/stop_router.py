@@ -33,12 +33,33 @@ class StopDecision:
 # Each option must head its own list item ("1. Subagent-Driven", "- Native:"), as in the real
 # choice prompt — not just be named in prose. "Inline Execution" was later renamed "Native".
 _LIST_ITEM = r"^\s*(?:[-*\u2022]|\d+[.)]|[a-z][.)])\s*(?:\*\*)?"
+_SUBAGENT = r"subagent-driven"
+_NATIVE = r"(?:inline execution|native)\b"
 _PLAN_SELECTION_OPTIONS = [
-    re.compile(_LIST_ITEM + r"subagent-driven", re.MULTILINE),
-    re.compile(_LIST_ITEM + r"(?:inline execution|native)\b", re.MULTILINE),
+    re.compile(_LIST_ITEM + _SUBAGENT, re.MULTILINE),
+    re.compile(_LIST_ITEM + _NATIVE, re.MULTILINE),
 ]
 # The choice prompt must also appear as an actual question (same line, ending in "?").
-_PLAN_SELECTION_ASK = re.compile(r"\b(?:which approach|which way|execution option)[^\n.]*\?")
+# "which approach" also covers "which execution approach".
+_PLAN_SELECTION_ASK = re.compile(
+    r"\b(?:which (?:\w+ )?approach|which way|execution option)[^\n.]*\?")
+
+# Claude's own recommendation, either tagged on the option ("1. Subagent-Driven (recommended)")
+# or stated in prose ("I recommend subagent-driven."). Group 1 is the recommended option.
+_OPTION = rf"({_SUBAGENT}|{_NATIVE})"
+_RECOMMENDED_ITEM = re.compile(_LIST_ITEM + _OPTION + r"[^\n]*\(recommended\)", re.MULTILINE)
+_RECOMMENDED_PROSE = re.compile(r"\brecommend(?:ed|s)?:?\s+(?:the\s+)?(?:\*\*)?" + _OPTION)
+
+
+def recommended_plan_option(lowered: str) -> str | None:
+    """Return the execution option Claude recommended, or None when it recommended none."""
+    match = _RECOMMENDED_ITEM.search(lowered) or _RECOMMENDED_PROSE.search(lowered)
+    if not match:
+        return None
+    option = match.group(1)
+    if option.startswith("subagent"):
+        return "Subagent-Driven"
+    return "Native" if option == "native" else "Inline Execution"
 
 _SPEC_WRITTEN = [
     "spec written and committed",
@@ -51,7 +72,10 @@ def check_static_rules(last_text: str) -> str | None:
     lowered = last_text.lower()
     if all(option.search(lowered) for option in _PLAN_SELECTION_OPTIONS) and \
             _PLAN_SELECTION_ASK.search(lowered):
-        return 'Option 1: Subagent-Driven. Please continue accordingly.'
+        option = recommended_plan_option(lowered)
+        if option:
+            return f'{option}, as you recommended. Please continue accordingly.'
+        return 'Subagent-Driven. Please continue accordingly.'
     if all(term in last_text.lower() for term in _SPEC_WRITTEN):
         return 'Specs are accepted. Please continue.'
     return None
