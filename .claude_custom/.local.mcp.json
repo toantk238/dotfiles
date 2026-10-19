@@ -2,17 +2,32 @@
   "mcpServers": {
     "sequential-thinking": {
       "command": "npx",
-      "args": [
-        "-y",
-        "@modelcontextprotocol/server-sequential-thinking"
-      ]
+      "args": ["-y", "@modelcontextprotocol/server-sequential-thinking"]
     },
     "memory": {
       "command": "npx",
+      "args": ["-y", "@modelcontextprotocol/server-memory"]
+    },
+    "android-adb": {
+      "_platforms": ["linux", "darwin"],
+      "_requires": "${ANDROID_MCP_DIR:-~/Workspace/1.CloneAndRun/android-mcp-server}",
+      "command": "uv",
       "args": [
-        "-y",
-        "@modelcontextprotocol/server-memory"
+        "--directory",
+        "${ANDROID_MCP_DIR:-~/Workspace/1.CloneAndRun/android-mcp-server}",
+        "run",
+        "server.py"
       ]
+    },
+    "code-review-graph": {
+      "type": "stdio",
+      "command": "uvx",
+      "args": ["code-review-graph", "serve"]
+    },
+    "codegraph": {
+      "type": "stdio",
+      "command": "codegraph",
+      "args": ["serve", "--mcp"]
     }
   }
 }

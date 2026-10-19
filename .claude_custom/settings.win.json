@@ -22,25 +22,62 @@
       "mcp__code-review-graph__*",
       "mcp__sequential-thinking__*",
       "mcp__memory__*",
-      "Skill(superpowers*)",
-      "Skill(superpowers:writing-plans)",
-      "Skill(superpowers:subagent-driven-development)",
-      "Agent"
+      "mcp__plugin_figma_figma__*",
+      "Skill(superpowers:*)",
+      "Agent",
+      "mcp__codegraph__*"
     ],
     "deny": [
       "Bash(rm -rf /)",
       "Bash(sudo rm -rf :*)",
       "Bash(dd if=/dev/zero of=*)"
     ],
-    "defaultMode": "acceptEdits",
+    "defaultMode": "auto",
     "disableBypassPermissionsMode": "disable",
     "additionalDirectories": []
   },
+  "model": "fable[1m]",
   "enableAllProjectMcpServers": true,
   "enabledMcpjsonServers": [
     "sequential-thinking",
     "memory"
   ],
+  "enabledPlugins": {
+    "superpowers@claude-plugins-official": true,
+    "clangd-lsp@claude-plugins-official": true,
+    "pyright-lsp@claude-plugins-official": true,
+    "figma@claude-plugins-official": true,
+    "document-skills@anthropic-agent-skills": true,
+    "context-mode@context-mode": true,
+    "frontend-design@claude-plugins-official": true,
+    "skill-creator@claude-plugins-official": true
+  },
+  "extraKnownMarketplaces": {
+    "context-mode": {
+      "source": {
+        "source": "github",
+        "repo": "mksglu/context-mode"
+      }
+    },
+    "codeceptjs-skills": {
+      "source": {
+        "source": "github",
+        "repo": "codeceptjs/skills"
+      }
+    }
+  },
+  "forceLoginMethod": "claudeai",
+  "outputStyle": "default",
+  "askUserQuestionTimeout": "60s",
+  "autoUpdatesChannel": "latest",
+  "minimumVersion": "2.1.241",
+  "tui": "default",
+  "editorMode": "normal",
+  "verbose": false,
+  "autoCompactEnabled": true,
+  "remoteControlAtStartup": true,
+  "inputNeededNotifEnabled": true,
+  "agentPushNotifEnabled": true,
   "hooks": {
     "Notification": [
       {
@@ -85,19 +122,42 @@
             "command": "if (Test-Path ~/.env.ps1) { . ~/.env.ps1 }; $input | & ~/.claude/hooks/.venv/Scripts/python.exe ~/.claude/hooks/stop_router.py; exit $LASTEXITCODE",
             "shell": "powershell",
             "timeout": 30,
-            "statusMessage": "AI reviewing...",
-            "asyncRewake": true
+            "statusMessage": "AI reviewing..."
+          }
+        ]
+      }
+    ],
+    "SessionStart": [
+      {
+        "matcher": "",
+        "hooks": [
+          {
+            "type": "command",
+            "command": "code-review-graph status",
+            "shell": "powershell",
+            "timeout": 10
+          }
+        ]
+      },
+      {
+        "hooks": [
+          {
+            "type": "command",
+            "command": "node ~/.claude/hooks/context-mode-cache-heal.mjs",
+            "shell": "powershell"
           }
         ]
       }
     ],
     "PostToolUse": [
       {
+        "matcher": "Edit|Write|Bash",
         "hooks": [
           {
             "type": "command",
-            "command": "if (Test-Path ~/.env.ps1) { . ~/.env.ps1 }; $input | & ~/.claude/hooks/.venv/Scripts/python.exe ~/.claude/hooks/debug.py",
-            "shell": "powershell"
+            "command": "code-review-graph update --skip-flows",
+            "shell": "powershell",
+            "timeout": 30
           }
         ]
       }
@@ -107,18 +167,11 @@
         "hooks": [
           {
             "type": "command",
-            "command": "if (Test-Path ~/.env.ps1) { . ~/.env.ps1 }; $input | & ~/.claude/hooks/.venv/Scripts/python.exe ~/.claude/hooks/debug.py",
+            "command": "codegraph prompt-hook",
             "shell": "powershell"
           }
         ]
       }
     ]
-  },
-  "enabledPlugins": {
-    "superpowers@superpowers-marketplace": true
-  },
-  "forceLoginMethod": "claudeai",
-  "remoteControlAtStartup": true,
-  "agentPushNotifEnabled": true,
-  "inputNeededNotifEnabled": true
+  }
 }

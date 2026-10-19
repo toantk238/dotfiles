@@ -1,0 +1,10 @@
+# Windows mise config (linked to ~/.config/mise/config.toml by scripts/setup_mise.ps1)
+# lua is omitted: building it needs make/gcc, which a stock Windows lacks.
+# Python is intentionally left to pyenv-win.
+
+[tools]
+node = "24"
+
+[settings]
+# Honour .nvmrc / .node-version files in projects, like nvm did
+idiomatic_version_file_enable_tools = ["node"]

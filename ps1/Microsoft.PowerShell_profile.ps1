@@ -29,6 +29,9 @@ Import-Module git-aliases -DisableNameChecking
 
 Invoke-Expression (& { (zoxide init powershell --cmd j | Out-String) })
 
+# mise: node version manager (setup: scripts/setup_mise.ps1)
+if (Get-Command mise -ErrorAction SilentlyContinue) { (& mise activate pwsh) -join "`n" | Invoke-Expression }
+
 $env:CLAUDE_CODE_GIT_BASH_PATH="C:\Program Files\Git\bin\bash.exe"
 $env:ANTHROPIC_MODEL="opusplan"
 
