@@ -30,6 +30,13 @@ export ZSH="/$HOME/.oh-my-zsh"
 ZSH_THEME="powerlevel10k/powerlevel10k"
 # ZSH_THEME="robbyrussell"
 
+# Load .envrc before instant prompt so direnv's "loading/export" lines don't trip p10k
+if ((${+commands[direnv]})); then
+  # ensure compatibility tmux <-> direnv
+  [ -n "$TMUX" ] && [ -n "$DIRENV_DIR" ] && direnv reload
+  emulate zsh -c "$(direnv export zsh)"
+fi
+
 if [[ -r "${XDG_CACHE_HOME:-$HOME/.cache}/p10k-instant-prompt-${(%):-%n}.zsh" ]]; then
   source "${XDG_CACHE_HOME:-$HOME/.cache}/p10k-instant-prompt-${(%):-%n}.zsh"
 fi
@@ -99,7 +106,7 @@ source "$dot_dir/.zoxide.sh"
 # Custom plugins may be added to $ZSH_CUSTOM/plugins/
 # Example format: plugins=(rails git textmate ruby lighthouse)
 # Add wisely, as too many plugins slow down shell startup.
-plugins=(git zoxide tmux fzf direnv zsh-autosuggestions zsh-syntax-highlighting forgit eza fzf-tab)
+plugins=(git zoxide tmux fzf zsh-autosuggestions zsh-syntax-highlighting forgit eza fzf-tab)
 # plugins=(git tmux fzf direnv flutter zsh-autosuggestions zsh-syntax-highlighting forgit)
 
 if [ -n "$RUN_BY_ME" ]; then
@@ -168,11 +175,6 @@ source "$dot_dir/.sesh.sh"
 source "$dot_dir/.claude.sh"
 
 export PATH=$DOT_DIR/git:$DOT_DIR/scripts/bin:$PATH
-
-# ensure compatibility tmux <-> direnv
-if [ -n "$TMUX" ] && [ -n "$DIRENV_DIR" ]; then
-  direnv reload
-fi
 
 export DISABLE_AUTO_TITLE='true'
 
