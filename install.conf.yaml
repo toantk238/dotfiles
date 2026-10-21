@@ -39,6 +39,7 @@
     ~/.local/bin/check_drawable_missing.py: scripts/android/check_drawable_missing.py
     ~/.local/bin/gittool: git/gittool
     ~/.local/bin/img_to_base64: scripts/img_to_base64.py
+    ~/.local/bin/kitty-session: scripts/kitty_session.py
     ~/.local/bin/mermaid_render: scripts/mermaid_render.py
     ~/.local/bin/move_android_string: scripts/android/move_android_string.py
     ~/.local/bin/repack_aar: scripts/repack_aar
