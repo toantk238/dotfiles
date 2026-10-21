@@ -6,7 +6,7 @@
 pre_sudo = true
 
 # containers: would `docker pull` every local image (incl. k3d test builds)
-disable = ["containers"]
+disable = ["containers", "uv"]
 
 # Steps that fail are just reported, no interactive "retry?" prompt
 no_retry = true
