@@ -10,7 +10,8 @@ Examples:
 Each instance becomes one <dir>/instance-<n>.kitty-session file (default dir:
 ~/kitty-sessions/saved). The layout comes from `kitty @ ls --output-format session`;
 on top of it, the program each window was running (nvim, sesh, tmux, ...) is
-re-run through shell integration, so you land back in a shell when it exits.
+saved and, on restore, typed into the window once its shell shows a prompt, so
+you land back in that shell when it exits.
 A tmux client is restored as `tmux new-session -A` on the session it was showing
 at dump time, which re-attaches or recreates it.
 
@@ -26,10 +27,13 @@ import shlex
 import shutil
 import subprocess
 import sys
+import time
 from pathlib import Path
 
 DEFAULT_DIR = Path.home() / 'kitty-sessions' / 'saved'
 UNSERIALIZE_FLAG = 'kitty-unserialize-data='
+CMD_VAR = 'kitty_session_cmd'
+RESTORE_TIMEOUT = 30  # seconds to wait for restored shells to reach their prompt
 SHELLS = {'zsh', 'bash', 'fish', 'sh', 'dash', 'nu', 'xonsh'}
 
 
@@ -130,6 +134,20 @@ def startup_command(window: dict, clients: dict[int, tuple[str, str]]) -> str | 
     return shlex.join(procs[0][1]) if procs else None
 
 
+def map_unserialize_data(text: str, fn) -> str:
+    """Rewrite every `launch` line's kitty-unserialize-data dict with fn(data) -> (data, extra launch args)."""
+    lines = []
+    for line in text.splitlines():
+        if line.startswith('launch '):
+            args = shlex.split(line[len('launch '):])
+            if args and args[0].startswith(UNSERIALIZE_FLAG):
+                data, extra = fn(json.loads(args[0][len(UNSERIALIZE_FLAG):]))
+                args[0] = UNSERIALIZE_FLAG + json.dumps(data)
+                line = 'launch ' + shlex.join(args[:1] + extra + args[1:])
+        lines.append(line)
+    return '\n'.join(lines) + '\n'
+
+
 def build_session(pid: int, clients: dict[int, tuple[str, str]]) -> str:
     windows = {
         w['id']: w
@@ -137,20 +155,55 @@ def build_session(pid: int, clients: dict[int, tuple[str, str]]) -> str:
         for t in ow['tabs']
         for w in t['windows']
     }
-    lines = []
-    for line in kitty_ls(pid, 'session').splitlines():
-        if line.startswith('launch '):
-            args = shlex.split(line[len('launch '):])
-            if args and args[0].startswith(UNSERIALIZE_FLAG):
-                data = json.loads(args[0][len(UNSERIALIZE_FLAG):])
-                w = windows.get(data.get('id'))
-                cmd = startup_command(w, clients) if w else None
-                if cmd and not data.get('cmd_at_shell_startup'):
-                    data['cmd_at_shell_startup'] = cmd
-                    args[0] = UNSERIALIZE_FLAG + json.dumps(data)
-                    line = 'launch ' + shlex.join(args)
-        lines.append(line)
-    return '\n'.join(lines) + '\n'
+
+    def add_command(data: dict) -> tuple[dict, list[str]]:
+        w = windows.get(data.get('id'))
+        cmd = startup_command(w, clients) if w else None
+        if cmd and not data.get('cmd_at_shell_startup'):
+            data['cmd_at_shell_startup'] = cmd
+        return data, []
+
+    return map_unserialize_data(kitty_ls(pid, 'session'), add_command)
+
+
+def as_window_var(data: dict) -> tuple[dict, list[str]]:
+    # Don't let shell integration run the command: it does so from zsh's first precmd,
+    # inside p10k instant prompt, where tmux fails ("not a terminal") or never draws.
+    # Park it in a user var instead and type it once the shell is at its prompt.
+    cmd = data.pop('cmd_at_shell_startup', None)
+    if isinstance(cmd, list):
+        cmd = shlex.join(cmd)
+    return data, ['--var', f'{CMD_VAR}={cmd}'] if cmd else []
+
+
+def type_commands(pids: list[int]) -> None:
+    """Send each restored window its saved command as soon as its shell is at a prompt."""
+    done: set[tuple[int, int]] = set()
+    deadline = time.monotonic() + RESTORE_TIMEOUT
+    while time.monotonic() < deadline:
+        pending = 0
+        for pid in pids:
+            try:
+                state = json.loads(kitty_ls(pid, 'json'))
+            except (subprocess.CalledProcessError, json.JSONDecodeError):
+                pending += 1  # socket not up yet
+                continue
+            for w in (w for ow in state for t in ow['tabs'] for w in t['windows']):
+                cmd = w['user_vars'].get(CMD_VAR)
+                if not cmd or (pid, w['id']) in done:
+                    continue
+                if not w['at_prompt']:
+                    pending += 1
+                    continue
+                subprocess.run(
+                    ['kitty', '@', '--to', f'unix:/tmp/kitty-{pid}', 'send-text', '--match', f'id:{w["id"]}', '--stdin'],
+                    input=cmd + '\r', text=True, check=False,
+                )
+                done.add((pid, w['id']))
+        if not pending:
+            return
+        time.sleep(0.3)
+    print(f'gave up after {RESTORE_TIMEOUT}s on windows whose shell never reached a prompt', file=sys.stderr)
 
 
 def dump(args: argparse.Namespace) -> None:
@@ -197,13 +250,21 @@ def list_saved(args: argparse.Namespace) -> None:
 
 
 def restore(args: argparse.Namespace) -> None:
+    # Restoring from inside tmux must not leak this pane's tmux into the new instances.
+    env = {k: v for k, v in os.environ.items() if k not in ('TMUX', 'TMUX_PANE')}
+    pids = []
     for f in saved_files(args.dir):
-        subprocess.Popen(
-            ['kitty', '--session', str(f)],
-            stdin=subprocess.DEVNULL, stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL,
-            start_new_session=True,
+        session = map_unserialize_data(f.read_text(), as_window_var)
+        proc = subprocess.Popen(
+            ['kitty', '--session', '-'],
+            stdin=subprocess.PIPE, stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL,
+            start_new_session=True, env=env, text=True,
         )
-        print(f'started kitty --session {f}')
+        with proc.stdin or open(os.devnull, 'w') as stdin:
+            stdin.write(session)
+        pids.append(proc.pid)
+        print(f'started kitty {proc.pid} for {f}')
+    type_commands(pids)
 
 
 def main() -> None:
