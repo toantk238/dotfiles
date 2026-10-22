@@ -50,3 +50,5 @@
       description: oh-my-zsh
     - command: '[ -d ~/.tmux/.git ] || { git clone https://github.com/gpakosz/.tmux.git ~/.tmux && ln -s .tmux/.tmux.conf ~/.tmux.conf; }'
       description: oh-my-tmux
+    - command: gnome/apply.sh
+      description: GNOME keybindings
