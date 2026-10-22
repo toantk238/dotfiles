@@ -77,15 +77,21 @@ def short(host):
     return name[: WIDTH - 1] + "…"
 
 
-def draw_title(data):
-    title, fmt = data["title"], data["fmt"]
+def remote_host(title, tab_id):
+    """Return (remote host or "" when local, title without the host prefix)."""
     tmux_host, _, rest = title.partition(SEP) if SEP in title else ("", "", title)
     remote = tmux_host if tmux_host and tmux_host != LOCAL_HOST else ""
     if not remote:
-        remote = ssh_destination(data["tab_id"])
+        remote = ssh_destination(tab_id)
         # kitten ssh titles the tab with its own command line until the remote sets one.
         if remote and rest.startswith(("ssh ", "kitten")):
             rest = ""
+    return remote, rest
+
+
+def draw_title(data):
+    fmt = data["fmt"]
+    remote, rest = remote_host(data["title"], data["tab_id"])
     if not remote:
         return rest
     bg = PALETTE[zlib.crc32(remote.encode()) % len(PALETTE)]
