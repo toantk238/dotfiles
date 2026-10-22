@@ -12,6 +12,7 @@ KEYBINDINGS=(
   "scrcpy-all|<Super><Shift>l|$DOTFILES/scripts/scrcpy_all.sh|Mirror all android devices"
   "restart-ibus|<Control><Shift>i|$DOTFILES/scripts/restart_ibus.sh|Restart ibus"
   "kitty-session-dump|<Super><Shift>s|$HOME/.local/bin/kitty-session dump --all|Dump kitty sessions"
+  "kitty-session-restore|<Super><Shift>r|$HOME/.local/bin/kitty-session restore|Restore kitty sessions"
 )
 
 SCHEMA=org.gnome.settings-daemon.plugins.media-keys
