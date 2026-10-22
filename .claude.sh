@@ -1,8 +1,9 @@
 claude_hooks_log() {
   if exists tspin; then
     tspin -f ~/.claude/hooks/stop_router.log
-  elif 
+  else
     tail -f ~/.claude/hooks/stop_router.log
+  fi
 }
 
 claude() {
@@ -58,3 +59,5 @@ claude() {
     fi
     return $ret
 }
+
+alias c="claude"
