@@ -285,8 +285,9 @@ osis Darwin && {
 }
 alias gcurl='curl -H "Authorization: Bearer $(gcloud auth print-access-token)" -H "Content-Type: application/json"'
 
-if [[ -f /usr/bin/src-hilite-lesspipe.sh ]]; then
-  export LESSOPEN="| /usr/bin/src-hilite-lesspipe.sh %s"
+# /usr/bin on Arch, /opt/homebrew/bin on macOS
+if exists src-hilite-lesspipe.sh; then
+  export LESSOPEN="| $(command -v src-hilite-lesspipe.sh) %s"
   export LESS=' -R'
 elif exists moor || exists moar; then
   # moar was renamed to moor upstream; Homebrew ships moor
