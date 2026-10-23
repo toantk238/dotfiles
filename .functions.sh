@@ -172,7 +172,7 @@ handle_docker_compose() {
     read yn"?Are you sure that you run DOCKER-COMPOSE DOWN ? (y/n): "
     case $yn in
     [Yy]*)
-      /usr/bin/docker-compose $@
+      command docker-compose "$@"
       echo "Running docker-compose down DONE !"
       ;;
     [Nn]*)
@@ -183,7 +183,7 @@ handle_docker_compose() {
     return 0
   fi
 
-  /usr/bin/docker-compose $@
+  command docker-compose "$@"
 }
 
 exists() {
@@ -228,7 +228,10 @@ fi
 
 if exists kitty && [[ -z "$SSH_CONNECTION" ]]; then
   alias ssh="kitty +kitten ssh"
-  alias icat="kitty +kitten icat"
+fi
+
+if exists kitty; then
+  alias icat="kitten icat"
 fi
 
 if exists bat; then
@@ -262,7 +265,10 @@ alias nv="nvim"
 alias docker-compose="handle_docker_compose"
 alias lc="lemonade copy --host=127.0.0.1 --trim-newline"
 # alias glow="glow --pager"
-alias open="xdg-open"
+# macOS has a native `open`; only alias it where xdg-open exists
+if exists xdg-open; then
+  alias open="xdg-open"
+fi
 # alias enw="emacs -nw"
 alias duhs="du -hs"
 alias sudoe="sudo -E"
@@ -282,8 +288,9 @@ alias gcurl='curl -H "Authorization: Bearer $(gcloud auth print-access-token)" -
 if [[ -f /usr/bin/src-hilite-lesspipe.sh ]]; then
   export LESSOPEN="| /usr/bin/src-hilite-lesspipe.sh %s"
   export LESS=' -R'
-elif exists moar; then
-  export PAGER=$(which moar)
+elif exists moor || exists moar; then
+  # moar was renamed to moor upstream; Homebrew ships moor
+  export PAGER=$(command -v moor || command -v moar)
   export MOAR='--statusbar=bold --no-linenumbers'
   alias less="$PAGER"
 else
@@ -297,13 +304,13 @@ apk_key_hash() {
 osis Darwin && {
   lctl() {
     if [[ "$1" == "reload" ]]; then
-      launchctl unload $2
-      launchctl load $2
+      launchctl unload -w $2
+      launchctl load -w $2
     elif [[ "$1" == "load" ]]; then
-      launchctl load $2
+      launchctl load -w $2
     elif [[ "$1" == "unload" ]]; then
       echo "run stop"
-      launchctl unload $2
+      launchctl unload -w $2
     fi
   }
 }

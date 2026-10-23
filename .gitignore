@@ -5,3 +5,6 @@ __pycache__
 *.log
 .zcompdump*
 kitty-sessions/saved/
+
+# Machine-local overrides (see .claude_custom/skills/dotfiles-machine-local)
+.config/kitty/local.conf

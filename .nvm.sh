@@ -1,5 +1,15 @@
 [ -z "$NVM_DIR" ] && export NVM_DIR="$HOME/.nvm"
 
+# nvm.sh lives in $NVM_DIR for the git install, under Homebrew's prefix for `brew install nvm`
+_nvm_source() {
+  if [ -f "$NVM_DIR/nvm.sh" ]; then
+    source "$NVM_DIR/nvm.sh"
+  elif [ -s /opt/homebrew/opt/nvm/nvm.sh ]; then
+    source /opt/homebrew/opt/nvm/nvm.sh
+    [ -s /opt/homebrew/opt/nvm/etc/bash_completion.d/nvm ] && source /opt/homebrew/opt/nvm/etc/bash_completion.d/nvm
+  fi
+}
+
 _nvm_setup_nvmrc_hook() {
   autoload -U add-zsh-hook
 
@@ -30,13 +40,13 @@ _nvm_setup_nvmrc_hook() {
 # Defaults to lazy loading to avoid the ~300ms startup penalty.
 if [[ "${NVM_LAZY_LOAD:-true}" == "false" || "${NVM_LAZY_LOAD}" == "0" ]]; then
   # Eager load
-  [ -f "$NVM_DIR/nvm.sh" ] && source "$NVM_DIR/nvm.sh"
+  _nvm_source
   _nvm_setup_nvmrc_hook
 else
   # Lazy-load: defer sourcing until nvm/node/npm/npx is first invoked
   _nvm_lazy_load() {
     unfunction nvm node npm npx 2>/dev/null
-    [ -f "$NVM_DIR/nvm.sh" ] && source "$NVM_DIR/nvm.sh"
+    _nvm_source
     _nvm_setup_nvmrc_hook
   }
 

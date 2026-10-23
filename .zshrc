@@ -166,6 +166,7 @@ source "$dot_dir/.lspconfig.sh"
 source "$dot_dir/.nvim.sh"
 source "$dot_dir/.tmux.sh"
 source "$dot_dir/.android.sh"
+source "$dot_dir/.ios.sh"
 # source "$dot_dir/.ranger.sh" # replaced by yazi
 source "$dot_dir/.just.sh"
 source "$dot_dir/.ssh.sh"
@@ -209,3 +210,7 @@ source "$dot_dir/.cargo.sh"
 # autoload -U compinit && compinit
 
 compdef -d ssh
+
+# Machine-local overrides: sourced last so aliases/functions here win.
+# Secrets and env vars go in ~/.env.zsh (sourced first). Neither file is in the repo.
+[ -f "$HOME/.zshrc.local" ] && source "$HOME/.zshrc.local"

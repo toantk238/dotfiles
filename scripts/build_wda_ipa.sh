@@ -232,6 +232,22 @@ mkdir -p "$PAYLOAD_DIR"
 echo "Copying $RUNNER_APP_NAME to Payload directory..."
 cp -R "$RUNNER_APP_PATH" "$PAYLOAD_DIR/"
 
+# Remove XCTest frameworks for iOS 17/tvOS 17 compatibility
+echo -e "${BLUE}Removing XCTest frameworks for iOS 17+ compatibility...${NC}"
+FRAMEWORKS_DIR="$PAYLOAD_DIR/$RUNNER_APP_NAME/Frameworks"
+if [ -d "$FRAMEWORKS_DIR" ]; then
+    # Remove XC** frameworks (required for iOS 17+)
+    rm -rf "$FRAMEWORKS_DIR"/XC* 2>/dev/null || true
+
+    # Optional: Remove additional frameworks to reduce package size
+    rm -rf "$FRAMEWORKS_DIR/Testing.framework" 2>/dev/null || true
+    rm -f "$FRAMEWORKS_DIR/libXCTestSwiftSupport.dylib" 2>/dev/null || true
+
+    echo -e "${GREEN}✔ XCTest frameworks removed${NC}"
+else
+    echo -e "${YELLOW}⚠ Frameworks directory not found, skipping cleanup${NC}"
+fi
+
 # Remove extended attributes (to avoid issues)
 xattr -cr "$PAYLOAD_DIR/$RUNNER_APP_NAME" 2>/dev/null || true
 
@@ -290,6 +306,8 @@ echo "‚Ä¢ WebDriverAgent is an XCTest runner, not a regular iOS app"
 echo "‚Ä¢ It starts via 'test-without-building' when used with Appium"
 echo "‚Ä¢ The app will appear as 'WebDriverAgentRunner-Runner' on your device"
 echo "‚Ä¢ It won't have a visible UI - it runs as a background test service"
+echo "‚Ä¢ XCTest frameworks have been removed for iOS 17+ compatibility"
+echo "‚Ä¢ For iOS 17+, use 'xcrun devicectl device process launch' to start WDA"
 echo ""
 echo -e "${GREEN}========================================${NC}"
 
