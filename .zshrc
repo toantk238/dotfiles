@@ -115,6 +115,24 @@ fi
 
 fpath+=${ZSH_CUSTOM:-${ZSH:-~/.oh-my-zsh}/custom}/plugins/zsh-completions/src
 source $ZSH/oh-my-zsh.sh
+# eza (0.23) with no path argument reads the paths to list from stdin when stdin is not a terminal, so a
+# bare `ls` (the eza plugin's alias) hangs forever in agent/IDE shells whose stdin is an open socket.
+# Off a terminal: never read stdin (unless --stdin is asked for) and list "." when no path is given.
+# The plugin's aliases (ls, ll, la, …) all go through this function.
+eza() {
+  if [[ -t 0 || " $* " == *" --stdin "* ]]; then command eza "$@"; return; fi
+  local a skip=0 has_path=0
+  for a in "$@"; do
+    if (( skip )); then skip=0; continue; fi
+    case $a in
+      -L|--level|-s|--sort|-I|--ignore-glob|-t|--time|--time-style|-w|--width|--color|--colour|--icons|--hyperlink|--absolute|--smart-group|-X) skip=1 ;;
+      --) ;;
+      -*) ;;
+      *) has_path=1 ;;
+    esac
+  done
+  if (( has_path )); then command eza "$@" </dev/null; else command eza "$@" . </dev/null; fi
+}
 # before the per-tool files so their own compdefs (e.g. just) take precedence
 source "$dot_dir/.carapace.sh"
 # compdef _gnu_generic flutter
