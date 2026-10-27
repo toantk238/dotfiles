@@ -30,6 +30,9 @@ class StopDecision:
     """The decision result of the stop hook."""
     action: str
     answer: str = ""
+    # What Claude's last message is for: QUESTION (asks the human something),
+    # REPORT (results/summary of finished work) or OTHER.
+    purpose: str = "OTHER"
 
 
 # Each option must head its own list item ("1. Subagent-Driven", "- Native:"), as in the real
@@ -145,16 +148,23 @@ For unfinished requested work, when in doubt between PROCEED and HUMAN_NEEDED, p
 For finished work (STEP 0), always choose HUMAN_NEEDED — never invent a next task.
 Use ANSWER only to supply an actual answer Claude asked for, never to comment on Claude's message.
 
+Also classify the PURPOSE of Claude's last message:
+- QUESTION: it is waiting on the human to answer a question, pick an option, or approve a step.
+- REPORT: it reports finished work or answers the user (optional follow-up offers included).
+- OTHER: anything else.
+
 Reply in this exact format:
 ACTION: <PROCEED | ANSWER | HUMAN_NEEDED>
+PURPOSE: <QUESTION | REPORT | OTHER>
 ANSWER: <your concise answer if ACTION is ANSWER, reason if ACTION is HUMAN_NEEDED or PROCEED>
 """
 
 
 def parse_llm_output(output: str) -> StopDecision:
-    """Parse AI output for ACTION and ANSWER lines. ANSWER may span multiple lines."""
+    """Parse AI output for ACTION, PURPOSE and ANSWER lines. ANSWER may span multiple lines."""
     logger.debug(f"LLM raw output:\n{output}")
     action = "HUMAN_NEEDED"
+    purpose = "OTHER"
     answer_lines: list[str] = []
     in_answer = False
     for line in output.splitlines():
@@ -162,14 +172,17 @@ def parse_llm_output(output: str) -> StopDecision:
         if stripped.startswith("ACTION:"):
             action = stripped[len("ACTION:"):].strip().upper()
             in_answer = False
+        elif stripped.startswith("PURPOSE:"):
+            purpose = stripped[len("PURPOSE:"):].strip().upper()
+            in_answer = False
         elif stripped.startswith("ANSWER:"):
             answer_lines = [stripped[len("ANSWER:"):].strip()]
             in_answer = True
         elif in_answer and stripped:
             answer_lines.append(stripped)
     answer = " ".join(part for part in answer_lines if part).strip()
-    logger.debug(f"Parsed → action={action} answer={answer!r}")
-    return StopDecision(action=action, answer=answer)
+    logger.debug(f"Parsed → action={action} purpose={purpose} answer={answer!r}")
+    return StopDecision(action=action, answer=answer, purpose=purpose)
 
 
 _STATE_FILE = os.path.join(tempfile.gettempdir(), "stop_router_last_text.json")
@@ -241,25 +254,31 @@ def build_escalation_prompt(last_text: str, original_request: str, latest_reques
 
 def decide(last_text: str, original_request: str, latest_request: str = "",
            recent_turns: list[tuple[str, str]] | None = None) -> StopDecision:
-    """Ask Haiku; if it defers to the human (or fails), ask Fable with more context."""
-    haiku_reason = ""
+    """Ask Haiku; if it defers to the human on a question, ask Fable with more context.
+
+    Finished-work reports and other non-questions go straight to the human: Fable
+    could not answer them any better, so escalating would only add latency.
+    """
     try:
         output = call_claude(build_prompt(last_text, original_request, latest_request), timeout=30)
-        decision = parse_llm_output(output)
-        if decision.action == "PROCEED" or (decision.action == "ANSWER" and decision.answer):
-            return decision
-        haiku_reason = decision.answer
-        logger.info(f"Haiku deferred (action={decision.action}) reason={haiku_reason!r} — escalating to Fable")
     except Exception as e:
-        logger.warning(f"Haiku call failed, escalating to Fable: {e}")
+        logger.warning(f"Haiku call failed, falling back to human: {e}")
+        return StopDecision(action="HUMAN_NEEDED")
+    decision = parse_llm_output(output)
+    if decision.action == "PROCEED" or (decision.action == "ANSWER" and decision.answer):
+        return decision
+    if decision.purpose != "QUESTION":
+        logger.info(f"Haiku deferred on a non-question (purpose={decision.purpose}) — not escalating")
+        return decision
 
+    logger.info(f"Haiku deferred on a question reason={decision.answer!r} — escalating to Fable")
     prompt = build_escalation_prompt(last_text, original_request, latest_request,
-                                     recent_turns or [], haiku_reason)
+                                     recent_turns or [], decision.answer)
     try:
         return parse_llm_output(call_claude(prompt, model=FABLE_MODEL, timeout=80))
     except Exception as e:
         logger.warning(f"Fable call failed, falling back to human: {e}")
-        return StopDecision(action="HUMAN_NEEDED", answer=haiku_reason)
+        return decision
 
 
 def handle_stop(last_text: str, original_request: str, latest_request: str = "",

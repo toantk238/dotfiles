@@ -216,7 +216,7 @@ def test_decide_haiku_confident_skips_fable():
 
 def test_decide_escalates_to_fable_with_more_context():
     responses = iter([
-        "ACTION: HUMAN_NEEDED\nANSWER: unsure which db",
+        "ACTION: HUMAN_NEEDED\nPURPOSE: QUESTION\nANSWER: unsure which db",
         "ACTION: ANSWER\nANSWER: Use Postgres",
     ])
     with patch("stop_router.call_claude", side_effect=lambda *a, **kw: next(responses)) as mock_llm:
@@ -232,8 +232,36 @@ def test_decide_escalates_to_fable_with_more_context():
     assert "unsure which db" in fable_prompt
 
 
-def test_decide_escalates_when_haiku_errors():
-    responses = iter([Exception("timeout"), "ACTION: PROCEED\nANSWER: "])
+def test_decide_haiku_error_goes_to_human_without_fable():
+    with patch("stop_router.call_claude", side_effect=Exception("timeout")) as mock_llm:
+        assert stop_router.decide("Go?", "build a tool").action == "HUMAN_NEEDED"
+    assert mock_llm.call_count == 1
+
+
+@pytest.mark.parametrize("purpose", ["REPORT", "OTHER", ""])
+def test_decide_non_question_deferral_skips_fable(purpose):
+    output = f"ACTION: HUMAN_NEEDED\nPURPOSE: {purpose}\nANSWER: work is done"
+    with patch("stop_router.call_claude", return_value=output) as mock_llm:
+        decision = stop_router.decide("Done. Want me to commit?", "build a tool")
+    assert decision.action == "HUMAN_NEEDED"
+    assert mock_llm.call_count == 1
+
+
+def test_decide_both_defer_on_question_returns_human_needed():
+    output = "ACTION: HUMAN_NEEDED\nPURPOSE: QUESTION\nANSWER: pick a name"
+    with patch("stop_router.call_claude", return_value=output) as mock_llm:
+        decision = stop_router.decide("What name?", "build a tool")
+    assert decision.action == "HUMAN_NEEDED"
+    assert mock_llm.call_count == 2
+
+
+@pytest.mark.parametrize("fable", [
+    "ACTION: HUMAN_NEEDED\nPURPOSE: QUESTION\nANSWER: still needs the user",
+    Exception("timeout"),
+])
+def test_handle_stop_both_defer_steps_aside_for_notifications(fable, capsys):
+    """Exit 0 with no output, so Claude stops and the Notification hooks (desktop + Slack) fire."""
+    responses = iter(["ACTION: HUMAN_NEEDED\nPURPOSE: QUESTION\nANSWER: pick a name", fable])
 
     def fake_claude(*args, **kwargs):
         value = next(responses)
@@ -242,14 +270,16 @@ def test_decide_escalates_when_haiku_errors():
         return value
 
     with patch("stop_router.call_claude", side_effect=fake_claude):
-        assert stop_router.decide("Go?", "build a tool").action == "PROCEED"
+        with pytest.raises(SystemExit) as exc:
+            stop_router.handle_stop("What name?", "build a tool")
+    assert exc.value.code == 0
+    captured = capsys.readouterr()
+    assert captured.out == "" and captured.err == ""
 
 
-def test_decide_both_defer_returns_human_needed():
-    with patch("stop_router.call_claude", return_value="ACTION: HUMAN_NEEDED\nANSWER: pick a name") as mock_llm:
-        decision = stop_router.decide("What name?", "build a tool")
-    assert decision.action == "HUMAN_NEEDED"
-    assert mock_llm.call_count == 2
+def test_parse_llm_output_purpose():
+    decision = stop_router.parse_llm_output("ACTION: HUMAN_NEEDED\nPURPOSE: question\nANSWER: x")
+    assert decision == StopDecision(action="HUMAN_NEEDED", answer="x", purpose="QUESTION")
 
 
 # ── main() integration ────────────────────────────────────────────────────────
