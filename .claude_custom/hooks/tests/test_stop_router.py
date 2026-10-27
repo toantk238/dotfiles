@@ -204,6 +204,54 @@ def test_handle_stop_call_claude_error():
     assert exc.value.code == 0
 
 
+# ── Haiku → Fable escalation ─────────────────────────────────────────────────
+
+def test_decide_haiku_confident_skips_fable():
+    with patch("stop_router.call_claude", return_value="ACTION: PROCEED\nANSWER: ") as mock_llm:
+        decision = stop_router.decide("Shall I proceed?", "build a tool")
+    assert decision.action == "PROCEED"
+    assert mock_llm.call_count == 1
+    assert mock_llm.call_args.kwargs.get("model", common.HAIKU_MODEL) == common.HAIKU_MODEL
+
+
+def test_decide_escalates_to_fable_with_more_context():
+    responses = iter([
+        "ACTION: HUMAN_NEEDED\nANSWER: unsure which db",
+        "ACTION: ANSWER\nANSWER: Use Postgres",
+    ])
+    with patch("stop_router.call_claude", side_effect=lambda *a, **kw: next(responses)) as mock_llm:
+        decision = stop_router.decide(
+            "Which db?", "build a tool", "add storage",
+            recent_turns=[("2026-01-01T00:00:00Z", "we already run Postgres")],
+        )
+    assert decision == StopDecision(action="ANSWER", answer="Use Postgres")
+    fable_call = mock_llm.call_args_list[1]
+    assert fable_call.kwargs["model"] == common.FABLE_MODEL
+    fable_prompt = fable_call.args[0]
+    assert "we already run Postgres" in fable_prompt
+    assert "unsure which db" in fable_prompt
+
+
+def test_decide_escalates_when_haiku_errors():
+    responses = iter([Exception("timeout"), "ACTION: PROCEED\nANSWER: "])
+
+    def fake_claude(*args, **kwargs):
+        value = next(responses)
+        if isinstance(value, Exception):
+            raise value
+        return value
+
+    with patch("stop_router.call_claude", side_effect=fake_claude):
+        assert stop_router.decide("Go?", "build a tool").action == "PROCEED"
+
+
+def test_decide_both_defer_returns_human_needed():
+    with patch("stop_router.call_claude", return_value="ACTION: HUMAN_NEEDED\nANSWER: pick a name") as mock_llm:
+        decision = stop_router.decide("What name?", "build a tool")
+    assert decision.action == "HUMAN_NEEDED"
+    assert mock_llm.call_count == 2
+
+
 # ── main() integration ────────────────────────────────────────────────────────
 
 def _run_main(transcript_path: str, extra_hook_input: dict | None = None):

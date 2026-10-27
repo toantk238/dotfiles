@@ -4,9 +4,11 @@ PreToolUse hook for AskUserQuestion — auto-answer using an LLM.
 
 When Claude asks a structured question via AskUserQuestion, this hook
 intercepts the call, reads the questions + options from tool_input, asks
-a small LLM model to pick the best answer for each question (using the
+Haiku to pick the best answer for each question (using the
 original user request as context), and returns the answers so Claude can
-continue without waiting for human input.
+continue without waiting for human input. If Haiku's reply is unusable
+(error, unparseable, or missing answers), Fable retries once with more of the
+conversation before the question falls through to the human.
 
 Exit codes:
   0  — fall through (human answers)
@@ -15,7 +17,15 @@ Exit codes:
 import json
 import sys
 
-from common import HookInput, call_claude, get_original_user_request
+from common import (
+    FABLE_MODEL,
+    HAIKU_MODEL,
+    HookInput,
+    call_claude,
+    get_last_assistant_message,
+    get_original_user_request,
+    get_recent_user_turns,
+)
 from logger import get_logger
 
 logger = get_logger("ask_user_question_handler")
@@ -46,13 +56,59 @@ Rules:
 """
 
 
-def build_prompt(original_request: str, questions: list[dict]) -> str:
+EXTRA_CONTEXT_TEMPLATE = """
+More context from the conversation:
+
+Recent user messages (oldest first):
+{recent_turns}
+
+Claude's last message before asking (may be truncated at the start):
+{last_text}
+"""
+
+
+def build_prompt(original_request: str, questions: list[dict], original_limit: int = 1500) -> str:
     """Format the LLM prompt."""
     questions_json = json.dumps(questions, indent=2, ensure_ascii=False)
     return ANSWER_PROMPT_TEMPLATE.format(
-        original_request=original_request[:1500],
+        original_request=original_request[:original_limit],
         questions_json=questions_json,
     )
+
+
+def build_extra_context(transcript_path: str) -> str:
+    """Recent user turns and Claude's last message, appended to the Fable prompt."""
+    if not transcript_path:
+        return ""
+    turns = get_recent_user_turns(transcript_path, limit=5)
+    last_text = get_last_assistant_message(transcript_path) or "(none)"
+    return EXTRA_CONTEXT_TEMPLATE.format(
+        recent_turns="\n".join(f"- [{ts}] {text[:1500]}" for ts, text in turns) or "(none)",
+        last_text=last_text[-8000:],
+    )
+
+
+def ask_model(prompt: str, questions: list[dict], model: str, timeout: int) -> dict[str, str] | None:
+    """Ask `model` for answers; None when the call fails or any question is left unanswered."""
+    try:
+        llm_output = call_claude(prompt, model=model, timeout=timeout)
+    except Exception as e:
+        logger.warning(f"{model} call failed: {e}")
+        return None
+
+    logger.debug(f"{model} raw output:\n{llm_output}")
+
+    answers = parse_answers(llm_output)
+    if not answers:
+        logger.warning(f"Could not parse {model} answers")
+        return None
+
+    # Validate: ensure all questions have an answer
+    missing = [q["question"] for q in questions if q.get("question") not in answers]
+    if missing:
+        logger.warning(f"{model} missing answers for: {missing}")
+        return None
+    return answers
 
 
 def parse_answers(llm_output: str) -> dict[str, str] | None:
@@ -123,25 +179,14 @@ def main() -> None:
     if not original_request:
         original_request = "(no additional context)"
 
-    prompt = build_prompt(original_request, questions)
-
-    try:
-        llm_output = call_claude(prompt, timeout=30)
-    except Exception as e:
-        logger.warning(f"LLM call failed, passing through to human: {e}")
-        sys.exit(0)
-
-    logger.debug(f"LLM raw output:\n{llm_output}")
-
-    answers = parse_answers(llm_output)
-    if not answers:
-        logger.warning("Could not parse LLM answers, passing through to human")
-        sys.exit(0)
-
-    # Validate: ensure all questions have an answer
-    missing = [q["question"] for q in questions if q.get("question") not in answers]
-    if missing:
-        logger.warning(f"LLM missing answers for: {missing} — passing through to human")
+    answers = ask_model(build_prompt(original_request, questions), questions, HAIKU_MODEL, timeout=30)
+    if answers is None:
+        logger.info("Haiku could not answer — escalating to Fable with more context")
+        prompt = build_prompt(original_request, questions, original_limit=4000) + \
+            build_extra_context(transcript_path)
+        answers = ask_model(prompt, questions, FABLE_MODEL, timeout=80)
+    if answers is None:
+        logger.warning("Fable could not answer either, passing through to human")
         sys.exit(0)
 
     auto_answer(questions, answers)

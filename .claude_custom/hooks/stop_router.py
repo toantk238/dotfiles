@@ -1,7 +1,8 @@
 #!/usr/bin/env python3
 """
 Stop hook — unified router for proceed-detection and AI-assisted question answering.
-Uses a single LLM call to decide the action.
+Asks Haiku first; when Haiku defers to the human, escalates once to Fable with
+more of the conversation before actually handing control back.
 """
 from dataclasses import dataclass
 import json
@@ -11,6 +12,7 @@ import sys
 import tempfile
 
 from common import (
+    FABLE_MODEL,
     HookInput,
     call_claude,
     get_last_assistant_message,
@@ -203,22 +205,66 @@ def check_repeated_last_text(session_id: str, last_text: str) -> bool:
     return False
 
 
-def handle_stop(last_text: str, original_request: str, latest_request: str = "") -> None:
+ESCALATION_CONTEXT_TEMPLATE = """
+A faster model already reviewed a shorter excerpt and deferred to the human, saying:
+{haiku_reason}
 
+Here is more context to decide with. Re-apply the steps above using it; only keep
+HUMAN_NEEDED if the human's input is still genuinely required.
+
+Recent user messages (oldest first):
+{recent_turns}
+"""
+
+
+def build_prompt(last_text: str, original_request: str, latest_request: str,
+                 original_limit: int = 1000, last_text_limit: int = 3000) -> str:
     # Keep the tail of the last message: the closing question/offer is what matters.
-    prompt = STOP_PROMPT_TEMPLATE.format(
-        original_request=original_request[:1000],
-        latest_request=(latest_request or original_request)[:1000],
-        last_text=last_text[-3000:]
+    return STOP_PROMPT_TEMPLATE.format(
+        original_request=original_request[:original_limit],
+        latest_request=(latest_request or original_request)[:original_limit],
+        last_text=last_text[-last_text_limit:],
     )
 
-    try:
-        output = call_claude(prompt, timeout=30)
-    except Exception as e:
-        logger.warning(f"LLM call failed, falling back to human: {e}")
-        sys.exit(0)
 
-    decision = parse_llm_output(output)
+def build_escalation_prompt(last_text: str, original_request: str, latest_request: str,
+                            recent_turns: list[tuple[str, str]], haiku_reason: str) -> str:
+    """The Haiku prompt with larger excerpts, recent user turns and Haiku's reason appended."""
+    turns = "\n".join(f"- [{ts}] {text[:1500]}" for ts, text in recent_turns) or "(none)"
+    return build_prompt(last_text, original_request, latest_request,
+                        original_limit=4000, last_text_limit=12000) + \
+        ESCALATION_CONTEXT_TEMPLATE.format(
+            haiku_reason=haiku_reason or "(no reason given)",
+            recent_turns=turns,
+        )
+
+
+def decide(last_text: str, original_request: str, latest_request: str = "",
+           recent_turns: list[tuple[str, str]] | None = None) -> StopDecision:
+    """Ask Haiku; if it defers to the human (or fails), ask Fable with more context."""
+    haiku_reason = ""
+    try:
+        output = call_claude(build_prompt(last_text, original_request, latest_request), timeout=30)
+        decision = parse_llm_output(output)
+        if decision.action == "PROCEED" or (decision.action == "ANSWER" and decision.answer):
+            return decision
+        haiku_reason = decision.answer
+        logger.info(f"Haiku deferred (action={decision.action}) reason={haiku_reason!r} — escalating to Fable")
+    except Exception as e:
+        logger.warning(f"Haiku call failed, escalating to Fable: {e}")
+
+    prompt = build_escalation_prompt(last_text, original_request, latest_request,
+                                     recent_turns or [], haiku_reason)
+    try:
+        return parse_llm_output(call_claude(prompt, model=FABLE_MODEL, timeout=80))
+    except Exception as e:
+        logger.warning(f"Fable call failed, falling back to human: {e}")
+        return StopDecision(action="HUMAN_NEEDED", answer=haiku_reason)
+
+
+def handle_stop(last_text: str, original_request: str, latest_request: str = "",
+                recent_turns: list[tuple[str, str]] | None = None) -> None:
+    decision = decide(last_text, original_request, latest_request, recent_turns)
 
     context = ""
     if decision.action == "PROCEED":
@@ -304,10 +350,10 @@ def main():
         logger.info("Early exit: no original_request in transcript")
         sys.exit(0)
 
-    recent_turns = get_recent_user_turns(transcript_path, limit=1)
+    recent_turns = get_recent_user_turns(transcript_path, limit=5)
     latest_request = recent_turns[-1][1] if recent_turns else ""
 
-    handle_stop(last_text, original_request, latest_request)
+    handle_stop(last_text, original_request, latest_request, recent_turns)
 
 
 if __name__ == "__main__":

@@ -28,7 +28,13 @@ class HookInput:
         return self.data.get(key, default)
 
 
-def call_claude(prompt: str, model: str = "claude-haiku-4-5-20251001", timeout: int = 60) -> str:
+# Fast, cheap first pass for every hook decision.
+HAIKU_MODEL = "claude-haiku-5-5"
+# Escalation model, used with more context when Haiku defers to the human.
+FABLE_MODEL = "claude-fable-5-1"
+
+
+def call_claude(prompt: str, model: str = HAIKU_MODEL, timeout: int = 60) -> str:
     """Call the claude CLI with a prompt and return the stdout."""
     try:
         result = subprocess.run(
