@@ -224,7 +224,7 @@ def test_decide_escalates_to_fable_with_more_context():
             "Which db?", "build a tool", "add storage",
             recent_turns=[("2026-01-01T00:00:00Z", "we already run Postgres")],
         )
-    assert decision == StopDecision(action="ANSWER", answer="Use Postgres")
+    assert decision == StopDecision(action="ANSWER", answer="Use Postgres", model=common.FABLE_MODEL)
     fable_call = mock_llm.call_args_list[1]
     assert fable_call.kwargs["model"] == common.FABLE_MODEL
     fable_prompt = fable_call.args[0]
@@ -275,6 +275,36 @@ def test_handle_stop_both_defer_steps_aside_for_notifications(fable, capsys):
     assert exc.value.code == 0
     captured = capsys.readouterr()
     assert captured.out == "" and captured.err == ""
+
+
+def test_logs_are_tagged_with_answering_model():
+    import logging
+    import logger as hook_logger
+
+    lines: list[str] = []
+
+    class Collect(logging.Handler):
+        def emit(self, record):
+            lines.append(self.format(record))
+
+    handler = Collect()
+    handler.setFormatter(logging.Formatter("%(model_tag)s|%(message)s"))
+    handler.addFilter(hook_logger._ModelTagFilter())
+    stop_router.logger.addHandler(handler)
+    responses = iter([
+        "ACTION: HUMAN_NEEDED\nPURPOSE: QUESTION\nANSWER: unsure",
+        "ACTION: PROCEED\nANSWER: ",
+    ])
+    try:
+        with patch("stop_router.call_claude", side_effect=lambda *a, **kw: next(responses)):
+            decision = stop_router.decide("Which?", "build a tool")
+    finally:
+        stop_router.logger.removeHandler(handler)
+
+    assert decision.model == common.FABLE_MODEL
+    assert any(line.startswith(f" [{common.HAIKU_MODEL}]|Deferred on a question") for line in lines)
+    assert lines[-1].startswith(f" [{common.FABLE_MODEL}]|")
+    assert hook_logger._current_model.get() == ""
 
 
 def test_parse_llm_output_purpose():

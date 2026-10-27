@@ -26,7 +26,7 @@ from common import (
     get_original_user_request,
     get_recent_user_turns,
 )
-from logger import get_logger
+from logger import get_logger, model_context
 
 logger = get_logger("ask_user_question_handler")
 
@@ -89,26 +89,30 @@ def build_extra_context(transcript_path: str) -> str:
 
 
 def ask_model(prompt: str, questions: list[dict], model: str, timeout: int) -> dict[str, str] | None:
-    """Ask `model` for answers; None when the call fails or any question is left unanswered."""
-    try:
-        llm_output = call_claude(prompt, model=model, timeout=timeout)
-    except Exception as e:
-        logger.warning(f"{model} call failed: {e}")
-        return None
+    """Ask `model` for answers; None when the call fails or any question is left unanswered.
 
-    logger.debug(f"{model} raw output:\n{llm_output}")
+    Every log line written while asking is tagged with `model`.
+    """
+    with model_context(model):
+        try:
+            llm_output = call_claude(prompt, model=model, timeout=timeout)
+        except Exception as e:
+            logger.warning(f"Call failed: {e}")
+            return None
 
-    answers = parse_answers(llm_output)
-    if not answers:
-        logger.warning(f"Could not parse {model} answers")
-        return None
+        logger.debug(f"Raw output:\n{llm_output}")
 
-    # Validate: ensure all questions have an answer
-    missing = [q["question"] for q in questions if q.get("question") not in answers]
-    if missing:
-        logger.warning(f"{model} missing answers for: {missing}")
-        return None
-    return answers
+        answers = parse_answers(llm_output)
+        if not answers:
+            logger.warning("Could not parse answers")
+            return None
+
+        # Validate: ensure all questions have an answer
+        missing = [q["question"] for q in questions if q.get("question") not in answers]
+        if missing:
+            logger.warning(f"Missing answers for: {missing}")
+            return None
+        return answers
 
 
 def parse_answers(llm_output: str) -> dict[str, str] | None:
@@ -132,7 +136,7 @@ def parse_answers(llm_output: str) -> dict[str, str] | None:
     return None
 
 
-def auto_answer(questions: list[dict], answers: dict[str, str]) -> None:
+def auto_answer(questions: list[dict], answers: dict[str, str], model: str) -> None:
     """Output the hookSpecificOutput JSON and exit 0 (allow + updatedInput)."""
     updated_input = {
         "questions": questions,
@@ -146,7 +150,8 @@ def auto_answer(questions: list[dict], answers: dict[str, str]) -> None:
         }
     }
     print(json.dumps(output))
-    logger.info(f"Auto-answered AskUserQuestion: {answers}")
+    with model_context(model):
+        logger.info(f"Auto-answered AskUserQuestion: {answers}")
     sys.exit(0)
 
 
@@ -179,17 +184,19 @@ def main() -> None:
     if not original_request:
         original_request = "(no additional context)"
 
-    answers = ask_model(build_prompt(original_request, questions), questions, HAIKU_MODEL, timeout=30)
+    model = HAIKU_MODEL
+    answers = ask_model(build_prompt(original_request, questions), questions, model, timeout=30)
     if answers is None:
-        logger.info("Haiku could not answer — escalating to Fable with more context")
+        logger.info(f"{HAIKU_MODEL} could not answer — escalating to {FABLE_MODEL} with more context")
+        model = FABLE_MODEL
         prompt = build_prompt(original_request, questions, original_limit=4000) + \
             build_extra_context(transcript_path)
-        answers = ask_model(prompt, questions, FABLE_MODEL, timeout=80)
+        answers = ask_model(prompt, questions, model, timeout=80)
     if answers is None:
-        logger.warning("Fable could not answer either, passing through to human")
+        logger.warning(f"{FABLE_MODEL} could not answer either, passing through to human")
         sys.exit(0)
 
-    auto_answer(questions, answers)
+    auto_answer(questions, answers, model)
 
 
 if __name__ == "__main__":

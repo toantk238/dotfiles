@@ -4,7 +4,7 @@ Stop hook — unified router for proceed-detection and AI-assisted question answ
 Asks Haiku first; when Haiku defers to the human, escalates once to Fable with
 more of the conversation before actually handing control back.
 """
-from dataclasses import dataclass
+from dataclasses import dataclass, replace
 import json
 import os
 import re
@@ -13,6 +13,7 @@ import tempfile
 
 from common import (
     FABLE_MODEL,
+    HAIKU_MODEL,
     HookInput,
     call_claude,
     get_last_assistant_message,
@@ -20,7 +21,7 @@ from common import (
     get_recent_user_turns,
     has_incomplete_tasks,
 )
-from logger import get_logger
+from logger import get_logger, model_context
 
 logger = get_logger("stop_router")
 
@@ -33,6 +34,8 @@ class StopDecision:
     # What Claude's last message is for: QUESTION (asks the human something),
     # REPORT (results/summary of finished work) or OTHER.
     purpose: str = "OTHER"
+    # The model that made this decision ("" when no model answered).
+    model: str = ""
 
 
 # Each option must head its own list item ("1. Subagent-Driven", "- Native:"), as in the real
@@ -259,42 +262,54 @@ def decide(last_text: str, original_request: str, latest_request: str = "",
     Finished-work reports and other non-questions go straight to the human: Fable
     could not answer them any better, so escalating would only add latency.
     """
-    try:
-        output = call_claude(build_prompt(last_text, original_request, latest_request), timeout=30)
-    except Exception as e:
-        logger.warning(f"Haiku call failed, falling back to human: {e}")
-        return StopDecision(action="HUMAN_NEEDED")
-    decision = parse_llm_output(output)
-    if decision.action == "PROCEED" or (decision.action == "ANSWER" and decision.answer):
-        return decision
-    if decision.purpose != "QUESTION":
-        logger.info(f"Haiku deferred on a non-question (purpose={decision.purpose}) — not escalating")
-        return decision
+    with model_context(HAIKU_MODEL):
+        decision = ask_model(build_prompt(last_text, original_request, latest_request),
+                             HAIKU_MODEL, timeout=30)
+        if decision is None:
+            logger.warning("Call failed, falling back to human")
+            return StopDecision(action="HUMAN_NEEDED")
+        if decision.action == "PROCEED" or (decision.action == "ANSWER" and decision.answer):
+            return decision
+        if decision.purpose != "QUESTION":
+            logger.info(f"Deferred on a non-question (purpose={decision.purpose}) — not escalating")
+            return decision
+        logger.info(f"Deferred on a question reason={decision.answer!r} — escalating to {FABLE_MODEL}")
 
-    logger.info(f"Haiku deferred on a question reason={decision.answer!r} — escalating to Fable")
     prompt = build_escalation_prompt(last_text, original_request, latest_request,
                                      recent_turns or [], decision.answer)
+    with model_context(FABLE_MODEL):
+        fable_decision = ask_model(prompt, FABLE_MODEL, timeout=80)
+        if fable_decision is None:
+            logger.warning(f"Call failed, falling back to human with {HAIKU_MODEL}'s decision")
+            return decision
+        return fable_decision
+
+
+def ask_model(prompt: str, model: str, timeout: int) -> StopDecision | None:
+    """One `model` call parsed into a decision; None when the call fails."""
     try:
-        return parse_llm_output(call_claude(prompt, model=FABLE_MODEL, timeout=80))
+        output = call_claude(prompt, model=model, timeout=timeout)
     except Exception as e:
-        logger.warning(f"Fable call failed, falling back to human: {e}")
-        return decision
+        logger.warning(f"Call failed: {e}")
+        return None
+    return replace(parse_llm_output(output), model=model)
 
 
 def handle_stop(last_text: str, original_request: str, latest_request: str = "",
                 recent_turns: list[tuple[str, str]] | None = None) -> None:
     decision = decide(last_text, original_request, latest_request, recent_turns)
 
-    context = ""
-    if decision.action == "PROCEED":
-        context = 'Your recommendation looks good. I agree. Please continue accordingly.'
-    elif decision.action == "ANSWER" and decision.answer:
-        context = f'{decision.answer}. Please continue accordingly.'
-    else:
-        logger.info(f"Passing to human (action={decision.action}) reason={decision.answer!r}")
-        sys.exit(0)
+    with model_context(decision.model):
+        context = ""
+        if decision.action == "PROCEED":
+            context = 'Your recommendation looks good. I agree. Please continue accordingly.'
+        elif decision.action == "ANSWER" and decision.answer:
+            context = f'{decision.answer}. Please continue accordingly.'
+        else:
+            logger.info(f"Passing to human (action={decision.action}) reason={decision.answer!r}")
+            sys.exit(0)
 
-    logger.info(f"Decision: action={decision.action} context={context} reason={decision.answer!r}")
+        logger.info(f"Decision: action={decision.action} context={context} reason={decision.answer!r}")
     continue_with(context)
 
 
