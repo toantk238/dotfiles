@@ -955,3 +955,29 @@ def test_repeat_check_runs_before_static_rule(tmp_path):
             _run_main(path, extra)
     assert first.value.code == 2
     assert second.value.code == 0
+
+
+# ── PURPOSE classification of closing offers ─────────────────────────────────
+
+def test_prompt_classifies_offer_to_start_next_step_as_question():
+    """A closing offer such as "Want me to start with the Figma step?" must be a QUESTION
+    (so the stop escalates to Fable), not folded into REPORT as a follow-up offer."""
+    template = stop_router.STOP_PROMPT_TEMPLATE
+    purpose_block = template[template.index("classify the PURPOSE"):]
+    question_line = purpose_block[purpose_block.index("- QUESTION:"):purpose_block.index("- REPORT:")]
+    report_line = purpose_block[purpose_block.index("- REPORT:"):purpose_block.index("- OTHER:")]
+    assert "offer" in question_line.lower()
+    assert "want me to start" in question_line.lower()
+    assert "offer" not in report_line.lower()
+
+
+def test_get_original_user_request_skips_local_command_plumbing(tmp_path):
+    """A session whose first transcript entry is `/clear` plumbing must report the first
+    message the human actually typed, not the caveat text."""
+    transcript = _write_transcript(tmp_path, [
+        _msg("user", "<local-command-caveat>The command below was run directly in Claude Code"
+                     "</local-command-caveat>\n<command-name>/clear</command-name>"),
+        _msg("assistant", "ok"),
+        _msg("user", "Continue with service split"),
+    ])
+    assert common.get_original_user_request(transcript) == "Continue with service split"

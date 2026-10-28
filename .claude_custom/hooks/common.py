@@ -107,13 +107,13 @@ def read_transcript(transcript_path: str) -> Iterator[dict[str, Any]]:
 
 
 def get_original_user_request(transcript_path: str) -> str | None:
-    """Find the first user message in the transcript at the given path."""
-    for entry in read_transcript(transcript_path):
-        msg = entry.get("message", {})
-        if msg.get("role") == "user":
-            text = extract_text(msg.get("content", ""))
-            if text:
-                return text
+    """The first message the human actually typed in the transcript.
+
+    Skips slash-command plumbing such as the `/clear` caveat that otherwise opens
+    a session as its first "user" entry.
+    """
+    for _ts, text in iter_human_user_turns(transcript_path):
+        return text
     return None
 
 
@@ -122,6 +122,7 @@ _SYSTEM_REMINDER_RE = re.compile(r"<system-reminder>.*?</system-reminder>", re.D
 # Prefixes that mark a "user" transcript entry as machine-generated rather than
 # something the human actually typed (slash-command plumbing, hook output, ...).
 _SYNTHETIC_USER_PREFIXES = (
+    "<local-command-caveat>",
     "<command-name>", "<command-message>", "<command-args>",
     "<local-command-stdout>", "<local-command-stderr>",
     "<bash-input>", "<bash-stdout>", "<bash-stderr>",

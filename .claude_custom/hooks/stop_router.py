@@ -151,9 +151,12 @@ For unfinished requested work, when in doubt between PROCEED and HUMAN_NEEDED, p
 For finished work (STEP 0), always choose HUMAN_NEEDED — never invent a next task.
 Use ANSWER only to supply an actual answer Claude asked for, never to comment on Claude's message.
 
-Also classify the PURPOSE of Claude's last message:
-- QUESTION: it is waiting on the human to answer a question, pick an option, or approve a step.
-- REPORT: it reports finished work or answers the user (optional follow-up offers included).
+Also classify the PURPOSE of Claude's last message, independently of the ACTION above:
+- QUESTION: it ends by asking the human something — a question, a choice between options,
+  approval of a step, or an offer to start further work ("Want me to start with X?",
+  "Should I commit this?"). An offer phrased as a question is a QUESTION even when the
+  work so far is finished and the ACTION is HUMAN_NEEDED.
+- REPORT: it reports finished work or answers the user and asks the human nothing.
 - OTHER: anything else.
 
 Reply in this exact format:
@@ -260,7 +263,9 @@ def decide(last_text: str, original_request: str, latest_request: str = "",
     """Ask Haiku; if it defers to the human on a question, ask Fable with more context.
 
     Finished-work reports and other non-questions go straight to the human: Fable
-    could not answer them any better, so escalating would only add latency.
+    could not answer them any better, so escalating would only add latency. A closing
+    offer ("Want me to start with X?") counts as a question: Fable sees the recent user
+    turns and can tell whether X was already asked for.
     """
     with model_context(HAIKU_MODEL):
         decision = ask_model(build_prompt(last_text, original_request, latest_request),
