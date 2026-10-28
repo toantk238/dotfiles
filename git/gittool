@@ -3,43 +3,99 @@
 # so the CLI works from any cwd. Python sees the next line as a string literal.
 ''''exec uv run --quiet --project "$(dirname "$(readlink -f "$0")")" python "$0" "$@" # '''
 
-from pathlib import Path
+"""gittool: keep a main repo and its submodules on the same branch, verify
+before pushing, and merge with submodule-pointer conflict resolution."""
+
 import argparse
-from helper import BigRepo, logger
+import sys
+from pathlib import Path
+
+from pygit2 import GitError
+
+from helper import BigRepo, NotARepository, logger
+
+
+def build_parser() -> argparse.ArgumentParser:
+    parser = argparse.ArgumentParser(
+        prog="gittool",
+        description="Help devs work easily with submodules",
+        epilog="toantk238@gmail.com")
+    sub = parser.add_subparsers(dest="action", required=True, metavar="action")
+
+    def command(name: str, help_text: str) -> argparse.ArgumentParser:
+        p = sub.add_parser(name, help=help_text, description=help_text)
+        p.add_argument("path", nargs="?", default=".", help="main repo (default: cwd)")
+        return p
+
+    def ai_options(p: argparse.ArgumentParser) -> None:
+        group = p.add_mutually_exclusive_group()
+        group.add_argument("--ai", metavar="TOOL",
+                           help="resolve leftover conflicts with this AI tool (claude, agy, or one "
+                                "from GITTOOL_AI_TOOLS); default: ask when interactive")
+        group.add_argument("--no-ai", action="store_true", help="never offer an AI tool")
+
+    command("sync", "init submodules and put detached ones on the main repo's branch")
+    command("verify_before_push", "fail unless every repo is clean and submodule commits are pushed")
+    merge = command("merge", "merge a branch; conflicting submodules keep ours, then get their "
+                             "matching branch merged in; file conflicts can go to an AI tool")
+    merge.add_argument("-b", "--branch", required=True, help="local or remote branch, e.g. origin/dev")
+    ai_options(merge)
+    resolve = command("resolve_conflicts", "resume a merge: commit resolved conflicts, then run the "
+                                           "deferred submodule merges")
+    ai_options(resolve)
+    remove = command("remove_submodules", "deinit and delete every submodule (destructive)")
+    remove.add_argument("-y", "--yes", action="store_true", help="skip the confirmation prompt")
+    return parser
+
+
+def ai_mode(args: argparse.Namespace) -> str | None:
+    if getattr(args, "no_ai", False):
+        return None
+    if getattr(args, "ai", None):
+        return args.ai
+    return "ask" if sys.stdin.isatty() else None
+
+
+def confirm_removal(repo_path: Path) -> bool:
+    if not sys.stdin.isatty():
+        logger.error("remove_submodules deletes submodule checkouts; pass --yes to confirm")
+        return False
+    answer = input(f"Remove ALL submodules of {repo_path}? This deletes their checkouts. [y/N]: ")
+    return answer.strip().lower() in ("y", "yes")
+
+
+def main(argv: list[str] | None = None) -> int:
+    args = build_parser().parse_args(argv)
+    logger.debug("args=%s", vars(args))
+    path = Path(args.path).resolve()
+
+    try:
+        big_repo = BigRepo(path, ai=ai_mode(args))
+        if args.action == "sync":
+            ok = big_repo.sync_branch()
+        elif args.action == "verify_before_push":
+            ok = big_repo.verify_before_push()
+        elif args.action == "merge":
+            ok = big_repo.merge(args.branch)
+        elif args.action == "resolve_conflicts":
+            ok = big_repo.resolve_conflicts()
+        elif args.action == "remove_submodules":
+            if not args.yes and not confirm_removal(path):
+                return 1
+            big_repo.remove_submodules()
+            ok = True
+        else:  # unreachable: argparse rejects unknown actions
+            raise AssertionError(args.action)
+    except NotARepository as exc:
+        logger.error("%s", exc)
+        return 1
+    except (ValueError, RuntimeError, GitError) as exc:
+        logger.error("%s", exc)
+        return 1
+    except KeyboardInterrupt:
+        return 130
+    return 0 if ok else 1
 
 
 if __name__ == "__main__":
-    parser = argparse.ArgumentParser(
-        prog='Git Helper',
-        description='Help devs to work easily with submodules',
-        epilog='toantk238@gmail.com')
-
-    parser.add_argument('action')           # positional argument
-    parser.add_argument('path')           # positional argument
-    parser.add_argument('-b', '--branch', required=False)
-    args = parser.parse_args()
-    args = vars(args)
-    logger.info(f"args={args}")
-
-    working_path = args["path"]
-
-    abs_pwd = Path(working_path).resolve()
-    big_repo = BigRepo(abs_pwd)
-    # big_repo.verify_local_state()
-
-    action = args["action"]
-
-    if action == "sync":
-        big_repo.sync_branch()
-    elif action == "verify_before_push":
-        big_repo.verify_before_push()
-    elif action == "merge":
-        branch = args["branch"]
-        logger.info(f"Merge branch: {branch}")
-        big_repo.merge(branch)
-    elif action == "resolve_conflicts":
-        big_repo.resolve_conflicts()
-    elif action == "remove_submodules":
-        big_repo.remove_submodules()
-    else:
-        logger.error(f"Invalid action : {action}")
+    sys.exit(main())

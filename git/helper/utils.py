@@ -1,98 +1,82 @@
+"""Small pygit2 helpers shared by the repo wrappers."""
+
+from __future__ import annotations
+
 from collections.abc import Callable
-from pygit2 import Branch, Object, Repository
+
+from pygit2 import Branch, Oid, Repository
 from pygit2.enums import FileStatus
-from .log import logger
-from typing import TypeVar, Optional
-import subprocess
-T = TypeVar('T')
 
 WT_CHANGES = (FileStatus.WT_MODIFIED | FileStatus.WT_DELETED | FileStatus.WT_TYPECHANGE
               | FileStatus.WT_RENAMED)
 INDEX_CHANGES = (FileStatus.INDEX_NEW | FileStatus.INDEX_MODIFIED | FileStatus.INDEX_DELETED
                  | FileStatus.INDEX_RENAMED | FileStatus.INDEX_TYPECHANGE)
 
-
-def run_command(**kwargs):
-    result = subprocess.run(args=kwargs["args"], stdout=subprocess.PIPE, stderr=subprocess.PIPE, cwd=kwargs["cwd"])
-    # result.wait()
-    return result
+# Asked to pick one of `options`; returns the chosen index or None to skip.
+Chooser = Callable[[str, list[str]], int | None]
 
 
-def iMap(data: list, mapper) -> str:
-    return ", ".join([mapper(key, value) for key, value in enumerate(data)])
+def console_chooser(prompt: str, options: list[str]) -> int | None:
+    print(prompt)
+    for i, option in enumerate(options):
+        print(f"  [{i}] {option}")
+    answer = input("Pick a number, or press Enter to skip: ").strip().lower()
+    if answer in ("", "n", "no"):
+        return None
+    try:
+        index = int(answer)
+    except ValueError:
+        print(f"'{answer}' is not a number, skipping.")
+        return None
+    if not 0 <= index < len(options):
+        print(f"{index} is out of range, skipping.")
+        return None
+    return index
 
 
-def get_active_branch(repo: Repository):
-    result = str(repo.head.shorthand).strip()
-    logger.info("Active branch is : " + result)
-    return result
-
-
-def is_any_changes(repo: Repository):
+def changed_paths(repo: Repository) -> list[str]:
+    """Tracked paths with staged or unstaged changes (untracked files are ignored)."""
     status = repo.status(untracked_files="no")
-    unstagedFiles = [path for path, flags in status.items() if flags & WT_CHANGES]
-    stagedFiles = [path for path, flags in status.items() if flags & INDEX_CHANGES]
-
-    logger.debug(f"Check changes in repo {repo.workdir}")
-    logger.debug(f"Unstaged files: {unstagedFiles}")
-    logger.debug(f"stagedFiles : {stagedFiles}")
-
-    return bool(unstagedFiles or stagedFiles)
+    return sorted(path for path, flags in status.items() if flags & (WT_CHANGES | INDEX_CHANGES))
 
 
-def branches_containing_commit(repo: Repository, commit_sha: str, comparator) -> list[Branch]:
-    # Get the commit object for the given SHA
-    commit = repo.get(commit_sha)
+def current_branch(repo: Repository) -> str | None:
+    """Short name of the checked-out branch, or None when HEAD is detached or unborn."""
+    if repo.head_is_unborn or repo.head_is_detached:
+        return None
+    return repo.head.shorthand
 
-    # List to hold branches containing the commit
-    branches_with_commit = []
 
-    # Check local branches
-    for branch in repo.branches.local:
-        branch_ref = repo.branches.local[branch]
-        logger.debug(f"local target = {branch_ref.target}")
-        branch_commit = repo.get(branch_ref.target)
+def is_remote_branch(branch: Branch) -> bool:
+    return branch.name.startswith("refs/remotes/")
 
-        if comparator(repo, branch_commit, commit):
-            branches_with_commit.append(branch_ref)
 
-    # Check remote branches
-    for remote in repo.branches.remote:
-        logger.debug(f"remote = {remote}")
-        if "HEAD" in remote:
+def local_name(branch: Branch) -> str:
+    """'feature' for both refs/heads/feature and refs/remotes/<remote>/feature."""
+    if is_remote_branch(branch):
+        return branch.shorthand[len(branch.remote_name) + 1:]
+    return branch.shorthand
+
+
+def all_branches(repo: Repository) -> list[Branch]:
+    """Local branches first, then remote-tracking branches (skipping the symbolic <remote>/HEAD)."""
+    branches: list[Branch] = [repo.branches.local[name] for name in repo.branches.local]
+    for name in repo.branches.remote:
+        if name.endswith("/HEAD"):
             continue
-        branch = repo.branches.remote[remote]
-        target = branch.target
-        logger.debug(f"remote_taget = {target}")
-        branch_commit = repo.get(branch.target)
-    #
-        if comparator(repo, branch_commit, commit):
-            branches_with_commit.append(branch)
-
-    return branches_with_commit
+        branches.append(repo.branches.remote[name])
+    return branches
 
 
-def contains_commit(repo: Repository, branch_commit: Object, target_commit: Object):
-    # Check if the branch contains the commit
-    return repo.merge_base(branch_commit.id, target_commit.id) == target_commit.id
+def branches_pointing_at(repo: Repository, oid: Oid) -> list[Branch]:
+    return [b for b in all_branches(repo) if b.target == oid]
 
 
-def equals_commit(repo: Repository, branch_commit: Object, target_commit: Object):
-    return branch_commit.id == target_commit.id
-
-
-def remove_duplicate(data: list[T], key_maker: Callable[[T], any], key_weight=Optional[Callable[[any, T], int]]) -> list[T]:
-    output = dict()
-
-    for item in data:
-        key = key_maker(item)
-        if key not in output:
-            output[key] = item
-        elif key_weight:
-            old_item = output[key]
-            old_weight = key_weight(key, old_item)
-            new_weight = key_weight(key, item)
-            if (new_weight > old_weight):
-                output[key] = item
-
-    return list(output.values())
+def remote_branches_containing(repo: Repository, oid: Oid) -> list[Branch]:
+    found = []
+    for branch in all_branches(repo):
+        if not is_remote_branch(branch):
+            continue
+        if repo.merge_base(branch.target, oid) == oid:
+            found.append(branch)
+    return found

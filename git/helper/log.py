@@ -1,70 +1,75 @@
-import datetime
+"""Logging for gittool.
+
+Console: coloured, level from ``LOG_LEVEL`` (default INFO), written to stderr.
+File:    everything at DEBUG, rotated, at ``GITTOOL_LOG_FILE`` or
+         ``$XDG_STATE_HOME/gittool/gittool.log`` (default ``~/.local/state``).
+         Set ``GITTOOL_LOG_FILE=`` (empty) to disable the file log.
+"""
+
+from __future__ import annotations
+
 import logging
 import os
+from logging.handlers import RotatingFileHandler
+from pathlib import Path
 
-# Uncomment the below line to show log of Git cmd from gitPython
-# logging.basicConfig(level=logging.INFO)
-
-env_log_level = os.environ.get('LOG_LEVEL', 'WARN').upper()
-
-console_log_level = logging.WARN
-
-if env_log_level == 'WARN':
-    console_log_level = logging.WARN
-elif env_log_level == 'INFO':
-    console_log_level = logging.INFO
-elif env_log_level == 'DEBUG':
-    console_log_level = logging.DEBUG
-elif env_log_level == 'ERROR':
-    console_log_level = logging.ERROR
+FORMAT = "%(levelname)8s | %(message)s"
+FILE_FORMAT = "%(asctime)s | %(levelname)8s | %(filename)s:%(lineno)d | %(message)s"
 
 
-class CustomFormatter(logging.Formatter):
-    """Logging colored formatter, adapted from https://stackoverflow.com/a/56944256/3638629"""
+class ColourFormatter(logging.Formatter):
+    """Adapted from https://stackoverflow.com/a/56944256/3638629"""
 
-    grey = '\x1b[38;21m'
-    blue = '\x1b[38;5;39m'
-    yellow = '\x1b[38;5;226m'
-    red = '\x1b[38;5;196m'
-    bold_red = '\x1b[31;1m'
-    reset = '\x1b[0m'
+    COLOURS = {
+        logging.DEBUG: "\x1b[38;21m",
+        logging.INFO: "\x1b[38;5;39m",
+        logging.WARNING: "\x1b[38;5;226m",
+        logging.ERROR: "\x1b[38;5;196m",
+        logging.CRITICAL: "\x1b[31;1m",
+    }
+    RESET = "\x1b[0m"
 
-    def __init__(self, fmt):
-        super().__init__()
-        self.fmt = fmt
-        self.FORMATS = {
-            logging.DEBUG: self.grey + self.fmt + self.reset,
-            logging.INFO: self.blue + self.fmt + self.reset,
-            logging.WARNING: self.yellow + self.fmt + self.reset,
-            logging.ERROR: self.red + self.fmt + self.reset,
-            logging.CRITICAL: self.bold_red + self.fmt + self.reset
-        }
-
-    def format(self, record):
-        log_fmt = self.FORMATS.get(record.levelno)
-        formatter = logging.Formatter(log_fmt)
-        return formatter.format(record)
+    def format(self, record: logging.LogRecord) -> str:
+        colour = self.COLOURS.get(record.levelno, "")
+        return f"{colour}{super().format(record)}{self.RESET}"
 
 
-# Create custom logger logging all five levels
-logger = logging.getLogger(__name__)
-logger.setLevel(logging.DEBUG)
+def _console_level() -> int:
+    name = os.environ.get("LOG_LEVEL", "INFO").upper()
+    return logging.getLevelNamesMapping().get(name, logging.INFO)
 
-# Define format for logs
-# fmt = '%(asctime)s | %(levelname)8s | %(message)s'
-fmt = '%(levelname)8s | %(filename)s:%(lineno)d | %(message)s'
 
-# Create stdout handler for logging to the console (logs all five levels)
-stdout_handler = logging.StreamHandler()
-stdout_handler.setLevel(console_log_level)
-stdout_handler.setFormatter(CustomFormatter(fmt))
+def _log_file() -> Path | None:
+    override = os.environ.get("GITTOOL_LOG_FILE")
+    if override is not None:
+        return Path(override) if override else None
+    state_home = os.environ.get("XDG_STATE_HOME") or Path.home() / ".local" / "state"
+    return Path(state_home) / "gittool" / "gittool.log"
 
-# Create file handler for logging to a file (logs all five levels)
-today = datetime.date.today()
-file_handler = logging.FileHandler('my_app_{}.log'.format(today.strftime('%Y_%m_%d')))
-file_handler.setLevel(logging.DEBUG)
-file_handler.setFormatter(logging.Formatter(fmt))
 
-# Add both handlers to the logger
-logger.addHandler(stdout_handler)
-logger.addHandler(file_handler)
+def _build_logger() -> logging.Logger:
+    log = logging.getLogger("gittool")
+    log.setLevel(logging.DEBUG)
+    log.propagate = False
+    if log.handlers:  # already configured (e.g. module re-imported in tests)
+        return log
+
+    console = logging.StreamHandler()
+    console.setLevel(_console_level())
+    console.setFormatter(ColourFormatter(FORMAT))
+    log.addHandler(console)
+
+    path = _log_file()
+    if path is not None:
+        try:
+            path.parent.mkdir(parents=True, exist_ok=True)
+            file_handler = RotatingFileHandler(path, maxBytes=1_000_000, backupCount=3)
+            file_handler.setLevel(logging.DEBUG)
+            file_handler.setFormatter(logging.Formatter(FILE_FORMAT))
+            log.addHandler(file_handler)
+        except OSError as exc:  # unwritable state dir: keep going with console only
+            log.debug("file logging disabled: %s", exc)
+    return log
+
+
+logger = _build_logger()

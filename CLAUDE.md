@@ -12,10 +12,21 @@ This is a personal dotfiles repository containing shell configurations, developm
 ```bash
 # No setup needed: git/gittool re-execs itself via `uv run --project git/`,
 # so uv creates/syncs git/.venv on first run. Symlinked to ~/.local/bin/gittool.
-gittool sync <path>
-gittool verify_before_push <path>
-gittool merge <path> -b <branch>
-gittool resolve_conflicts <path>
+gittool sync [path]                 # init submodules, attach detached ones to the main branch
+gittool verify_before_push [path]   # clean trees + every submodule commit exists on a remote
+gittool merge [path] -b <branch> [--ai TOOL|--no-ai]
+#   ff / merge commit. Conflicting submodule pointers keep OURS so the merge commits
+#   fast; then each such submodule gets THEIR branch of the same name (fallback: the
+#   recorded commit) merged into our branch, recorded as a follow-up commit.
+#   File conflicts: interactive --ai TOOL (claude, agy, or GITTOOL_AI_TOOLS names) opens
+#   in a tmux split / kitty / gnome-terminal / xterm (GITTOOL_TERMINAL=... or inline)
+#   with a prepared prompt; exit the tool and gittool commits. Default: ask when a tty.
+gittool resolve_conflicts [path] [--ai TOOL|--no-ai]   # resume: commit + deferred submodule merges
+gittool remove_submodules [path] --yes   # destructive: deinit + delete all submodules
+# path defaults to cwd. LOG_LEVEL=DEBUG for chatter; file log in ~/.local/state/gittool/
+
+# Tests build real repos with the git CLI under tmp_path
+uv run --project git pytest
 
 # Manage deps (pyproject.toml + uv.lock in git/)
 uv add --project git <pkg>
@@ -59,10 +70,13 @@ uv add --project git <pkg>
 ### Git Tool Architecture (`git/` directory)
 - **`gittool`**: Main entry point (sh/python polyglot that runs itself via uv)
 - **`helper/`**: Core functionality modules (pygit2-based)
-  - `big_repo.py`: Main repo + submodules orchestration
-  - `repo.py` / `submodule.py`: Repo and submodule wrappers
-  - `utils.py`: Git utilities
-  - `log.py`: Logging (`LOG_LEVEL` env var)
+  - `big_repo.py`: `BigRepo` — main repo + submodules orchestration; every action returns a bool that becomes the exit code
+  - `repo.py`: `GitRepo` wrapper over one `pygit2.Repository` (branch attach, merge/fast-forward, conflict snapshot, submodule update)
+  - `ai.py`: AI tool registry (claude, agy, `GITTOOL_AI_TOOLS`), conflict prompt, terminal launcher
+  - `utils.py`: branch/status helpers and the interactive `Chooser` (injectable for tests)
+  - Deferred submodule merges persist in `.git/gittool-pending-submodules.json` between runs
+  - `log.py`: Logging (`LOG_LEVEL`, `GITTOOL_LOG_FILE` env vars)
+- **`tests/`**: pytest suite; fixtures in `conftest.py` build bare remotes + a recursive clone
 - **Deps**: `pyproject.toml` + `uv.lock` (no PyInstaller build anymore)
 
 ### Key Design Patterns

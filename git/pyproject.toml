@@ -1,6 +1,6 @@
 [project]
 name = "gittool"
-version = "0.1.0"
+version = "0.2.0"
 description = "Helper for working with big repos and submodules"
 authors = [
     { name = "rock-tran", email = "toantk238@gmail.com" }
@@ -9,3 +9,13 @@ requires-python = ">=3.12"
 dependencies = [
     "pygit2>=1.15.1",
 ]
+
+[dependency-groups]
+dev = [
+    "pytest>=8",
+]
+
+[tool.pytest.ini_options]
+testpaths = ["tests"]
+pythonpath = ["."]
+addopts = "-q"

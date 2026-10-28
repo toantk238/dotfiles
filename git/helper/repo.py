@@ -1,179 +1,319 @@
-from pygit2 import Branch, Commit, Repository, Oid
-from pygit2.index import ConflictCollection
-from pygit2.enums import BranchType
+"""Thin wrapper around one pygit2.Repository (main repo or a submodule checkout)."""
 
-from .utils import equals_commit, get_active_branch, iMap, is_any_changes, branches_containing_commit, remove_duplicate, run_command
+from __future__ import annotations
+
+import re
+import shutil
+import subprocess
+from pathlib import Path
+
+from pygit2 import Branch, Commit, GitError, IndexEntry, Oid, Repository, Submodule
+from pygit2.enums import FileMode, MergeAnalysis
+
 from .log import logger
+from .utils import (Chooser, branches_pointing_at, changed_paths, current_branch, is_remote_branch,
+                    local_name, remote_branches_containing)
 
 
-class MyRepo(object):
+class NotARepository(Exception):
+    pass
 
-    _repo: Repository
 
-    def __init__(self, path: str) -> None:
-        self._repo = Repository(path)
+class GitRepo:
 
-    def get_active_branch(self) -> str:
-        return get_active_branch(self._repo)
+    def __init__(self, repo: Repository) -> None:
+        self._repo = repo
 
-    def is_any_changes(self) -> bool:
-        return is_any_changes(self._repo)
+    @classmethod
+    def open(cls, path: str | Path) -> "GitRepo":
+        try:
+            return cls(Repository(str(path)))
+        except GitError as exc:
+            raise NotARepository(f"{path} is not a git repository") from exc
 
-    def __repr__(self):
-        return f"{self._repo}"
+    @classmethod
+    def from_submodule(cls, submodule: Submodule) -> "GitRepo":
+        return cls(submodule.open())
+
+    # ------------------------------------------------------------ state ---
 
     @property
-    def submodules(self):
-        return self._repo.submodules
+    def workdir(self) -> Path:
+        return Path(self._repo.workdir)
 
-    def sync_submodules(self):
+    @property
+    def gitdir(self) -> Path:
+        return Path(self._repo.path)
+
+    def __repr__(self) -> str:
+        return str(self.workdir)
+
+    @property
+    def head_id(self) -> Oid:
+        return self._repo.head.peel(Commit).id
+
+    @property
+    def current_branch(self) -> str | None:
+        return current_branch(self._repo)
+
+    @property
+    def is_detached(self) -> bool:
+        return self._repo.head_is_detached
+
+    def changed_paths(self) -> list[str]:
+        return changed_paths(self._repo)
+
+    def has_commit(self, oid: Oid) -> bool:
+        return oid in self._repo
+
+    def head_is_on_remote(self) -> bool:
+        return bool(remote_branches_containing(self._repo, self.head_id))
+
+    @property
+    def submodules(self) -> list[Submodule]:
+        return list(self._repo.submodules)
+
+    def merge_in_progress(self) -> bool:
+        return bool(self._repo.listall_mergeheads())
+
+    def conflicts(self) -> list[tuple]:
+        """Snapshot of (ancestor, ours, theirs) index entries; empty when clean.
+        Re-reads the index first: an AI tool or the user may have run `git add`."""
+        self._repo.index.read()
+        conflicts = self._repo.index.conflicts
+        return list(conflicts) if conflicts else []
+
+    def fetch_all(self) -> bool:
+        ok = True
+        for remote in self._repo.remotes:
+            logger.debug("%s: fetching %s", self, remote.name)
+            try:
+                remote.fetch()
+            except GitError as exc:
+                logger.warning("%s: fetch from %s failed: %s", self, remote.name, exc)
+                ok = False
+        return ok
+
+    # ------------------------------------------------------- submodules ---
+
+    def update_submodules(self) -> bool:
+        """Init and check out every submodule at the commit recorded in the index."""
+        ok = True
         for module in self._repo.submodules:
-            logger.info(f"syncing submodule {module.name}")
+            if self._submodule_is_at_recorded_commit(module):
+                continue  # libgit2's update would needlessly detach a branch checkout
             try:
                 module.update(init=True)
-            except Exception as e:
-                logger.error(e)
+            except GitError as exc:
+                logger.error("Submodule %s: update failed: %s", module.path, exc)
+                ok = False
+        return ok
 
-    def _checkout_branch_at_commit(self, branch: Branch, commit):
-        commit_obj = self._repo.get(commit)
-        branch_name = branch.shorthand.replace("origin/", "")
-        new_branch = self._repo.branches.create(branch_name, commit_obj, force=True)
-        self._repo.checkout(new_branch)
+    def _submodule_is_at_recorded_commit(self, module: Submodule) -> bool:
+        entry = self._repo.index[module.path] if module.path in self._repo.index else None
+        wanted = entry.id if entry is not None else module.head_id
+        try:
+            return wanted is not None and module.open().head.target == wanted
+        except GitError:
+            return False  # not initialised yet
 
-    def branches_contains_commit(self, commit: str) -> list[Branch]:
-        logger.info(f"module = {self._repo.path}")
-        logger.info(f"commit = {commit}")
+    def remove_all_submodules(self) -> None:
+        for module in self.submodules:
+            logger.info("Removing submodule %s", module.path)
+            self._git("submodule", "deinit", "-f", "--", module.path)
+            self._git("rm", "-f", "--", module.path)
+            shutil.rmtree(self.gitdir / "modules" / module.name, ignore_errors=True)
 
-        # params = ["-a", "--contains", commit]
-        branches = branches_containing_commit(self._repo, commit, equals_commit)
-        logger.info(f"branches = {iMap(branches, lambda _, x: str(x.shorthand))}")
+    def _git(self, *args: str) -> None:
+        subprocess.run(["git", *args], cwd=self.workdir, check=True,
+                       stdout=subprocess.DEVNULL, stderr=subprocess.PIPE, text=True)
 
-        # branches: list[str] = self._repo.branches.remote.branche
-        # branches = branches.split("\n")
-        # branches = list(map(lambda x: x.strip(), branches))
-        # branches = list(filter(lambda x: "HEAD" not in x, branches))
-        # logger.info(f"branches = {branches}")
-        # branches = list(filter(lambda x: self._repo.git.rev_parse(x) == commit, branches))
-        return branches
+    # --------------------------------------------------------- branches ---
 
-    def checkout_branch(self, branch: str):
-        commit = self._repo.head.target
-        branches = self.branches_contains_commit(commit)
-        branches = remove_duplicate(
-            branches,
-            lambda x: x.shorthand.replace("origin/", ""),
-            lambda key, _: -1 if "origin" in key else 0
-        )
-        logger.info(f"distint_branches = {iMap(branches, lambda _, x: str(x.shorthand))}")
+    def lookup_branch(self, name: str) -> Branch | None:
+        """Local branch first, then remote-tracking (e.g. 'origin/feature')."""
+        return self._repo.branches.get(name)
 
-        if not branches:
-            logger.info(f"Not found branch in {self._repo}")
-            return
+    def attach_head_to_branch(self, preferred: str | None, chooser: Chooser) -> bool:
+        """Turn a detached HEAD into a branch checkout without moving the commit.
 
-        found_branch = next(filter(lambda x: x.shorthand == branch, branches), None)
-
-        if found_branch:
-            logger.info(f"Repo {self._repo.path} --- checkout to {found_branch.name}")
-            self._checkout_branch_at_commit(found_branch, commit)
-            return
-
-        if len(branches) == 1:
-            self._checkout_branch_at_commit(branches[0], commit)
-            return
-
-        branch_lines = [f"[{i}] - {x.shorthand}" for i, x in enumerate(branches)]
-        prompt = f"In module {self._repo}\nSelect branch or *n* if you don't want to checkout\n"
-        prompt += "\n".join(branch_lines) + "\n"
-        choice = input(prompt).strip()
-
-        if choice == "n":
-            return
-
-        choice = int(choice)
-        selected_branch = branches[choice]
-        self._checkout_branch_at_commit(selected_branch, commit)
-
-    def get_commit_date_of_branch(self, branch: Branch):
-        commit: Commit = self._repo.get(branch.target)
-        commit_time = commit.commit_time
-        logger.debug(f"commit_time of branch {branch.name} = {commit_time}")
-        return commit_time
-
-    def merge(self, branch):
-        branch_type = BranchType.REMOTE if "origin" in branch else BranchType.LOCAL
-        branch_ref = self._repo.lookup_branch(branch, branch_type)
-        logger.debug(f"branch_ref = {branch_ref}")
-        if not branch_ref:
-            logger.error(f"Branch {branch} not found")
-            exit(126)
-
-        commit: Commit = self._repo.get(branch_ref.target)
-        logger.debug(f"branch_target = {commit}")
-
-        self._merge_commit(commit.id)
-
-    def _merge_commit(self, commit_id: Oid | str) -> bool:
-        self._repo.merge(commit_id)
-        self.sync_submodules()
-        conflicts = self._repo.index.conflicts
-        if not conflicts:
-            logger.info(f"No conflicts in {self._repo.path}")
-            author = self._repo.default_signature
-            # self._repo.index.write()
-            tree = self._repo.index.write_tree()
-            new_commit = self._repo.create_commit(
-                'HEAD',
-                author,
-                author,
-                "Merge message",
-                tree,
-                [self._repo.head.target, commit_id])
-            self._repo.state_cleanup()
-            # self._repo.head.set_target(new_commit)
+        Candidates are the branches whose tip is exactly HEAD. A branch named
+        `preferred` wins; a single candidate is taken; otherwise `chooser` asks.
+        A remote-tracking candidate becomes a new local branch with upstream set.
+        Never moves an existing local branch. Returns True when HEAD ends on a branch.
+        """
+        if not self.is_detached:
             return True
-        else:
-            logger.warning(f"Conflicts in {self._repo.path}")
+        head = self.head_id
+        candidates = self._dedupe(branches_pointing_at(self._repo, head))
+        if not candidates:
+            logger.warning("%s: detached at %s and no branch points at it; leaving as is",
+                           self, str(head)[:10])
             return False
 
-    def remove_all_submodules(self):
-        for module in self.submodules:
-            run_command(args=["rm", "-r", module.path], cwd=".")
+        chosen = next((b for b in candidates if local_name(b) == preferred), None)
+        if chosen is None and len(candidates) == 1:
+            chosen = candidates[0]
+        if chosen is None:
+            names = [b.shorthand for b in candidates]
+            index = chooser(f"{self}: several branches point at {str(head)[:10]}", names)
+            if index is None:
+                logger.warning("%s: left detached at %s", self, str(head)[:10])
+                return False
+            chosen = candidates[index]
 
-    def resolve_conflicts(self):
-        conflicts = self._repo.index.conflicts
-        if not conflicts:
-            return
+        return self._checkout_existing_or_tracking(chosen)
 
-        submodules = {x.path: x for x in self.submodules}
-        # logger.debug(f"sub_module_paths = {submodules}")
+    @staticmethod
+    def _dedupe(branches: list[Branch]) -> list[Branch]:
+        """One entry per local name; a local branch shadows its remote-tracking twin."""
+        by_name: dict[str, Branch] = {}
+        for branch in branches:
+            name = local_name(branch)
+            if name not in by_name or (is_remote_branch(by_name[name]) and not is_remote_branch(branch)):
+                by_name[name] = branch
+        return list(by_name.values())
 
-        for conflict in conflicts:
-            (ancestor, our, their) = conflict
-            if not ancestor:
-                continue
-            logger.info(f"ancestor = {ancestor}")
-            logger.info(f"our = {our}")
-            logger.info(f"their = {their}")
-            item_path = str(ancestor.path)
-            if ancestor.path in submodules:
-                submodule = submodules[ancestor.path]
-                sub_repo = MyRepo(submodule.path)
-                logger.info(f"submodule = {sub_repo}")
-                logger.info(f"commitId = {their.oid}")
-                merged_done = sub_repo._merge_commit(their.oid)
-                if merged_done:
-                    self._repo.index.add(item_path)
-                    self._repo.index.write()
-                    logger.info(f"Resolve submodule {sub_repo} done")
-                # Skip to merge sub_module. We can continue later
-                continue
+    def _checkout_existing_or_tracking(self, branch: Branch) -> bool:
+        if not is_remote_branch(branch):
+            self._repo.checkout(branch)
+            logger.info("%s: now on branch %s", self, branch.shorthand)
+            return True
 
-            # result = self._repo.merge_file_from_index(ancestor, our, their)
-            # logger.debug(f"result = {result}")
-        # head_commit: Commit = self._repo.head.peel(Commit)
-        # head_tree = head_commit.tree
-        # head_tree.diff_to_index()
-        # self._repo.index.read_tree(head_tree)
-        # self._repo.index.add_all()
-        # self._repo.index.write()
-        # logger.info(f"head_commit = {head_tree}")
+        name = local_name(branch)
+        head = self.head_id
+        existing = self._repo.branches.local.get(name)
+        if existing is not None:
+            old_tip = existing.peel(Commit).id
+            if self._repo.merge_base(old_tip, head) != old_tip:
+                logger.warning("%s: local branch %s has commits not in %s (at %s), not touching it",
+                               self, name, str(head)[:10], str(old_tip)[:10])
+                return False
+            # strictly behind: fast-forward it to HEAD, nothing is lost
+            existing.set_target(head, f"gittool: fast-forward {name} to {branch.shorthand}")
+            local = self._repo.branches.local[name]
+            if local.upstream is None:
+                local.upstream = branch
+            self._repo.checkout(local)
+            logger.info("%s: fast-forwarded branch %s from %s to %s", self, name, str(old_tip)[:10],
+                        str(head)[:10])
+            return True
+
+        local = self._repo.branches.local.create(name, self._repo[head].peel(Commit))
+        local.upstream = branch
+        self._repo.checkout(local)
+        logger.info("%s: created branch %s tracking %s", self, name, branch.shorthand)
+        return True
+
+    # ------------------------------------------------------------ merge ---
+
+    def merge_branch(self, name: str) -> bool:
+        """Merge `name` into HEAD. True when done (up to date, fast-forward or merge
+        commit). False when conflicts were left in the index for resolution."""
+        branch = self.lookup_branch(name)
+        if branch is None:
+            raise ValueError(f"branch '{name}' not found in {self}")
+        dirty = self.changed_paths()
+        if dirty:
+            raise RuntimeError(f"{self} has uncommitted changes: {', '.join(dirty)}")
+        if self.merge_in_progress():
+            raise RuntimeError(f"{self} already has a merge in progress; resolve or abort it first")
+
+        target = branch.peel(Commit).id
+        into = self.current_branch or "detached HEAD"
+        return self.merge_commit(target, f"Merge branch '{name}' into {into}")
+
+    def merge_commit(self, target: Oid, message: str) -> bool:
+        analysis, _ = self._repo.merge_analysis(target)
+        if analysis & MergeAnalysis.UP_TO_DATE:
+            logger.info("%s: already up to date", self)
+            return True
+
+        if analysis & MergeAnalysis.FASTFORWARD:
+            self._repo.checkout_tree(self._repo[target].peel(Commit))
+            if self.is_detached:
+                self._repo.set_head(target)
+            else:
+                self._repo.head.set_target(target)
+            logger.info("%s: fast-forwarded to %s", self, str(target)[:10])
+            self.update_submodules()
+            return True
+
+        self._repo.merge(target)
+        (self.gitdir / "MERGE_MSG").write_text(message + "\n")
+        if self.conflicts():
+            logger.warning("%s: conflicts in %s", self, ", ".join(self.conflicted_paths()))
+            return False
+
+        self.finish_merge()
+        self.update_submodules()
+        return True
+
+    def finish_merge(self) -> Oid:
+        """Commit the merge prepared in the index (HEAD + MERGE_HEADs) and clean up."""
+        message = (self.gitdir / "MERGE_MSG").read_text().strip() if (self.gitdir / "MERGE_MSG").exists() else "Merge"
+        parents: list = [self.head_id, *self._repo.listall_mergeheads()]
+        index = self._repo.index
+        index.write()
+        tree = index.write_tree()
+        signature = self._repo.default_signature
+        oid = self._repo.create_commit("HEAD", signature, signature, message, tree, parents)
+        self._repo.state_cleanup()
+        logger.info("%s: merge committed as %s", self, str(oid)[:10])
+        return oid
+
+    def stage(self, path: str) -> None:
+        self._repo.index.add(path)
+        self._repo.index.write()
+
+    def stage_blob(self, path: str, oid: Oid, mode: FileMode) -> None:
+        """Record `oid` for `path` at stage 0, dropping any conflict entries for it."""
+        index = self._repo.index
+        index.add(IndexEntry(path, oid, FileMode(mode)))
+        if index.conflicts and path in index.conflicts:
+            del index.conflicts[path]
+        index.write()
+
+    def staged_id(self, path: str) -> Oid | None:
+        index = self._repo.index
+        index.read()
+        entry = index[path] if path in index else None
+        return entry.id if entry is not None else None
+
+    def commit_index(self, message: str) -> Oid:
+        """Plain commit of the current index on top of HEAD."""
+        index = self._repo.index
+        index.write()
+        tree = index.write_tree()
+        signature = self._repo.default_signature
+        oid = self._repo.create_commit("HEAD", signature, signature, message, tree, [self.head_id])
+        logger.info("%s: committed %s", self, str(oid)[:10])
+        return oid
+
+    def merge_source(self) -> str | None:
+        """Name of the branch being merged, best effort: the MERGE_MSG gittool
+        wrote, else a branch pointing at MERGE_HEAD."""
+        msg_path = self.gitdir / "MERGE_MSG"
+        if msg_path.exists():
+            match = re.search(r"Merge branch '([^']+)'", msg_path.read_text())
+            if match:
+                return match.group(1)
+        heads = self._repo.listall_mergeheads()
+        if not heads:
+            return None
+        candidates = self._dedupe(branches_pointing_at(self._repo, heads[0]))
+        return candidates[0].shorthand if candidates else None
+
+    def resolve_branch_tip(self, name: str) -> Oid | None:
+        """Tip of local `name`, else `<remote>/<name>` for any remote, else None."""
+        branch = self.lookup_branch(name)
+        if branch is None:
+            short = name.split("/", 1)[-1] if "/" in name else name
+            for remote in self._repo.remotes:
+                branch = self.lookup_branch(f"{remote.name}/{short}")
+                if branch is not None:
+                    break
+        return branch.peel(Commit).id if branch is not None else None
+
+    def conflicted_paths(self) -> list[str]:
+        return sorted({e.path for entry in self.conflicts() for e in entry if e is not None})
