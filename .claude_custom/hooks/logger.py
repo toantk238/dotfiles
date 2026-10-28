@@ -1,12 +1,16 @@
-"""Shared logger: writes to hooks.log in the same directory."""
+"""Shared logger: each hook writes to <name>.log in this directory, rotated by size."""
 from contextlib import contextmanager
 from contextvars import ContextVar
 import logging
+from logging.handlers import RotatingFileHandler
 import os
 from pathlib import Path
 from typing import Generator
 
 LOG_LEVEL = os.environ.get("HOOKS_LOG_LEVEL", "INFO").upper()
+# Each <name>.log rolls over at LOG_MAX_BYTES, keeping LOG_BACKUPS old files (<name>.log.1, ...).
+LOG_MAX_BYTES = 5 * 1024 * 1024
+LOG_BACKUPS = 3
 
 # The model currently answering, tagged onto every log line while set.
 _current_model: ContextVar[str] = ContextVar("current_model", default="")
@@ -44,7 +48,9 @@ def get_logger(name: str) -> logging.Logger:
 
     try:
         log_file = Path(__file__).parent / f"{name}.log"
-        handler: logging.Handler = logging.FileHandler(log_file, encoding="utf-8")
+        handler: logging.Handler = RotatingFileHandler(
+            log_file, maxBytes=LOG_MAX_BYTES, backupCount=LOG_BACKUPS, encoding="utf-8"
+        )
         error = None
     except Exception as e:
         # Fallback to stream handler if file is not writable

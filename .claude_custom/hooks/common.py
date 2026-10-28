@@ -34,11 +34,23 @@ HAIKU_MODEL = "claude-haiku-5-5"
 FABLE_MODEL = "claude-fable-5-1"
 
 
+# A hook's model call needs no tools, MCP servers, skills or hooks; skipping them
+# halves its start-up time and keeps the nested session from re-running these hooks.
+# (--bare would be leaner still but skips the keychain, breaking claude.ai login.)
+_LEAN_SESSION_ARGS = [
+    "--settings", json.dumps({"disableAllHooks": True}),
+    "--strict-mcp-config",
+    "--disable-slash-commands",
+    "--tools", "",
+]
+
+
 def call_claude(prompt: str, model: str = HAIKU_MODEL, timeout: int = 60) -> str:
     """Call the claude CLI with a prompt and return the stdout."""
     try:
         result = subprocess.run(
-            ["claude", "--print", "--model", model, "--no-session-persistence"],
+            ["claude", "--print", "--model", model, "--no-session-persistence",
+             *_LEAN_SESSION_ARGS],
             input=prompt,
             capture_output=True,
             text=True,

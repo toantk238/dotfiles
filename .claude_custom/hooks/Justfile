@@ -1,2 +1,5 @@
+test:
+  uv run --with pytest pytest -q tests
+
 tail-log:
-  tail -f ./hooks.log | logalize
+  tail -F ./*.log | logalize
