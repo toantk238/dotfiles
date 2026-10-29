@@ -1,3 +1,4 @@
+import json
 import sys
 from pathlib import Path
 import pytest
@@ -37,9 +38,6 @@ def test_everything_else_is_allowed(tool_name, tool_input):
     "mk" + "fs.ext4 /dev/sda1",
     "dd if=/dev/zero of=/dev/sda",
     ":(){ :|:& };:",
-    "rm -rf ~/",
-    "rm -rf $HOME",
-    "rm -rf /usr/lib",
     "echo key > ~/.ssh/authorized_keys",
     "cat foo > /etc/hosts",
 ])
@@ -61,10 +59,25 @@ def test_review_rm_rf_root_blocked():
     assert "root" in verdict.reason.lower()
 
 
-def test_review_pattern_block_without_override():
-    verdict = pre_tool_reviewer.review("Bash", {"command": "rm -rf ~/scratch"})
-    assert verdict.approved is False
+@pytest.mark.parametrize("command", ["rm -rf ~/", "rm -rf $HOME", "rm -rf /usr/lib", "rm -fr ~/scratch"])
+def test_rm_rf_outside_safe_dirs_asks_the_user_instead_of_blocking(command):
+    assert pre_tool_reviewer.block_decision("Bash", {"command": command}) is None
+    verdict = pre_tool_reviewer.review("Bash", {"command": command})
+    assert verdict.approved is False and verdict.ask is True
     assert "outside safe directories" in verdict.reason
+
+
+def test_main_emits_ask_permission_decision(monkeypatch, capsys):
+    monkeypatch.setattr(pre_tool_reviewer.HookInput, "from_stdin", classmethod(
+        lambda cls: cls({"tool_name": "Bash", "tool_input": {"command": "rm -rf ~/scratch"}})))
+    monkeypatch.setattr(pre_tool_reviewer.ReviewContext, "from_hook_input",
+                        classmethod(lambda cls, _h: _ctx([])))
+    with pytest.raises(SystemExit) as exc:
+        pre_tool_reviewer.main()
+    assert exc.value.code == 0
+    out = json.loads(capsys.readouterr().out)["hookSpecificOutput"]
+    assert out["permissionDecision"] == "ask"
+    assert "outside safe directories" in out["permissionDecisionReason"]
 
 
 # ── user override ─────────────────────────────────────────────────────────────

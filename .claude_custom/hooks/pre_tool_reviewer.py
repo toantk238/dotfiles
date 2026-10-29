@@ -8,6 +8,9 @@ Policy:
   * A few dangerous Bash commands are blocked unless the user authorised them
     in their own words (_BLOCK_BASH_PATTERNS) — approvals are remembered per
     session so the same call is never blocked after having been approved once.
+  * A few risky-but-common Bash commands are not blocked: Claude Code shows the
+    user its permission prompt instead (_ASK_BASH_PATTERNS). The same typed
+    approval that clears a block also lets these through without a prompt.
 """
 from dataclasses import dataclass, field
 from datetime import datetime, timedelta, timezone
@@ -38,6 +41,8 @@ class ReviewVerdict:
     approved: bool
     reason: str = ""
     raw_verdict: str = ""
+    # Not approved, but ask the user through Claude Code's permission prompt instead of blocking.
+    ask: bool = False
 
 
 # Catastrophic and unrecoverable — blocked even when the user says "go ahead".
@@ -50,10 +55,14 @@ _CRITICAL_BASH_PATTERNS = [
 
 # Dangerous by default, but the user can explicitly authorize them.
 _BLOCK_BASH_PATTERNS = [
-    (r"\brm\b\s+(-\w*r\w*f\w*|-\w*f\w*r\w*)\s+(/(?!tmp[/\s])|~/|~$|\$HOME)", "rm -rf outside safe directories"),
     (r">\s*(~/.ssh|~/.aws|/etc/)", "write to sensitive system path"),
     # (r"curl\s+\S+\s*\|\s*(bash|sh)", "remote code execution via curl-pipe"),
     # (r"wget\s+\S+\s*\|\s*(bash|sh)", "remote code execution via wget-pipe"),
+]
+
+# Risky but often legitimate — the user decides in Claude Code's permission prompt.
+_ASK_BASH_PATTERNS = [
+    (r"\brm\b\s+(-\w*r\w*f\w*|-\w*f\w*r\w*)\s+(/(?!tmp[/\s])|~/|~$|\$HOME)", "rm -rf outside safe directories"),
 ]
 
 # The user telling the agent to proceed.
@@ -256,6 +265,17 @@ def block_decision(tool_name: str, tool_input: dict) -> str | None:
     return None
 
 
+def ask_reason(tool_name: str, tool_input: dict) -> str | None:
+    """Reason to send the call to the user's permission prompt, or None."""
+    if tool_name != "Bash":
+        return None
+    command = tool_input.get("command", "") or ""
+    for pattern, reason in _ASK_BASH_PATTERNS:
+        if re.search(pattern, command):
+            return reason
+    return None
+
+
 def review(tool_name: str, tool_input: dict, context: ReviewContext | None = None) -> ReviewVerdict:
     context = context or ReviewContext()
     signature = call_signature(tool_name, tool_input)
@@ -283,6 +303,11 @@ def review(tool_name: str, tool_input: dict, context: ReviewContext | None = Non
         logger.info(f"[rule] BLOCKED  tool={tool_name} reason={reason}")
         return ReviewVerdict(approved=False, reason=reason, raw_verdict=block)
 
+    ask = ask_reason(tool_name, tool_input)
+    if ask is not None:
+        logger.info(f"[rule] ASK USER  tool={tool_name} reason={ask}")
+        return ReviewVerdict(approved=False, reason=ask, raw_verdict=f"ASK: {ask}", ask=True)
+
     logger.info(f"[default] APPROVED  tool={tool_name}")
     return ReviewVerdict(approved=True, raw_verdict="APPROVE")
 
@@ -302,6 +327,14 @@ def main():
             "hookEventName": "PreToolUse",
             "permissionDecision": "allow",
             "permissionDecisionReason": "pre_tool_reviewer: no block rule matched",
+        }}))
+        sys.exit(0)
+    elif verdict.ask:
+        logger.info(f"ASK USER  tool={tool_name} reason={verdict.reason}")
+        print(json.dumps({"hookSpecificOutput": {
+            "hookEventName": "PreToolUse",
+            "permissionDecision": "ask",
+            "permissionDecisionReason": f"pre_tool_reviewer: {verdict.reason}",
         }}))
         sys.exit(0)
     else:
