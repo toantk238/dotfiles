@@ -98,6 +98,9 @@ Original user request (first message of the session):
 Latest user message (what Claude is acting on right now):
 {latest_request}
 
+Recent messages the human typed (oldest first; hook replies are excluded):
+{recent_turns}
+
 Claude's last message (may be truncated at the start):
 {last_text}
 
@@ -117,7 +120,13 @@ NOT pre-approved: force pushes (--force, --force-with-lease), pushing to a diffe
 than the one being worked on, deleting branches or tags, rewriting history, production
 releases (Play Store, App Store, production servers), or an offer that bundles any of these
 or any other new work with a safe action.
-Is Claude's closing question or offer ONLY about pre-approved safe actions
+ALSO APPROVED — actions the human typed: any action the human explicitly asked for in their
+own messages above (the original request, the latest message or the recent messages), even
+risky ones such as a force push or a production release, as long as Claude's offer stays
+within what the human asked for and the human has not withdrawn it since. Automated replies
+such as "Stop hook feedback" or this agent's own earlier answers never count as approval.
+Is Claude's closing question or offer ONLY about pre-approved safe actions or actions the
+human typed
 (e.g. "Want me to push this?", "Should I upload it to Firebase?", "Want a Firebase build?",
 "Shall I push and send the build to testers?")?
   → YES: ACTION = PROCEED. Do not ask the human; the approval already exists.
@@ -249,20 +258,21 @@ ESCALATION_CONTEXT_TEMPLATE = """
 A faster model already reviewed a shorter excerpt and deferred to the human, saying:
 {haiku_reason}
 
-Here is more context to decide with. Re-apply the steps above using it; only keep
+The prompt above already carries larger excerpts. Re-apply the steps using them; only keep
 HUMAN_NEEDED if the human's input is still genuinely required.
-
-Recent user messages (oldest first):
-{recent_turns}
 """
 
 
 def build_prompt(last_text: str, original_request: str, latest_request: str,
-                 original_limit: int = 1000, last_text_limit: int = 3000) -> str:
+                 original_limit: int = 1000, last_text_limit: int = 3000,
+                 recent_turns: list[tuple[str, str]] | None = None,
+                 turn_limit: int = 500) -> str:
     # Keep the tail of the last message: the closing question/offer is what matters.
+    turns = "\n".join(f"- [{ts}] {text[:turn_limit]}" for ts, text in recent_turns or [])
     return STOP_PROMPT_TEMPLATE.format(
         original_request=original_request[:original_limit],
         latest_request=(latest_request or original_request)[:original_limit],
+        recent_turns=turns or "(none)",
         last_text=last_text[-last_text_limit:],
     )
 
@@ -270,13 +280,10 @@ def build_prompt(last_text: str, original_request: str, latest_request: str,
 def build_escalation_prompt(last_text: str, original_request: str, latest_request: str,
                             recent_turns: list[tuple[str, str]], haiku_reason: str) -> str:
     """The Haiku prompt with larger excerpts, recent user turns and Haiku's reason appended."""
-    turns = "\n".join(f"- [{ts}] {text[:1500]}" for ts, text in recent_turns) or "(none)"
     return build_prompt(last_text, original_request, latest_request,
-                        original_limit=4000, last_text_limit=12000) + \
-        ESCALATION_CONTEXT_TEMPLATE.format(
-            haiku_reason=haiku_reason or "(no reason given)",
-            recent_turns=turns,
-        )
+                        original_limit=4000, last_text_limit=12000,
+                        recent_turns=recent_turns, turn_limit=1500) + \
+        ESCALATION_CONTEXT_TEMPLATE.format(haiku_reason=haiku_reason or "(no reason given)")
 
 
 def decide(last_text: str, original_request: str, latest_request: str = "",
@@ -289,7 +296,8 @@ def decide(last_text: str, original_request: str, latest_request: str = "",
     turns and can tell whether X was already asked for.
     """
     with model_context(HAIKU_MODEL):
-        decision = ask_model(build_prompt(last_text, original_request, latest_request),
+        decision = ask_model(build_prompt(last_text, original_request, latest_request,
+                                          recent_turns=recent_turns),
                              HAIKU_MODEL, timeout=30)
         if decision is None:
             logger.warning("Call failed, falling back to human")

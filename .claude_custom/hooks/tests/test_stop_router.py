@@ -1002,3 +1002,49 @@ def test_prompt_recognises_loose_firebase_phrasing():
     safe = safe[safe.index("STEP A"):safe.index("STEP 0")].lower()
     for phrase in ("firebase build", "upload/publish/send it to firebase", "distribute to testers"):
         assert phrase in safe
+
+
+# ── Approvals the human typed in earlier messages ─────────────────────────────
+
+def _queued(prompt: str, kind: str = "human") -> dict:
+    """A message the user typed while Claude was mid-turn (queued_command attachment)."""
+    return {"type": "attachment", "timestamp": "2026-10-29T02:36:19.129Z",
+            "attachment": {"type": "queued_command", "prompt": prompt, "commandMode": "prompt",
+                           "origin": {"kind": kind}, "humanTurn": kind == "human"}}
+
+
+def test_human_turns_include_mid_turn_queued_messages(tmp_path):
+    transcript = _write_transcript(tmp_path, [
+        _msg("user", "fix the crash"),
+        _queued("you can force push this branch"),
+        _queued("auto text", kind="hook"),
+    ])
+    texts = [t for _ts, t in common.iter_human_user_turns(transcript)]
+    assert texts == ["fix the crash", "you can force push this branch"]
+
+
+def test_human_turns_skip_stop_hook_feedback(tmp_path):
+    transcript = _write_transcript(tmp_path, [
+        _msg("user", "fix the crash"),
+        _msg("user", "Stop hook feedback:\n[stop_router.py]: Your recommendation looks good."),
+    ])
+    assert [t for _ts, t in common.iter_human_user_turns(transcript)] == ["fix the crash"]
+
+
+def test_haiku_prompt_shows_recent_human_turns():
+    prompt = stop_router.build_prompt("Want me to force push?", "fix it", "fix it",
+                                      recent_turns=[("t1", "force push is fine for this branch")])
+    assert "force push is fine for this branch" in prompt
+
+
+def test_decide_gives_haiku_the_recent_turns():
+    with patch("stop_router.call_claude", return_value="ACTION: PROCEED\nANSWER: ok") as mock_llm:
+        stop_router.decide("Force push?", "fix it", "fix it", recent_turns=[("t", "force push is ok")])
+    assert "force push is ok" in mock_llm.call_args.args[0]
+
+
+def test_prompt_treats_human_typed_requests_as_approval():
+    text = " ".join(stop_router.STOP_PROMPT_TEMPLATE.lower().split())
+    assert "the human typed" in text
+    assert "even risky" in text
+    assert "hook" in text and "never count as approval" in text

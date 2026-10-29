@@ -127,8 +127,25 @@ _SYNTHETIC_USER_PREFIXES = (
     "<local-command-stdout>", "<local-command-stderr>",
     "<bash-input>", "<bash-stdout>", "<bash-stderr>",
     "<user-prompt-submit-hook>", "<task-notification>",
-    "Caveat:", "[Request interrupted",
+    "Caveat:", "[Request interrupted", "Stop hook feedback:",
 )
+
+
+def _queued_human_prompt(entry: dict) -> str:
+    """Text of a message the human typed while Claude was mid-turn, else "".
+
+    Those land as `attachment` entries of type `queued_command`, not as user messages.
+    """
+    attachment = entry.get("attachment")
+    if entry.get("type") != "attachment" or not isinstance(attachment, dict):
+        return ""
+    if attachment.get("type") != "queued_command":
+        return ""
+    origin = attachment.get("origin")
+    if not isinstance(origin, dict) or origin.get("kind") != "human":
+        return ""
+    prompt = attachment.get("prompt")
+    return prompt.strip() if isinstance(prompt, str) else ""
 
 
 def iter_human_user_turns(transcript_path: str) -> Iterator[tuple[str, str]]:
@@ -141,6 +158,10 @@ def iter_human_user_turns(transcript_path: str) -> Iterator[tuple[str, str]]:
     """
     for entry in read_transcript(transcript_path):
         if entry.get("isMeta") or entry.get("isSidechain"):
+            continue
+        queued = _queued_human_prompt(entry)
+        if queued:
+            yield str(entry.get("timestamp", "")), queued
             continue
         msg = entry.get("message", {})
         if not isinstance(msg, dict) or msg.get("role") != "user":
