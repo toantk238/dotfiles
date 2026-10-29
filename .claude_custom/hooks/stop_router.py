@@ -326,7 +326,17 @@ def ask_model(prompt: str, model: str, timeout: int) -> StopDecision | None:
     except Exception as e:
         logger.warning(f"Call failed: {e}")
         return None
-    return replace(parse_llm_output(output), model=model)
+    return _drop_answer_to_a_report(replace(parse_llm_output(output), model=model))
+
+
+def _drop_answer_to_a_report(decision: StopDecision) -> StopDecision:
+    """An ANSWER needs a question to answer. When the model itself says Claude's message is a
+    REPORT, the "answer" is only its reasoning, and feeding it to Claude as the user's reply
+    would make Claude act on it. Hand over to the human instead."""
+    if decision.action == "ANSWER" and decision.purpose == "REPORT":
+        logger.info("ANSWER on a REPORT is contradictory — treating as HUMAN_NEEDED")
+        return replace(decision, action="HUMAN_NEEDED")
+    return decision
 
 
 def handle_stop(last_text: str, original_request: str, latest_request: str = "",

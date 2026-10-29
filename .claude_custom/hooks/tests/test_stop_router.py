@@ -1048,3 +1048,32 @@ def test_prompt_treats_human_typed_requests_as_approval():
     assert "the human typed" in text
     assert "even risky" in text
     assert "hook" in text and "never count as approval" in text
+
+
+# ── ANSWER on a REPORT is a contradiction ────────────────────────────────────
+
+def test_answer_on_a_report_goes_to_human():
+    """Haiku once returned ACTION: ANSWER + PURPOSE: REPORT whose 'answer' was only its
+    reason ("nothing is left for the human to approve"); it was fed to Claude as a reply."""
+    output = ("ACTION: ANSWER\nPURPOSE: REPORT\nANSWER: Claude's last message already answered "
+              "the question; the closing offer is optional follow-up work.")
+    with patch("stop_router.call_claude", return_value=output) as mock_llm:
+        decision = stop_router.decide("Done. Want me to add a WirePlumber script?", "why no sound?")
+        assert decision.action == "HUMAN_NEEDED"
+        assert mock_llm.call_count == 1
+        with pytest.raises(SystemExit) as exc:
+            stop_router.handle_stop("Done. Want me to add a WirePlumber script?", "why no sound?")
+    assert exc.value.code == 0
+
+
+def test_fable_answer_on_a_report_goes_to_human():
+    responses = iter(["ACTION: HUMAN_NEEDED\nPURPOSE: QUESTION\nANSWER: unsure",
+                      "ACTION: ANSWER\nPURPOSE: REPORT\nANSWER: nothing left to do"])
+    with patch("stop_router.call_claude", side_effect=lambda *a, **kw: next(responses)):
+        assert stop_router.decide("Which db?", "build a tool").action == "HUMAN_NEEDED"
+
+
+def test_answer_on_a_question_still_answers():
+    output = "ACTION: ANSWER\nPURPOSE: QUESTION\nANSWER: Use Postgres"
+    with patch("stop_router.call_claude", return_value=output):
+        assert stop_router.decide("Which db?", "build a tool").answer == "Use Postgres"
