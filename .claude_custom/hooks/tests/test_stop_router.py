@@ -981,3 +981,24 @@ def test_get_original_user_request_skips_local_command_plumbing(tmp_path):
         _msg("user", "Continue with service split"),
     ])
     assert common.get_original_user_request(transcript) == "Continue with service split"
+
+
+# ── Pre-approved safe actions ─────────────────────────────────────────────────
+
+def test_prompt_pre_approves_push_and_firebase_app_distribution():
+    """Offers to push (no force) or publish to Firebase App Distribution may be approved;
+    force pushes and production releases stay with the human."""
+    template = stop_router.STOP_PROMPT_TEMPLATE
+    safe = " ".join(template[template.index("STEP A"):template.index("STEP 0")].lower().split())
+    assert "push" in safe and "force" in safe
+    assert "firebase app distribution" in safe
+    assert "action = proceed" in safe
+    assert "play store" in safe or "production" in safe
+
+
+def test_prompt_recognises_loose_firebase_phrasing():
+    """Claude rarely says "App Distribution" outright; loose phrasings are pre-approved too."""
+    safe = stop_router.STOP_PROMPT_TEMPLATE
+    safe = safe[safe.index("STEP A"):safe.index("STEP 0")].lower()
+    for phrase in ("firebase build", "upload/publish/send it to firebase", "distribute to testers"):
+        assert phrase in safe

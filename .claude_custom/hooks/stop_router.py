@@ -103,15 +103,35 @@ Claude's last message (may be truncated at the start):
 
 Follow these steps in order to decide the best action:
 
+STEP A — PRE-APPROVED SAFE ACTIONS (check this first).
+The human has ALREADY said YES, in advance, to these actions in every session. Treat them as
+requested by the user, even when the latest message did not mention them:
+  a) Committing and pushing the current work to its target branch (the branch Claude is
+     working on, or the branch the user named) with a normal, non-force push.
+  b) Building the app for Firebase and publishing that build to testers through Firebase
+     App Distribution. Claude often says this loosely, without "App Distribution": "Firebase
+     build", "upload/publish/send it to Firebase", "distribute to testers", "share the APK
+     with QA", "run the firebase lane", `firebase appdistribution:distribute`. All of these
+     mean the same tester-only distribution and are pre-approved.
+NOT pre-approved: force pushes (--force, --force-with-lease), pushing to a different branch
+than the one being worked on, deleting branches or tags, rewriting history, production
+releases (Play Store, App Store, production servers), or an offer that bundles any of these
+or any other new work with a safe action.
+Is Claude's closing question or offer ONLY about pre-approved safe actions
+(e.g. "Want me to push this?", "Should I upload it to Firebase?", "Want a Firebase build?",
+"Shall I push and send the build to testers?")?
+  → YES: ACTION = PROCEED. Do not ask the human; the approval already exists.
+  → NO: go to STEP 0
+
 STEP 0 — Is Claude finished with what the latest user message asked for?
 Treat it as finished when Claude's message reports results ("Done", "Applied", "Fixed",
 "Tested", "Here's why…", a summary of changes or findings) or answers a question,
 EVEN IF it ends with an optional offer of further or new work, such as:
-"tell me if you want it committed", "want me to also…?", "I can push/deploy/publish it",
-"let me know if you'd like…", "should I commit this?".
+"tell me if you want it committed", "want me to also…?", "I can deploy it",
+"let me know if you'd like…".
 Such offers are NOT requests for a green light — the human decides on them.
-Never approve committing, pushing, deploying, publishing, deleting or other irreversible or
-outward-facing actions that the user did not already ask for.
+Never approve deploying, releasing, deleting or other irreversible or outward-facing actions
+that the user did not already ask for (STEP A actions count as already asked for).
   → YES (finished, or only optional follow-ups remain): ACTION = HUMAN_NEEDED.
   → NO (Claude stopped before completing the requested task): go to STEP 1
 
@@ -148,7 +168,8 @@ Can you answer with reasonable confidence using the original request and common 
   → NO: ACTION = HUMAN_NEEDED.
 
 For unfinished requested work, when in doubt between PROCEED and HUMAN_NEEDED, prefer PROCEED.
-For finished work (STEP 0), always choose HUMAN_NEEDED — never invent a next task.
+For finished work (STEP 0), choose HUMAN_NEEDED — never invent a next task.
+STEP A comes first: an offer of only pre-approved safe actions is always PROCEED.
 Use ANSWER only to supply an actual answer Claude asked for, never to comment on Claude's message.
 
 Also classify the PURPOSE of Claude's last message, independently of the ACTION above:
