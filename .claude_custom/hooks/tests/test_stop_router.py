@@ -1095,3 +1095,99 @@ def test_answer_on_a_question_still_answers():
     output = "ACTION: ANSWER\nPURPOSE: QUESTION\nANSWER: Use Postgres"
     with patch("stop_router.call_claude", return_value=output):
         assert stop_router.decide("Which db?", "build a tool").answer == "Use Postgres"
+
+
+# ── Claude ignored the hook's last reply ─────────────────────────────────────
+
+_FEEDBACK = {"message": {"role": "user", "content": "Stop hook feedback:\n[zsh -c ...]: "
+                         "Your recommendation looks good. I agree. Please continue accordingly.\n"}}
+_TOOL_CALL = _msg("assistant", [{"type": "tool_use", "id": "t1", "name": "Bash", "input": {}}])
+
+
+def test_text_only_reply_to_hook_feedback_goes_to_human(tmp_path):
+    """The hook kept sending "continue" while Claude kept replying "Still waiting on you"."""
+    path = _write_transcript(tmp_path, [
+        _msg("user", "commit the search group"),
+        _msg("assistant", "Want me to commit and push?"),
+        _FEEDBACK,
+        _msg("assistant", "Still waiting on \"Commit\" or \"push\" from you."),
+    ])
+    # The real loop: Haiku kept saying PROCEED on Claude's non-question replies.
+    output = "ACTION: PROCEED\nPURPOSE: OTHER\nANSWER: the auth check is not run yet"
+    with patch("stop_router.call_claude", return_value=output), \
+            pytest.raises(SystemExit) as exc:
+        _run_main(path, {"stop_hook_active": True,
+                         "last_assistant_message": "Still waiting on you."})
+    assert exc.value.code == 0
+
+
+def test_text_only_reply_that_asks_is_still_answered(tmp_path):
+    """A design section posted as text after "continue", ending in a question, keeps flowing."""
+    path = _write_transcript(tmp_path, [
+        _msg("user", "design the cache layer"),
+        _FEEDBACK,
+        _msg("assistant", "Section 2: eviction uses LRU. Does this look right?"),
+    ])
+    output = "ACTION: PROCEED\nPURPOSE: QUESTION\nANSWER: rhetorical confirmation"
+    with patch("stop_router.call_claude", return_value=output), \
+            pytest.raises(SystemExit) as exc:
+        _run_main(path, {"stop_hook_active": True,
+                         "last_assistant_message": "Section 2: eviction uses LRU. Does this look right?"})
+    assert exc.value.code == 2
+
+
+def test_hook_feedback_as_content_blocks_is_recognised(tmp_path):
+    feedback = _msg("user", "Stop hook feedback:\n[cmd]: Please continue accordingly.")
+    path = _write_transcript(tmp_path, [feedback, _msg("assistant", "Nothing to do.")])
+    assert common.ignored_hook_feedback_streak(path) == 1
+
+
+def test_tool_call_after_hook_feedback_still_reviews(tmp_path):
+    path = _write_transcript(tmp_path, [
+        _msg("user", "build a tool"),
+        _FEEDBACK,
+        _TOOL_CALL,
+        _msg("assistant", "Step 1 done. Shall I proceed to step 2?"),
+    ])
+    assert common.ignored_hook_feedback_streak(path) == 0
+
+
+def test_streak_counts_consecutive_ignored_feedback(tmp_path):
+    path = _write_transcript(tmp_path, [_FEEDBACK, _TOOL_CALL, _FEEDBACK,
+                                        _msg("assistant", "Nothing to do."), _FEEDBACK,
+                                        _msg("assistant", "Still nothing.")])
+    assert common.ignored_hook_feedback_streak(path) == 2
+
+
+def test_streak_resets_on_human_turn(tmp_path):
+    path = _write_transcript(tmp_path, [_FEEDBACK, _msg("assistant", "Waiting."),
+                                        _msg("user", "ok, commit"), _msg("assistant", "Sure?")])
+    assert common.ignored_hook_feedback_streak(path) == 0
+
+
+def test_no_hook_feedback_is_not_ignored(tmp_path):
+    path = _write_transcript(tmp_path, [_msg("user", "hi"), _msg("assistant", "Hello")])
+    assert common.ignored_hook_feedback_streak(path) == 0
+
+
+def test_streak_cap_hands_over_without_asking(tmp_path):
+    path = _write_transcript(tmp_path, [_msg("user", "commit it")] +
+                             [_FEEDBACK, _msg("assistant", "Still waiting on you.")] * 3)
+    with patch("stop_router.call_claude") as mock_llm, pytest.raises(SystemExit) as exc:
+        _run_main(path, {"stop_hook_active": True, "last_assistant_message": "Still waiting."})
+    assert exc.value.code == 0
+    mock_llm.assert_not_called()
+
+
+def test_ignored_feedback_note_reaches_the_prompt_and_blocks_escalation(tmp_path):
+    """Opus once re-approved a commit Claude had already declined; a deferral now stays put."""
+    path = _write_transcript(tmp_path, [_msg("user", "commit it"), _FEEDBACK,
+                                        _msg("assistant", "Waiting on you to type Commit.")])
+    output = "ACTION: HUMAN_NEEDED\nPURPOSE: QUESTION\nANSWER: Claude declined"
+    with patch("stop_router.call_claude", return_value=output) as mock_llm, \
+            pytest.raises(SystemExit) as exc:
+        _run_main(path, {"stop_hook_active": True,
+                         "last_assistant_message": "Waiting on you to type Commit."})
+    assert exc.value.code == 0
+    assert mock_llm.call_count == 1
+    assert "took no action in response" in mock_llm.call_args.args[0]

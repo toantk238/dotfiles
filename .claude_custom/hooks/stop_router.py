@@ -20,6 +20,7 @@ from common import (
     get_original_user_request,
     get_recent_user_turns,
     has_incomplete_tasks,
+    ignored_hook_feedback_streak,
 )
 from logger import get_logger, model_context
 
@@ -275,10 +276,21 @@ HUMAN_NEEDED if the human's input is still genuinely required.
 """
 
 
+IGNORED_FEEDBACK_NOTE = """
+OVERRIDING NOTE (takes precedence over STEP A and every other step):
+Claude's last message is its reply to an automated "continue"/answer this agent already sent
+(not the human), and Claude took no action in response: no tool call. Claude does not act on
+automated approvals, even for pre-approved actions such as commit or push. If its message
+declines, says it is waiting for the human to type or do something, or only repeats its earlier
+status or offer, choose HUMAN_NEEDED: another reply would loop. Only answer again if Claude moved
+the work forward and now asks something new.
+"""
+
+
 def build_prompt(last_text: str, original_request: str, latest_request: str,
                  original_limit: int = 1000, last_text_limit: int = 3000,
                  recent_turns: list[tuple[str, str]] | None = None,
-                 turn_limit: int = 500) -> str:
+                 turn_limit: int = 500, ignored_feedback: bool = False) -> str:
     # Keep the tail of the last message: the closing question/offer is what matters.
     turns = "\n".join(f"- [{ts}] {text[:turn_limit]}" for ts, text in recent_turns or [])
     return STOP_PROMPT_TEMPLATE.format(
@@ -286,7 +298,7 @@ def build_prompt(last_text: str, original_request: str, latest_request: str,
         latest_request=(latest_request or original_request)[:original_limit],
         recent_turns=turns or "(none)",
         last_text=last_text[-last_text_limit:],
-    )
+    ) + (IGNORED_FEEDBACK_NOTE if ignored_feedback else "")
 
 
 def build_escalation_prompt(last_text: str, original_request: str, latest_request: str,
@@ -299,17 +311,23 @@ def build_escalation_prompt(last_text: str, original_request: str, latest_reques
 
 
 def decide(last_text: str, original_request: str, latest_request: str = "",
-           recent_turns: list[tuple[str, str]] | None = None) -> StopDecision:
+           recent_turns: list[tuple[str, str]] | None = None,
+           ignored_feedback: bool = False) -> StopDecision:
     """Ask Haiku; if it defers to the human on a question, ask Opus with more context.
 
     Finished-work reports and other non-questions go straight to the human: Opus
     could not answer them any better, so escalating would only add latency. A closing
     offer ("Want me to start with X?") counts as a question: Opus sees the recent user
     turns and can tell whether X was already asked for.
+
+    `ignored_feedback`: Claude answered this hook's previous reply without a tool call. The
+    prompt says so, and a deferral is final: escalating once let Opus re-approve a commit
+    Claude had already declined, looping.
     """
     with model_context(HAIKU_MODEL):
         decision = ask_model(build_prompt(last_text, original_request, latest_request,
-                                          recent_turns=recent_turns),
+                                          recent_turns=recent_turns,
+                                          ignored_feedback=ignored_feedback),
                              HAIKU_MODEL, timeout=30)
         if decision is None:
             logger.warning("Call failed, falling back to human")
@@ -318,6 +336,9 @@ def decide(last_text: str, original_request: str, latest_request: str = "",
             return decision
         if decision.purpose != "QUESTION":
             logger.info(f"Deferred on a non-question (purpose={decision.purpose}) — not escalating")
+            return decision
+        if ignored_feedback:
+            logger.info("Deferred after Claude ignored the last hook reply — not escalating")
             return decision
         logger.info(f"Deferred on a question reason={decision.answer!r} — escalating to {OPUS_MODEL}")
 
@@ -362,12 +383,26 @@ def _drop_answer_to_a_report(decision: StopDecision) -> StopDecision:
     return decision
 
 
+# Hook replies in a row that Claude may answer in words only before the hook stops replying.
+MAX_IGNORED_FEEDBACK = 3
+
+
 def handle_stop(last_text: str, original_request: str, latest_request: str = "",
-                recent_turns: list[tuple[str, str]] | None = None) -> None:
-    decision = decide(last_text, original_request, latest_request, recent_turns)
+                recent_turns: list[tuple[str, str]] | None = None,
+                ignored_feedback: bool = False) -> None:
+    """`ignored_feedback`: Claude answered this hook's previous reply without a tool call."""
+    decision = decide(last_text, original_request, latest_request, recent_turns, ignored_feedback)
 
     with model_context(decision.model):
         context = ""
+        if ignored_feedback and decision.action in ("PROCEED", "ANSWER") and \
+                decision.purpose != "QUESTION":
+            # Claude already declined the last push and asks nothing new: pushing again only
+            # loops ("Still waiting on you…" after every "continue"). A text-only reply that
+            # asks something (a design section ending "Does this look right?") is still answered.
+            logger.info(f"Passing to human: Claude ignored the last hook reply and asks nothing "
+                        f"(action={decision.action}, purpose={decision.purpose})")
+            sys.exit(0)
         if decision.action == "PROCEED":
             context = 'Your recommendation looks good. I agree. Please continue accordingly.'
         elif decision.action == "ANSWER" and decision.answer:
@@ -422,6 +457,16 @@ def main():
             logger.info("Early exit: incomplete tasks present in task list (fallback heuristic)")
             sys.exit(0)
 
+    # Claude answered this hook's own replies in words only, several times running: whatever
+    # the model says, another reply would only loop. Hand over without asking.
+    ignored_streak = ignored_hook_feedback_streak(transcript_path) \
+        if hook_input.get("stop_hook_active") else 0
+    if ignored_streak >= MAX_IGNORED_FEEDBACK:
+        logger.info(f"Early exit: Claude answered the last {ignored_streak} hook replies "
+                    f"without a tool call")
+        sys.exit(0)
+    ignored_feedback = ignored_streak > 0
+
     last_text = hook_input.get("last_assistant_message", "")
 
     if not last_text:
@@ -454,7 +499,7 @@ def main():
     recent_turns = get_recent_user_turns(transcript_path, limit=5)
     latest_request = recent_turns[-1][1] if recent_turns else ""
 
-    handle_stop(last_text, original_request, latest_request, recent_turns)
+    handle_stop(last_text, original_request, latest_request, recent_turns, ignored_feedback)
 
 
 if __name__ == "__main__":

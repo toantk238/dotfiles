@@ -148,33 +148,40 @@ def _queued_human_prompt(entry: dict) -> str:
     return prompt.strip() if isinstance(prompt, str) else ""
 
 
-def iter_human_user_turns(transcript_path: str) -> Iterator[tuple[str, str]]:
-    """Yield (timestamp, text) for transcript turns the human actually typed.
+def _human_turn_text(entry: dict) -> str:
+    """The text of a turn the human actually typed, or "" for anything else.
 
     Skips tool results, sidechain (subagent) entries, meta entries and the
     synthetic `<command-*>` / hook plumbing that also lands in the transcript
-    with role="user". Timestamps are the raw ISO strings from the transcript
-    ("" when absent).
+    with role="user".
+    """
+    if entry.get("isMeta") or entry.get("isSidechain"):
+        return ""
+    queued = _queued_human_prompt(entry)
+    if queued:
+        return queued
+    msg = entry.get("message", {})
+    if not isinstance(msg, dict) or msg.get("role") != "user":
+        return ""
+    content = msg.get("content")
+    if isinstance(content, list) and any(
+        isinstance(b, dict) and b.get("type") == "tool_result" for b in content
+    ):
+        return ""
+    text = _SYSTEM_REMINDER_RE.sub("", extract_text(content)).strip()
+    if not text or text.startswith(_SYNTHETIC_USER_PREFIXES):
+        return ""
+    return text
+
+
+def iter_human_user_turns(transcript_path: str) -> Iterator[tuple[str, str]]:
+    """Yield (timestamp, text) for transcript turns the human actually typed.
+    Timestamps are the raw ISO strings from the transcript ("" when absent).
     """
     for entry in read_transcript(transcript_path):
-        if entry.get("isMeta") or entry.get("isSidechain"):
-            continue
-        queued = _queued_human_prompt(entry)
-        if queued:
-            yield str(entry.get("timestamp", "")), queued
-            continue
-        msg = entry.get("message", {})
-        if not isinstance(msg, dict) or msg.get("role") != "user":
-            continue
-        content = msg.get("content")
-        if isinstance(content, list) and any(
-            isinstance(b, dict) and b.get("type") == "tool_result" for b in content
-        ):
-            continue
-        text = _SYSTEM_REMINDER_RE.sub("", extract_text(content)).strip()
-        if not text or text.startswith(_SYNTHETIC_USER_PREFIXES):
-            continue
-        yield str(entry.get("timestamp", "")), text
+        text = _human_turn_text(entry)
+        if text:
+            yield str(entry.get("timestamp", "")), text
 
 
 def get_recent_user_turns(transcript_path: str, limit: int = 5) -> list[tuple[str, str]]:
@@ -193,6 +200,25 @@ def get_last_assistant_message(transcript_path: str) -> str | None:
             if text:
                 last_text = text
     return last_text
+
+
+def ignored_hook_feedback_streak(transcript_path: str) -> int:
+    """How many "Stop hook feedback" replies in a row, up to the latest, Claude answered
+    without a tool call (words only). 0 when Claude acted on the latest one, or none was sent
+    since the human's last message."""
+    streak = 0
+    for entry in read_transcript(transcript_path):
+        msg = entry.get("message") or {}
+        if not isinstance(msg, dict):
+            continue
+        content = msg.get("content")
+        if msg.get("role") == "user" and extract_text(content).startswith("Stop hook feedback:"):
+            streak += 1
+        elif _human_turn_text(entry) or (
+                msg.get("role") == "assistant" and isinstance(content, list) and
+                any(isinstance(c, dict) and c.get("type") == "tool_use" for c in content)):
+            streak = 0
+    return streak
 
 
 _TASK_CREATED_RE = re.compile(r"Task #(\d+) created successfully")
