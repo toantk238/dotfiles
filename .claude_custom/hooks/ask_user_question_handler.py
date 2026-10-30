@@ -7,7 +7,7 @@ intercepts the call, reads the questions + options from tool_input, asks
 Haiku to pick the best answer for each question (using the
 original user request as context), and returns the answers so Claude can
 continue without waiting for human input. If Haiku's reply is unusable
-(error, unparseable, or missing answers), Fable retries once with more of the
+(error, unparseable, or missing answers), Opus retries once with more of the
 conversation before the question falls through to the human.
 
 Exit codes:
@@ -18,7 +18,7 @@ import json
 import sys
 
 from common import (
-    FABLE_MODEL,
+    OPUS_MODEL,
     HAIKU_MODEL,
     HookInput,
     call_claude,
@@ -77,7 +77,7 @@ def build_prompt(original_request: str, questions: list[dict], original_limit: i
 
 
 def build_extra_context(transcript_path: str) -> str:
-    """Recent user turns and Claude's last message, appended to the Fable prompt."""
+    """Recent user turns and Claude's last message, appended to the Opus prompt."""
     if not transcript_path:
         return ""
     turns = get_recent_user_turns(transcript_path, limit=5)
@@ -187,13 +187,13 @@ def main() -> None:
     model = HAIKU_MODEL
     answers = ask_model(build_prompt(original_request, questions), questions, model, timeout=30)
     if answers is None:
-        logger.info(f"{HAIKU_MODEL} could not answer — escalating to {FABLE_MODEL} with more context")
-        model = FABLE_MODEL
+        logger.info(f"{HAIKU_MODEL} could not answer — escalating to {OPUS_MODEL} with more context")
+        model = OPUS_MODEL
         prompt = build_prompt(original_request, questions, original_limit=4000) + \
             build_extra_context(transcript_path)
         answers = ask_model(prompt, questions, model, timeout=80)
     if answers is None:
-        logger.warning(f"{FABLE_MODEL} could not answer either, passing through to human")
+        logger.warning(f"{OPUS_MODEL} could not answer either, passing through to human")
         sys.exit(0)
 
     auto_answer(questions, answers, model)

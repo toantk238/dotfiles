@@ -31,7 +31,7 @@ class HookInput:
 # Fast, cheap first pass for every hook decision.
 HAIKU_MODEL = "claude-haiku-5-5"
 # Escalation model, used with more context when Haiku defers to the human.
-FABLE_MODEL = "claude-fable-5-1"
+OPUS_MODEL = "claude-opus-5-5"
 
 
 # A hook's model call needs no tools, MCP servers, skills or hooks; skipping them

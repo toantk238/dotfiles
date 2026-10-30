@@ -204,9 +204,9 @@ def test_handle_stop_call_claude_error():
     assert exc.value.code == 0
 
 
-# ── Haiku → Fable escalation ─────────────────────────────────────────────────
+# ── Haiku → Opus escalation ─────────────────────────────────────────────────
 
-def test_decide_haiku_confident_skips_fable():
+def test_decide_haiku_confident_skips_opus():
     with patch("stop_router.call_claude", return_value="ACTION: PROCEED\nANSWER: ") as mock_llm:
         decision = stop_router.decide("Shall I proceed?", "build a tool")
     assert decision.action == "PROCEED"
@@ -214,7 +214,7 @@ def test_decide_haiku_confident_skips_fable():
     assert mock_llm.call_args.kwargs.get("model", common.HAIKU_MODEL) == common.HAIKU_MODEL
 
 
-def test_decide_escalates_to_fable_with_more_context():
+def test_decide_escalates_to_opus_with_more_context():
     responses = iter([
         "ACTION: HUMAN_NEEDED\nPURPOSE: QUESTION\nANSWER: unsure which db",
         "ACTION: ANSWER\nANSWER: Use Postgres",
@@ -224,22 +224,22 @@ def test_decide_escalates_to_fable_with_more_context():
             "Which db?", "build a tool", "add storage",
             recent_turns=[("2026-01-01T00:00:00Z", "we already run Postgres")],
         )
-    assert decision == StopDecision(action="ANSWER", answer="Use Postgres", model=common.FABLE_MODEL)
-    fable_call = mock_llm.call_args_list[1]
-    assert fable_call.kwargs["model"] == common.FABLE_MODEL
-    fable_prompt = fable_call.args[0]
-    assert "we already run Postgres" in fable_prompt
-    assert "unsure which db" in fable_prompt
+    assert decision == StopDecision(action="ANSWER", answer="Use Postgres", model=common.OPUS_MODEL)
+    opus_call = mock_llm.call_args_list[1]
+    assert opus_call.kwargs["model"] == common.OPUS_MODEL
+    opus_prompt = opus_call.args[0]
+    assert "we already run Postgres" in opus_prompt
+    assert "unsure which db" in opus_prompt
 
 
-def test_decide_haiku_error_goes_to_human_without_fable():
+def test_decide_haiku_error_goes_to_human_without_opus():
     with patch("stop_router.call_claude", side_effect=Exception("timeout")) as mock_llm:
         assert stop_router.decide("Go?", "build a tool").action == "HUMAN_NEEDED"
     assert mock_llm.call_count == 1
 
 
 @pytest.mark.parametrize("purpose", ["REPORT", "OTHER", ""])
-def test_decide_non_question_deferral_skips_fable(purpose):
+def test_decide_non_question_deferral_skips_opus(purpose):
     output = f"ACTION: HUMAN_NEEDED\nPURPOSE: {purpose}\nANSWER: work is done"
     with patch("stop_router.call_claude", return_value=output) as mock_llm:
         decision = stop_router.decide("Done. Want me to commit?", "build a tool")
@@ -255,13 +255,13 @@ def test_decide_both_defer_on_question_returns_human_needed():
     assert mock_llm.call_count == 2
 
 
-@pytest.mark.parametrize("fable", [
+@pytest.mark.parametrize("opus", [
     "ACTION: HUMAN_NEEDED\nPURPOSE: QUESTION\nANSWER: still needs the user",
     Exception("timeout"),
 ])
-def test_handle_stop_both_defer_steps_aside_for_notifications(fable, capsys):
+def test_handle_stop_both_defer_steps_aside_for_notifications(opus, capsys):
     """Exit 0 with no output, so Claude stops and the Notification hooks (desktop + Slack) fire."""
-    responses = iter(["ACTION: HUMAN_NEEDED\nPURPOSE: QUESTION\nANSWER: pick a name", fable])
+    responses = iter(["ACTION: HUMAN_NEEDED\nPURPOSE: QUESTION\nANSWER: pick a name", opus])
 
     def fake_claude(*args, **kwargs):
         value = next(responses)
@@ -301,9 +301,9 @@ def test_logs_are_tagged_with_answering_model():
     finally:
         stop_router.logger.removeHandler(handler)
 
-    assert decision.model == common.FABLE_MODEL
+    assert decision.model == common.OPUS_MODEL
     assert any(line.startswith(f" [{common.HAIKU_MODEL}]|Deferred on a question") for line in lines)
-    assert lines[-1].startswith(f" [{common.FABLE_MODEL}]|")
+    assert lines[-1].startswith(f" [{common.OPUS_MODEL}]|")
     assert hook_logger._current_model.get() == ""
 
 
@@ -961,7 +961,7 @@ def test_repeat_check_runs_before_static_rule(tmp_path):
 
 def test_prompt_classifies_offer_to_start_next_step_as_question():
     """A closing offer such as "Want me to start with the Figma step?" must be a QUESTION
-    (so the stop escalates to Fable), not folded into REPORT as a follow-up offer."""
+    (so the stop escalates to Opus), not folded into REPORT as a follow-up offer."""
     template = stop_router.STOP_PROMPT_TEMPLATE
     purpose_block = template[template.index("classify the PURPOSE"):]
     question_line = purpose_block[purpose_block.index("- QUESTION:"):purpose_block.index("- REPORT:")]
@@ -1066,11 +1066,29 @@ def test_answer_on_a_report_goes_to_human():
     assert exc.value.code == 0
 
 
-def test_fable_answer_on_a_report_goes_to_human():
+def test_opus_answer_on_a_report_goes_to_human():
     responses = iter(["ACTION: HUMAN_NEEDED\nPURPOSE: QUESTION\nANSWER: unsure",
                       "ACTION: ANSWER\nPURPOSE: REPORT\nANSWER: nothing left to do"])
     with patch("stop_router.call_claude", side_effect=lambda *a, **kw: next(responses)):
         assert stop_router.decide("Which db?", "build a tool").action == "HUMAN_NEEDED"
+
+
+def test_commentary_answer_on_a_question_goes_to_human():
+    """Haiku returned ANSWER + QUESTION whose 'answer' was its reasoning about Claude's
+    message; Claude got it as the user's reply and repeated its last message."""
+    output = ("ACTION: ANSWER\nPURPOSE: QUESTION\nANSWER: Claude's last message already "
+              "answered where the backup is. The closing offer is to run the prepare script "
+              "with sudo, which is a step for the user to take.")
+    with patch("stop_router.call_claude", return_value=output) as mock_llm:
+        decision = stop_router.decide("Run it before flashing: ! sudo ./prepare.sh",
+                                      "Where is the backup?")
+    assert decision.action == "HUMAN_NEEDED"
+    assert mock_llm.call_count == 2  # a demoted QUESTION still escalates to Opus
+
+
+def test_prompt_hands_human_only_steps_to_human():
+    text = stop_router.build_prompt("x", "y", "z")
+    assert "STEP B" in text and "sudo" in text and "only makes it repeat itself" in text
 
 
 def test_answer_on_a_question_still_answers():

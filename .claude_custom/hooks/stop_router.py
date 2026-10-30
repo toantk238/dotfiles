@@ -1,7 +1,7 @@
 #!/usr/bin/env python3
 """
 Stop hook — unified router for proceed-detection and AI-assisted question answering.
-Asks Haiku first; when Haiku defers to the human, escalates once to Fable with
+Asks Haiku first; when Haiku defers to the human, escalates once to Opus with
 more of the conversation before actually handing control back.
 """
 from dataclasses import dataclass, replace
@@ -12,7 +12,7 @@ import sys
 import tempfile
 
 from common import (
-    FABLE_MODEL,
+    OPUS_MODEL,
     HAIKU_MODEL,
     HookInput,
     call_claude,
@@ -130,6 +130,14 @@ human typed
 (e.g. "Want me to push this?", "Should I upload it to Firebase?", "Want a Firebase build?",
 "Shall I push and send the build to testers?")?
   → YES: ACTION = PROCEED. Do not ask the human; the approval already exists.
+  → NO: go to STEP B
+
+STEP B — Is Claude blocked on something only the human can do?
+For example: running a command that needs sudo or a password ("! sudo …", "run this as
+root"), logging in, entering a secret, rebooting, flashing firmware, a BIOS change, or any
+physical action, with Claude waiting for the result ("until you've run it", "once you've
+rebooted"). Claude cannot do these, so telling it to continue only makes it repeat itself.
+  → YES: ACTION = HUMAN_NEEDED.
   → NO: go to STEP 0
 
 STEP 0 — Is Claude finished with what the latest user message asked for?
@@ -193,6 +201,10 @@ Reply in this exact format:
 ACTION: <PROCEED | ANSWER | HUMAN_NEEDED>
 PURPOSE: <QUESTION | REPORT | OTHER>
 ANSWER: <your concise answer if ACTION is ANSWER, reason if ACTION is HUMAN_NEEDED or PROCEED>
+
+With ACTION: ANSWER, the ANSWER line is sent to Claude as the human's own reply ("Use
+Postgres", "Option B"). Never put commentary about Claude's message there; if all you have
+is a reason, the ACTION is HUMAN_NEEDED.
 """
 
 
@@ -288,11 +300,11 @@ def build_escalation_prompt(last_text: str, original_request: str, latest_reques
 
 def decide(last_text: str, original_request: str, latest_request: str = "",
            recent_turns: list[tuple[str, str]] | None = None) -> StopDecision:
-    """Ask Haiku; if it defers to the human on a question, ask Fable with more context.
+    """Ask Haiku; if it defers to the human on a question, ask Opus with more context.
 
-    Finished-work reports and other non-questions go straight to the human: Fable
+    Finished-work reports and other non-questions go straight to the human: Opus
     could not answer them any better, so escalating would only add latency. A closing
-    offer ("Want me to start with X?") counts as a question: Fable sees the recent user
+    offer ("Want me to start with X?") counts as a question: Opus sees the recent user
     turns and can tell whether X was already asked for.
     """
     with model_context(HAIKU_MODEL):
@@ -307,16 +319,16 @@ def decide(last_text: str, original_request: str, latest_request: str = "",
         if decision.purpose != "QUESTION":
             logger.info(f"Deferred on a non-question (purpose={decision.purpose}) — not escalating")
             return decision
-        logger.info(f"Deferred on a question reason={decision.answer!r} — escalating to {FABLE_MODEL}")
+        logger.info(f"Deferred on a question reason={decision.answer!r} — escalating to {OPUS_MODEL}")
 
     prompt = build_escalation_prompt(last_text, original_request, latest_request,
                                      recent_turns or [], decision.answer)
-    with model_context(FABLE_MODEL):
-        fable_decision = ask_model(prompt, FABLE_MODEL, timeout=80)
-        if fable_decision is None:
+    with model_context(OPUS_MODEL):
+        opus_decision = ask_model(prompt, OPUS_MODEL, timeout=80)
+        if opus_decision is None:
             logger.warning(f"Call failed, falling back to human with {HAIKU_MODEL}'s decision")
             return decision
-        return fable_decision
+        return opus_decision
 
 
 def ask_model(prompt: str, model: str, timeout: int) -> StopDecision | None:
@@ -329,12 +341,23 @@ def ask_model(prompt: str, model: str, timeout: int) -> StopDecision | None:
     return _drop_answer_to_a_report(replace(parse_llm_output(output), model=model))
 
 
+# A reply to Claude never talks about Claude in the third person; the model's reasoning does
+# ("Claude's last message already answered…", "The user asked…").
+_COMMENTARY_ANSWER = re.compile(r"\bClaude(?:'s)?\b|^\s*the (?:user|human)\b", re.IGNORECASE)
+
+
 def _drop_answer_to_a_report(decision: StopDecision) -> StopDecision:
     """An ANSWER needs a question to answer. When the model itself says Claude's message is a
-    REPORT, the "answer" is only its reasoning, and feeding it to Claude as the user's reply
-    would make Claude act on it. Hand over to the human instead."""
-    if decision.action == "ANSWER" and decision.purpose == "REPORT":
+    REPORT, or the "answer" is commentary about Claude's message, it is only the model's
+    reasoning, and feeding it to Claude as the user's reply would make Claude act on it.
+    Hand over to the human instead."""
+    if decision.action != "ANSWER":
+        return decision
+    if decision.purpose == "REPORT":
         logger.info("ANSWER on a REPORT is contradictory — treating as HUMAN_NEEDED")
+        return replace(decision, action="HUMAN_NEEDED")
+    if _COMMENTARY_ANSWER.search(decision.answer):
+        logger.info("ANSWER is commentary, not a reply — treating as HUMAN_NEEDED")
         return replace(decision, action="HUMAN_NEEDED")
     return decision
 
