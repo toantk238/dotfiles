@@ -7,7 +7,8 @@ import re
 import socket
 import zlib
 
-from kitty.fast_data_types import add_timer, get_boss, get_options, remove_timer, wcswidth
+from kitty.fast_data_types import get_boss, get_options, remove_timer, wcswidth
+from kitty.child import process_data_cache
 from kittens.ssh.utils import get_connection_data
 
 SEP = " ❐ "
@@ -41,12 +42,22 @@ def ssh_destination(tab_id):
 
 
 # The tab bar only redraws on title/focus changes, but ssh often starts after
-# the tab's last title change. Poll destinations and redraw when one changes.
-_seen = {}
+# the tab's last title change. ssh_tab_watcher.py re-checks a tab when a command
+# starts or ends in it (shell integration). Anything it misses (ssh run inside
+# local tmux, windows opened before the watcher was loaded) is fixed on demand
+# with the refresh_ssh_badges.py kitten (ctrl+alt+b): nothing polls.
+#
+# kitty runs this file more than once (config reload, and kittens such as
+# sort_tabs.py load it via load_custom_draw_tab_module), each time in a fresh
+# namespace. State lives on boss so every copy reads and updates the same dicts.
+_boss = get_boss()
+_state = _boss.__dict__.setdefault("_ssh_tab_state", {}) if _boss is not None else {}
+# Tab id -> ssh destination ("" when local), as last checked.
+_seen = _state.setdefault("seen", {})
 # Badge color per open remote host (palette index). Hosts keep their hashed
 # color while it is free and otherwise take an unused one, so open hosts only
 # share a color once there are more hosts than palette entries.
-_colors = {}
+_colors = _state.setdefault("colors", {})
 
 
 def _hash_color(host):
@@ -68,32 +79,51 @@ def _assign_colors(hosts):
     return _colors != old
 
 
-def _poll(timer_id=None):
+def _update(tabs):
+    """Re-check ssh destinations of `tabs`, then recolor and redraw as needed."""
     boss = get_boss()
-    hosts = []
-    for tm in boss.all_tab_managers:
-        changed = False
-        for tab in tm:
+    # Each foreground_processes call scans all of /proc on kitty's main thread
+    # (~15ms with ~1500 processes); share one scan across the tabs checked.
+    prev = process_data_cache.start_caching(refresh=True)
+    try:
+        for tab in tabs:
             dest = ssh_destination(tab.id)
             if _seen.get(tab.id) != dest:
                 _seen[tab.id] = dest
-                changed = True
+                tm = tab.tab_manager_ref()
+                if tm is not None:
+                    tm.mark_tab_bar_dirty()
+    finally:
+        process_data_cache.stop_caching(prev)
+    # Hosts come from titles and the cached destinations: no further scans.
+    hosts = []
+    for tm in boss.all_tab_managers:
+        for tab in tm:
             host = remote_host(tab.title, tab.id)[0]
             if host and host not in hosts:
                 hosts.append(host)
-        if changed:
-            tm.mark_tab_bar_dirty()
     if _assign_colors(hosts):
         for tm in boss.all_tab_managers:
             tm.mark_tab_bar_dirty()
 
 
-# kitty re-runs this module on config reload; keep a single timer alive.
-_boss = get_boss()
+def refresh_all():
+    _update([tab for tm in get_boss().all_tab_managers for tab in tm])
+
+
+def refresh_tab(tab_id):
+    tab = get_boss().tab_for_id(tab_id)
+    if tab is not None:
+        _update([tab])
+
+
+# Drop the poll timer older versions of this file started, and hand the
+# watcher refresh_tab (any copy works: they share _state).
 if _boss is not None:
     if getattr(_boss, "_ssh_tab_timer", None) is not None:
         remove_timer(_boss._ssh_tab_timer)
-    _boss._ssh_tab_timer = add_timer(_poll, 1.0, True)
+        _boss._ssh_tab_timer = None
+    _boss._ssh_tab_refresh = refresh_tab
 
 
 def short(host):
@@ -115,7 +145,9 @@ def remote_host(title, tab_id):
     tmux_host, _, rest = title.partition(SEP) if SEP in title else ("", "", title)
     remote = tmux_host if tmux_host and tmux_host != LOCAL_HOST else ""
     if not remote:
-        remote = ssh_destination(tab_id)
+        # Use the destination last checked: draw_title runs on every tab bar
+        # redraw and must not scan /proc itself.
+        remote = _seen[tab_id] if tab_id in _seen else ssh_destination(tab_id)
         # kitten ssh titles the tab with its own command line until the remote sets one.
         if remote and rest.startswith(("ssh ", "kitten")):
             rest = ""
