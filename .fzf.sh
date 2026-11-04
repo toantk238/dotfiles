@@ -28,7 +28,7 @@ export FZF_ALT_C_COMMAND='fd --type directory'
 export RG_FZF_OPTS=$(
   cat <<END
 -i \\
---no-ignore --hidden \\
+--no-ignore --hidden --no-messages \\
 -g '!Pods/' \\
 -g '!Text.swift' \\
 -g '!*.pbxproj' \\
