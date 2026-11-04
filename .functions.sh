@@ -186,6 +186,75 @@ handle_docker_compose() {
   command docker-compose "$@"
 }
 
+# Reclaim Docker disk space: stopped containers, unused networks, images and
+# build cache (classic builder + every buildx builder).
+#   docker_clean       dangling images + dangling build cache
+#   docker_clean -a    every image not used by a container + ALL build cache
+#   docker_clean -v    also unused volumes (deletes data, e.g. DB volumes)
+#   docker_clean -y    skip the confirmation prompt
+docker_clean() {
+  local all=0 volumes=0 yes=0 opt OPTIND=1
+  while getopts "avyh" opt; do
+    case $opt in
+    a) all=1 ;;
+    v) volumes=1 ;;
+    y) yes=1 ;;
+    *)
+      echo "usage: docker_clean [-a] [-v] [-y]"
+      echo "  -a  remove all unused images and all build cache (not just dangling)"
+      echo "  -v  also remove unused volumes (data loss)"
+      echo "  -y  do not ask for confirmation"
+      [[ $opt == h ]] && return 0 || return 1
+      ;;
+    esac
+  done
+
+  if ! docker info >/dev/null 2>&1; then
+    echo "Docker daemon is not reachable" >&2
+    return 1
+  fi
+
+  local -a all_flag=()
+  ((all)) && all_flag=(--all)
+
+  echo "== Disk usage before =="
+  docker system df
+
+  if ((!yes)); then
+    local what="stopped containers, unused networks, "
+    ((all)) && what+="ALL unused images, ALL build cache" || what+="dangling images, dangling build cache"
+    ((volumes)) && what+=", unused VOLUMES"
+    local yn
+    read "yn?Remove $what? (y/n): "
+    [[ $yn == [Yy]* ]] || { echo "Cancel !"; return 0; }
+  fi
+
+  echo "\n== Containers ==" && docker container prune -f
+  echo "\n== Networks ==" && docker network prune -f
+  echo "\n== Images ==" && docker image prune -f "${all_flag[@]}"
+  if ((volumes)); then
+    # --all: also named volumes (Docker >= 23 only prunes anonymous ones by default)
+    echo "\n== Volumes ==" && docker volume prune -f --all 2>/dev/null || docker volume prune -f
+  fi
+
+  echo "\n== Build cache =="
+  if docker buildx version >/dev/null 2>&1 && exists jq; then
+    # `buildx ls --format '{{.Name}}'` also prints node names; the JSON form
+    # has one object per builder, so take only the top-level Name.
+    local builder
+    for builder in ${(f)"$(docker buildx ls --format json 2>/dev/null | jq -r '.Name')"}; do
+      echo "-- builder: $builder"
+      docker buildx prune -f --builder "$builder" "${all_flag[@]}" ||
+        echo "   (skipped: builder $builder not available)"
+    done
+  else
+    docker builder prune -f "${all_flag[@]}"
+  fi
+
+  echo "\n== Disk usage after =="
+  docker system df
+}
+
 exists() {
   command -v "$1" >/dev/null 2>&1
 }
