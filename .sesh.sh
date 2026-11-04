@@ -15,9 +15,66 @@ bindkey -M emacs '\es' sesh-sessions
 bindkey -M vicmd '\es' sesh-sessions
 bindkey -M viins '\es' sesh-sessions
 
+# The session name sesh derives for <dir>: git root basename + subpath, else the
+# dir basename; tmux can't have . or : in a name, so they become _.
+_sesh_dir_name() {
+  local dir=$1 root name
+  root=$(git -C "$dir" rev-parse --show-toplevel 2>/dev/null)
+  if [[ -n "$root" ]]; then
+    name="${root:t}${dir#$root}"
+  else
+    name="${dir:t}"
+  fi
+  print -r -- "${${name//./_}//:/_}"
+}
+
+# Open a session for <target> even if one already exists, as name-2, name-3, ...
+# <target>: tmux session name, configured sesh session name or dir (default: cwd).
+# Only a first session goes through sesh, so suffixed ones skip startup_command.
+_sesh_new() {
+  local target="${1:-.}" tab=$'\t' row base dir name n=2
+  row=$({
+    tmux list-sessions -F "#S${tab}#{session_path}" 2>/dev/null
+    sesh list -c --format "{name}${tab}{path}"
+  } | awk -F'\t' -v t="$target" '$1 == t { print; exit }')
+
+  if [[ -n "$row" ]]; then
+    base="${row%%$tab*}"
+    dir="${row#*$tab}"
+  elif [[ -d "$target" ]]; then
+    dir="${target:A}"
+    base=$(_sesh_dir_name "$dir")
+  else
+    echo "s: no session or directory named '$target'" >&2
+    return 1
+  fi
+
+  if ! tmux has-session -t "=$base" 2>/dev/null; then
+    sesh connect "$target"
+    return
+  fi
+
+  name="$base-$n"
+  while tmux has-session -t "=$name" 2>/dev/null; do
+    name="$base-$((++n))"
+  done
+  tmux new-session -d -s "$name" -c "$dir" || return
+  if [[ -n "$TMUX" ]]; then
+    tmux switch-client -t "=$name"
+  else
+    tmux attach-session -t "=$name"
+  fi
+}
+
 # Sesh smart session manager function
+#   s                  pick a session
+#   s <target>         connect (reuses an existing session)
+#   s -n [target]      always a new session, suffixed if the name is taken
 s() {
-  if [ $# -eq 0 ]; then
+  if [[ "$1" == "-n" || "$1" == "--new" ]]; then
+    shift
+    _sesh_new "$@"
+  elif [ $# -eq 0 ]; then
     # No arguments: show interactive picker (without icons to avoid parsing issues)
     local selected=$(sesh list | fzf \
       --height 50% \
