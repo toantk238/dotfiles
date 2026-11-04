@@ -48,6 +48,9 @@ END
 #   - a regex (anything else),                            e.g. '\.kt$'  '^scripts/'  'ViewModel'
 #     -> matched case-insensitively against the relative path
 # Pass '' as <file-filter> to search all files while still using the two-arg form.
+#
+# enter opens the match in nvim and returns to the same fzf state (query, list,
+# selection) when nvim quits; alt-enter opens it and leaves fzf.
 function rgf() {
   local file_filter="" pattern file_cmd
   if (($# >= 2)); then
@@ -91,7 +94,9 @@ fzf --ansi \\
             --preview-window 'up,60%,border-bottom,+{2}+3/3,~3' \\
             --bind 'ctrl-w:unix-word-rubout+top,ctrl-u:unix-line-discard+top' \\
             --bind 'change:top' \\
-      --bind 'enter:become(nvim {1} +{2})'
+            --header 'enter: open (back here on quit) · alt-enter: open and exit' \\
+            --bind 'enter:execute(nvim {1} +{2})' \\
+            --bind 'alt-enter:become(nvim {1} +{2})'
 END
   )
 
