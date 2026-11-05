@@ -13,7 +13,7 @@ sort_translit  = false
 #
 [opener]
 open = [
-    { run = 'xdg-open "%s1"', desc = "Open", for = "linux" }
+    { run = 'xdg-open %s1', desc = "Open", for = "linux" }
 ]
 
 [[plugin.prepend_fetchers]]
