@@ -45,6 +45,7 @@
     ~/.local/bin/mermaid_render: scripts/mermaid_render.py
     ~/.local/bin/move_android_string: scripts/android/move_android_string.py
     ~/.local/bin/repack_aar: scripts/repack_aar
+    ~/.local/bin/retrace_log: scripts/android/retrace_log.sh
     ~/.local/bin/shorten_r_usages.py: scripts/android/shorten_r_usages.py
 
 # Per-OS files: tools without their own include/conditional support get one file
