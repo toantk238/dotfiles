@@ -1,12 +1,34 @@
+# Shared picker for `s` and Alt+s: prints the chosen session name.
+# Running tmux sessions get a green dot; the name stays in its own tab-separated
+# field so the marker never reaches `sesh preview` or `sesh connect`.
+_sesh_pick() {
+  local tab=$'\t' selected
+  selected=$(sesh list -d --format "{source}${tab}{name}" |
+    awk -F'\t' -v OFS='\t' '{ print ($1 == "tmux" ? "\033[32m●\033[0m" : " "), $2 }' |
+    fzf \
+      --ansi \
+      --delimiter '\t' \
+      --nth 2 \
+      --tabstop 2 \
+      --height 50% \
+      --border rounded \
+      --border-label ' sesh sessions ' \
+      --prompt '⚡ ' \
+      --header '● running | Enter to connect | Esc to cancel' \
+      --preview 'sesh preview {2}' \
+      --preview-window right:55%) || return
+  print -r -- "${selected#*$tab}"
+}
+
 function sesh-sessions() {
   {
     exec </dev/tty
     exec <&1
     local session
-    session=$(sesh list -t -c | fzf --height 40% --reverse --border-label ' sesh ' --border --prompt '⚡  ')
+    session=$(_sesh_pick)
     zle reset-prompt >/dev/null 2>&1 || true
     [[ -z "$session" ]] && return
-    sesh connect $session
+    sesh connect "$session"
   }
 }
 
@@ -75,16 +97,7 @@ s() {
     shift
     _sesh_new "$@"
   elif [ $# -eq 0 ]; then
-    # No arguments: show interactive picker (without icons to avoid parsing issues)
-    local selected=$(sesh list | fzf \
-      --height 50% \
-      --border rounded \
-      --border-label ' sesh sessions ' \
-      --prompt '⚡ ' \
-      --header 'Tips: Start typing to filter | Enter to connect | Esc to cancel' \
-      --preview 'sesh preview {}' \
-      --preview-window right:55%)
-
+    local selected=$(_sesh_pick)
     [[ -z "$selected" ]] && return 0
     sesh connect "$selected"
   else
