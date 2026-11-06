@@ -20,3 +20,8 @@ layout_uv() {
         source_env .venv/bin/activate
     fi
 }
+
+# `layout gomod` in .envrc — keep Go's module cache inside the project
+layout_gomod() {
+  export GOMODCACHE="$PWD/pkg/mod"
+}
