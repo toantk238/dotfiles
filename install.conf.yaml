@@ -66,5 +66,7 @@
       description: oh-my-zsh
     - command: '[ -d ~/.tmux/.git ] || { git clone https://github.com/gpakosz/.tmux.git ~/.tmux && ln -s .tmux/.tmux.conf ~/.tmux.conf; }'
       description: oh-my-tmux
+    - command: scripts/install-code-graphs.sh
+      description: codegraph + code-review-graph (Claude Code)
     - command: '[ "$(uname)" != Linux ] || gnome/apply.sh'
       description: GNOME keybindings

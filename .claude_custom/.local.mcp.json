@@ -21,8 +21,8 @@
     },
     "code-review-graph": {
       "type": "stdio",
-      "command": "uvx",
-      "args": ["code-review-graph", "serve"]
+      "command": "code-review-graph",
+      "args": ["serve"]
     },
     "codegraph": {
       "type": "stdio",
