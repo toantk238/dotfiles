@@ -315,5 +315,51 @@ class GitRepo:
                     break
         return branch.peel(Commit).id if branch is not None else None
 
+    # -------------------------------------------------------------- prs ---
+
+    def default_branch(self, configured: str | None = None, remote: str = "origin") -> str | None:
+        """The branch PRs target: `<remote>/HEAD`, else `configured` (e.g. the
+        .gitmodules `branch`), else main/master, if `<remote>/<name>` exists."""
+        prefix = f"refs/remotes/{remote}/"
+        ref = self._repo.references.get(f"{prefix}HEAD")
+        target = ref.target if ref is not None else None
+        if isinstance(target, str) and target.startswith(prefix):
+            return target[len(prefix):]
+        for name in (configured, "main", "master"):
+            if name and self.lookup_branch(f"{remote}/{name}") is not None:
+                return name
+        return None
+
+    def remote_tip(self, branch: str, remote: str = "origin") -> Oid | None:
+        found = self.lookup_branch(f"{remote}/{branch}")
+        return found.peel(Commit).id if found is not None else None
+
+    def commits_since(self, base_tip: Oid) -> list[Commit]:
+        """Commits reachable from HEAD but not from `base_tip`, newest first."""
+        walker = self._repo.walk(self.head_id)
+        walker.hide(base_tip)
+        return list(walker)
+
+    def contains(self, tip: Oid, oid: Oid) -> bool:
+        """True when `oid` is reachable from `tip`."""
+        return tip == oid or self._repo.merge_base(tip, oid) == oid
+
+    def fetch(self, remote: str = "origin") -> bool:
+        """`git fetch <remote>` via the CLI, so ssh agents/credential helpers just work."""
+        try:
+            self._git("fetch", "--quiet", remote)
+            return True
+        except subprocess.CalledProcessError as exc:
+            logger.warning("%s: fetch from %s failed: %s", self, remote, exc.stderr.strip())
+            return False
+
+    def push(self, branch: str, remote: str = "origin") -> None:
+        """`git push -u <remote> <branch>` via the CLI (uses the user's ssh/credential setup)."""
+        logger.info("%s: pushing %s to %s", self, branch, remote)
+        try:
+            self._git("push", "-u", remote, branch)
+        except subprocess.CalledProcessError as exc:
+            raise RuntimeError(f"{self}: push of {branch} failed: {exc.stderr.strip()}") from exc
+
     def conflicted_paths(self) -> list[str]:
         return sorted({e.path for entry in self.conflicts() for e in entry if e is not None})

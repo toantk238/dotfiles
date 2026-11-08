@@ -43,6 +43,20 @@ def build_parser() -> argparse.ArgumentParser:
     resolve = command("resolve_conflicts", "resume a merge: commit resolved conflicts, then run the "
                                            "deferred submodule merges")
     ai_options(resolve)
+    prs = command("create_prs", "open a GitHub PR (via gh) for every submodule whose branch is not "
+                                "merged into its default branch yet")
+    prs.add_argument("--base", help="target branch for every repo (default: each repo's origin/HEAD, "
+                                    "else its .gitmodules branch, else main/master)")
+    prs.add_argument("--push", action="store_true", help="push branches that are ahead of origin first")
+    prs.add_argument("--title", help="PR title for every repo (default: the commit subject when the "
+                                     "branch has one commit, else the branch name); body is left empty")
+    prs.add_argument("--repos-json", type=Path, help="maps <KEY>_BRANCH template lines to submodules "
+                                                     "(default: buildPlugin/root/repos.json if present)")
+    prs.add_argument("--no-edit", action="store_true", help="leave the body of already open PRs alone "
+                                                           "(default: fix their <KEY>_BRANCH lines)")
+    prs.add_argument("--draft", action="store_true", help="open the PRs as drafts")
+    prs.add_argument("-n", "--dry-run", action="store_true", help="only report what would be opened")
+    prs.add_argument("--include-main", action="store_true", help="also handle the main repo itself")
     remove = command("remove_submodules", "deinit and delete every submodule (destructive)")
     remove.add_argument("-y", "--yes", action="store_true", help="skip the confirmation prompt")
     return parser
@@ -79,6 +93,11 @@ def main(argv: list[str] | None = None) -> int:
             ok = big_repo.merge(args.branch)
         elif args.action == "resolve_conflicts":
             ok = big_repo.resolve_conflicts()
+        elif args.action == "create_prs":
+            ok = big_repo.create_prs(base=args.base, push=args.push, draft=args.draft,
+                                     dry_run=args.dry_run, include_main=args.include_main,
+                                     title=args.title, repos_json=args.repos_json,
+                                     edit=not args.no_edit)
         elif args.action == "remove_submodules":
             if not args.yes and not confirm_removal(path):
                 return 1

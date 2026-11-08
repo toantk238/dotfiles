@@ -3,11 +3,12 @@
 from __future__ import annotations
 
 import json
+import re
 from pathlib import Path
 
 from pygit2 import Oid
 
-from . import ai
+from . import ai, github
 from .log import logger
 from .repo import GitRepo
 from .utils import Chooser, console_chooser
@@ -15,6 +16,21 @@ from .utils import Chooser, console_chooser
 # Submodule merges deferred until the main merge is committed, keyed by submodule
 # path. Lives in .git/ so a later `resolve_conflicts` run can pick them up.
 PENDING_FILE = "gittool-pending-submodules.json"
+
+# `CORE_BRANCH=master` style lines in PR templates: which branch of a dependency CI builds with.
+TEMPLATE_BRANCH_LINE = re.compile(
+    r"^(?P<indent>[ \t]*)(?P<key>[A-Za-z0-9_]+)_BRANCH=(?P<value>[^\r\n]*?)(?P<cr>\r?)$", re.MULTILINE)
+# The CI parameters block of a template: optional "**Parameters**" line, then a fence
+# holding PR_START_ENV ... PR_END_ENV.
+PARAMS_BLOCK = re.compile(r"(?:^\*\*Parameters\*\*[ \t]*\r?\n)?^```[^\n]*\n[^`]*?PR_END_ENV=[^\n]*\n```",
+                          re.MULTILINE)
+# Maps CI env keys to submodule paths: {"items": [{"path", "default_branch", "branch_name_in_env"}]}.
+REPOS_JSON = Path("buildPlugin") / "root" / "repos.json"
+
+
+def _norm(name: str) -> str:
+    """'BUILD_PLUGIN', 'buildPlugin', 'build-plugin' -> 'buildplugin'."""
+    return re.sub(r"[^a-z0-9]", "", name.lower())
 
 
 class BigRepo:
@@ -241,6 +257,214 @@ class BigRepo:
             path.write_text(json.dumps(pending, indent=2) + "\n")
         elif path.exists():
             path.unlink()
+
+    # ------------------------------------------------------- create_prs ---
+
+    def create_prs(self, base: str | None = None, push: bool = False, draft: bool = False,
+                   dry_run: bool = False, include_main: bool = False,
+                   title: str | None = None, repos_json: Path | None = None,
+                   edit: bool = True) -> bool:
+        """Open a PR into the default branch for every submodule whose current
+        branch is not merged into it yet. A branch counts as merged when the
+        default branch contains its HEAD, or a merged PR has exactly that HEAD
+        (squash merges). Branches with an open PR are reported, not duplicated.
+        The PR body is the repo's PR template (empty if it has none) with each
+        `<DEP>_BRANCH=` line set to that dependency submodule's current branch (see
+        `_dependency_branches`). With `edit`, an already open PR whose body has wrong
+        `<KEY>_BRANCH=` values (or no parameters block) is corrected; the title is
+        `title`, else the commit subject for a single-commit branch, else the branch name.
+        Returns False when some repo needed a PR and did not get one."""
+        github.ensure_available()
+        targets: list[tuple[str, GitRepo, str | None]] = [
+            (module.path, GitRepo.from_submodule(module), module.branch)
+            for module in self._repo.submodules]
+        if include_main:
+            targets.append((".", self._repo, None))
+        for _, repo, _ in targets:
+            repo.fetch()
+
+        dep_branches = self._dependency_branches(targets, repos_json)
+
+        ok = True
+        summary: list[str] = []
+        for path, repo, configured in targets:
+            outcome, good = self._create_pr(path, repo, configured, base, push, draft, dry_run, title,
+                                            dep_branches, edit)
+            summary.append(f"{path}: {outcome}")
+            ok &= good
+        logger.info("PR summary:\n  %s", "\n  ".join(summary))
+        return ok
+
+    def _create_pr(self, path: str, repo: GitRepo, configured: str | None, base: str | None,
+                   push: bool, draft: bool, dry_run: bool, title: str | None,
+                   dep_branches: dict[str, str | None], edit: bool) -> tuple[str, bool]:
+        """Returns (one-line outcome, ok)."""
+        branch = repo.current_branch
+        if branch is None:
+            logger.warning("Submodule %s: detached HEAD, skipping (run `gittool sync` first)", path)
+            return "skipped, detached HEAD", True
+        target = base or repo.default_branch(configured)
+        if target is None:
+            logger.error("Submodule %s: cannot tell the default branch; pass --base", path)
+            return "failed, unknown default branch", False
+        if branch == target:
+            return f"skipped, on {target} itself", True
+        target_tip = repo.remote_tip(target)
+        if target_tip is None:
+            logger.error("Submodule %s: origin/%s does not exist", path, target)
+            return f"failed, no origin/{target}", False
+
+        head = repo.head_id
+        if repo.contains(target_tip, head):
+            logger.info("Submodule %s: %s is already merged into %s", path, branch, target)
+            return f"merged into {target}", True
+
+        open_prs = github.find_prs(repo.workdir, branch, "open")
+        if open_prs:
+            pr = open_prs[0]
+            logger.info("Submodule %s: PR already open for %s: %s", path, branch, pr["url"])
+            if not edit:
+                return f"PR already open {pr['url']}", True
+            return self._fix_open_pr(path, repo, pr, dep_branches, dry_run)
+        merged = [pr for pr in github.find_prs(repo.workdir, branch, "merged")
+                  if pr.get("headRefOid") == str(head)]
+        if merged:
+            logger.info("Submodule %s: %s was merged via %s", path, branch, merged[0]["url"])
+            return f"merged via {merged[0]['url']}", True
+
+        remote_head = repo.remote_tip(branch)
+        if remote_head != head:
+            if remote_head is not None and not repo.contains(head, remote_head):
+                logger.error("Submodule %s: %s and origin/%s have diverged; fix that first",
+                             path, branch, branch)
+                return f"failed, diverged from origin/{branch}", False
+            if not push:
+                logger.error("Submodule %s: %s has commits not pushed to origin; push it or pass "
+                             "--push", path, branch)
+                return "failed, not pushed (use --push)", False
+            if not dry_run:
+                repo.push(branch)
+
+        pr_title = title or self._pr_title(repo, branch, target_tip)
+        body, replaced = self._pr_body(path, repo, dep_branches)
+        if dry_run:
+            logger.info("Submodule %s: would open PR %s -> %s, title %r, branches set: %s\n%s", path,
+                        branch, target, pr_title, ", ".join(replaced) or "none", body)
+            return f"would open PR {branch} -> {target}: {pr_title!r}", True
+        url = github.create_pr(repo.workdir, branch, target, pr_title, body, draft)
+        logger.info("Submodule %s: opened PR %s -> %s: %s", path, branch, target, url)
+        return f"opened {url}", True
+
+    def _dependency_branches(self, targets: list[tuple[str, GitRepo, str | None]],
+                             repos_json: Path | None) -> dict[str, str | None]:
+        """Normalised env key (e.g. 'core' for CORE_BRANCH) -> the branch CI should
+        build that dependency from: its submodule's current branch, or its default
+        branch (repos.json `default_branch`, else origin/HEAD etc.) when it is
+        detached, on the default, not on origin, or already merged into the default.
+        None only when the default cannot be told (the template value is kept).
+
+        Keys come from repos.json (`branch_name_in_env` -> `path`); submodules it
+        does not list are matched by their folder/submodule name instead."""
+        by_path = {path: (repo, configured) for path, repo, configured in targets if path != "."}
+        keys: dict[str, tuple[str, str | None]] = {}  # norm key -> (path, default branch)
+        json_path = repos_json or (self._repo.workdir / REPOS_JSON)
+        if json_path.is_file():
+            for item in json.loads(json_path.read_text()).get("items", []):
+                env = item.get("branch_name_in_env", "")
+                if env.endswith("_BRANCH") and item.get("path") in by_path:
+                    keys[_norm(env[:-len("_BRANCH")])] = (item["path"], item.get("default_branch"))
+        elif repos_json is not None:
+            raise ValueError(f"{repos_json} does not exist")
+        for path, (_, configured) in by_path.items():
+            for name in (Path(path).name, path):
+                keys.setdefault(_norm(name), (path, configured))
+
+        result: dict[str, str | None] = {}
+        for key, (path, default) in keys.items():
+            repo, configured = by_path[path]
+            branch = repo.current_branch
+            default = default or repo.default_branch(configured)
+            result[key] = default
+            if branch is None or branch == default:
+                continue
+            tip = repo.remote_tip(branch)
+            default_tip = repo.remote_tip(default) if default else None
+            if tip is None:
+                logger.warning("Submodule %s: %s is not on origin, PR templates use %s instead",
+                               path, branch, default)
+            elif default_tip is None or not repo.contains(default_tip, tip):
+                result[key] = branch  # unmerged work CI must build against
+        return result
+
+    @staticmethod
+    def _pr_body(path: str, repo: GitRepo, dep_branches: dict[str, str | None]) -> tuple[str, list[str]]:
+        """The repo's PR template (or ""), with every `<DEP>_BRANCH=` line set to the
+        dependency's branch from `dep_branches` when it has one.
+        Returns (body, ["CORE_BRANCH=feature", ...] that were changed)."""
+        template = github.find_template(repo.workdir)
+        if template is None:
+            logger.info("Submodule %s: no PR template, leaving the body empty", path)
+            return "", []
+        replaced: list[str] = []
+
+        def substitute(match: re.Match) -> str:
+            key = match["key"]
+            if _norm(key) not in dep_branches:
+                logger.warning("Submodule %s: template key %s_BRANCH matches no submodule; kept",
+                               path, key)
+                return match[0]
+            branch = dep_branches[_norm(key)]
+            if branch is None or branch == match["value"].strip():
+                return match[0]
+            replaced.append(f"{key}_BRANCH={branch}")
+            return f"{match['indent']}{key}_BRANCH={branch}{match['cr']}"
+
+        return TEMPLATE_BRANCH_LINE.sub(substitute, template.read_text()), replaced
+
+    def _fix_open_pr(self, path: str, repo: GitRepo, pr: dict, dep_branches: dict[str, str | None],
+                     dry_run: bool) -> tuple[str, bool]:
+        generated, _ = self._pr_body(path, repo, dep_branches)
+        current = pr.get("body") or ""
+        fixed = self._corrected_body(current, generated, dep_branches)
+        if fixed == current:
+            return f"PR already open {pr['url']} (body ok)", True
+        if dry_run:
+            logger.info("Submodule %s: would update the body of %s to:\n%s", path, pr["url"], fixed)
+            return f"PR already open {pr['url']} (would update body)", True
+        github.edit_pr_body(repo.workdir, pr["number"], fixed)
+        logger.info("Submodule %s: updated the body of %s", path, pr["url"])
+        return f"PR already open {pr['url']} (body updated)", True
+
+    @staticmethod
+    def _corrected_body(current: str, generated: str, dep_branches: dict[str, str | None]) -> str:
+        """`current` with its `<KEY>_BRANCH=` lines set to what `generated` (the
+        filled template) says; free text is kept. A body without a PR_START_ENV
+        block gets the generated parameters block appended."""
+        if not generated:
+            return current
+        wanted = {_norm(m["key"]): m["value"] for m in TEMPLATE_BRANCH_LINE.finditer(generated)}
+        if "PR_START_ENV=" not in current:
+            block = PARAMS_BLOCK.search(generated)
+            extra = block[0] if block else generated
+            return f"{current.rstrip()}\n\n{extra}\n" if current.strip() else generated
+
+        def substitute(match: re.Match) -> str:
+            key = _norm(match["key"])
+            value = wanted.get(key)
+            if value is None and dep_branches.get(key):
+                value = dep_branches[key]  # key the template lacks but the body has
+            if value is None or value == match["value"]:
+                return match[0]
+            return f"{match['indent']}{match['key']}_BRANCH={value}{match['cr']}"
+
+        return TEMPLATE_BRANCH_LINE.sub(substitute, current)
+
+    @staticmethod
+    def _pr_title(repo: GitRepo, branch: str, target_tip: Oid) -> str:
+        commits = repo.commits_since(target_tip)
+        if len(commits) == 1:
+            return commits[0].message.splitlines()[0].strip() or branch
+        return branch
 
     # ---------------------------------------------------------- remove ---
 
