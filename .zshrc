@@ -216,7 +216,6 @@ if exists mise; then
 else
   source "$dot_dir/.luaenv.sh"
   source "$dot_dir/.goenv.sh"
-  source "$dot_dir/.rvm.sh"
   source "$dot_dir/.nvm.sh"
 fi
 source "$dot_dir/.pyenv.sh"

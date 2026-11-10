@@ -45,7 +45,7 @@ uv add --project git <pkg>
 # Install all development tools on Linux (Arch-based)
 ./scripts/linux.sh
 
-# One-off: move node/lua versions from nvm/luaenv to mise
+# One-off: move node/lua from nvm/luaenv to mise, build ruby with mise + reinstall rvm gems
 ./scripts/migrate_to_mise.sh
 
 # Set up Lua environment
@@ -86,7 +86,7 @@ uv add --project git <pkg>
 
 ### Key Design Patterns
 1. **Modular Shell Configuration**: Each tool has its own `.zsh` file that's conditionally sourced
-2. **Environment Management**: Uses mise for node/go/lua/ruby (falls back to nvm/goenv/luaenv/rvm when mise is absent) and pyenv for python (pyenv-virtualenv envs)
+2. **Environment Management**: Uses mise for node/go/lua/ruby (falls back to nvm/goenv/luaenv when mise is absent; no rvm fallback) and pyenv for python (pyenv-virtualenv envs)
 3. **Tool Integration**: Heavy use of modern CLI tools (fzf, ripgrep, eza, delta) with custom configurations
 4. **Script Organization**: Utility scripts grouped by functionality (Android, system, development)
 
