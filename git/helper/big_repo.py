@@ -6,16 +6,13 @@ import json
 import re
 from pathlib import Path
 
-from pygit2 import Oid
+from pygit2 import GitError, Oid
+from pygit2.enums import FileMode
 
 from . import ai, github
 from .log import logger
 from .repo import GitRepo
 from .utils import Chooser, console_chooser
-
-# Submodule merges deferred until the main merge is committed, keyed by submodule
-# path. Lives in .git/ so a later `resolve_conflicts` run can pick them up.
-PENDING_FILE = "gittool-pending-submodules.json"
 
 # `CORE_BRANCH=master` style lines in PR templates: which branch of a dependency CI builds with.
 TEMPLATE_BRANCH_LINE = re.compile(
@@ -96,123 +93,138 @@ class BigRepo:
     # ----------------------------------------------------------- merge ---
 
     def merge(self, branch: str) -> bool:
-        """Merge `branch` into the main repo. Conflicting submodule pointers keep
-        our side so the merge commits quickly; each such submodule then gets
-        their matching branch merged into ours in a follow-up commit. File
-        conflicts go to the AI tool if one is configured. Returns True when
-        everything is committed."""
-        if not self._repo.merge_branch(branch):
+        """Merge `branch` into the main repo, submodules first.
+
+        Every submodule whose pointer differs between HEAD and `branch` is checked
+        before anything is touched: it must be on a branch, be clean, and merging
+        the commit `branch` records for it into that branch must not conflict. Any
+        failure aborts the whole merge with nothing changed. Then each submodule
+        gets that commit merged in (fast-forward or merge commit), and finally the
+        main repo is merged as usual, recording the merged submodule commits. File
+        conflicts in the main repo go to the AI tool if one is configured.
+        Returns True when everything is committed."""
+        target = self._repo.branch_tip(branch)
+        self._repo.ensure_can_merge()
+
+        plan, problems = self._check_submodules(branch, target)
+        if problems:
+            logger.error("Not merging %s, submodules are not safe to merge:\n  %s",
+                         branch, "\n  ".join(problems))
+            return False
+
+        pinned: dict[str, Oid] = {}
+        for path, sub, theirs in plan:
+            into = sub.current_branch
+            logger.info("Submodule %s: merging %s (recorded on %s) into %s",
+                        path, str(theirs)[:10], branch, into)
+            if not sub.merge_commit(theirs, f"Merge {branch}'s {path} ({str(theirs)[:10]}) into {into}"):
+                # checked conflict-free just above, so only a race gets here
+                raise RuntimeError(f"Submodule {path}: unexpected conflicts merging {str(theirs)[:10]}; "
+                                   f"fix them in {sub.workdir}")
+            pinned[path] = sub.head_id
+
+        into = self.main_branch or "detached HEAD"
+        if not self._repo.merge_commit(target, f"Merge branch '{branch}' into {into}", pinned):
             logger.warning("Merge of %s stopped on conflicts", branch)
-        return self.resolve_conflicts()
+            return self.resolve_conflicts()
+        return True
+
+    def _check_submodules(self, branch: str, target: Oid) -> tuple[list[tuple[str, GitRepo, Oid]], list[str]]:
+        """Returns (submodules to merge as (path, repo, their commit), problems)."""
+        plan: list[tuple[str, GitRepo, Oid]] = []
+        problems: list[str] = []
+        head = self._repo.head_id
+        for module in self._repo.submodules:
+            path = module.path
+            ours = self._repo.gitlink(head, path)
+            theirs = self._repo.gitlink(target, path)
+            if ours is None or theirs is None or ours == theirs:
+                continue  # added/removed on one side, or untouched: the main merge handles it
+            try:
+                sub = GitRepo.from_submodule(module)
+            except GitError:
+                problems.append(f"{path}: not initialised (run `gittool sync`)")
+                continue
+            if sub.current_branch is None:
+                problems.append(f"{path}: detached at {str(sub.head_id)[:10]}, not on a branch "
+                                "(run `gittool sync` or check one out)")
+                continue
+            dirty = sub.changed_paths()
+            if dirty:
+                problems.append(f"{path}: uncommitted changes: {', '.join(dirty)}")
+                continue
+            if not sub.has_commit(theirs):
+                sub.fetch_all()
+            if not sub.has_commit(theirs):
+                problems.append(f"{path}: commit {str(theirs)[:10]} recorded on {branch} is not "
+                                "available, even after fetching")
+                continue
+            if sub.contains(sub.head_id, theirs):
+                logger.info("Submodule %s: %s already contains %s", path, sub.current_branch,
+                            str(theirs)[:10])
+                continue
+            conflicts = sub.merge_conflicts_with(theirs)
+            if conflicts:
+                problems.append(f"{path}: merging {str(theirs)[:10]} (recorded on {branch}) into "
+                                f"{sub.current_branch} conflicts in {', '.join(conflicts)}")
+                continue
+            plan.append((path, sub, theirs))
+        return plan, problems
 
     def resolve_conflicts(self) -> bool:
-        """Finish whatever merge work is outstanding: main-repo conflicts, the
-        merge commit, then deferred submodule merges. Safe to re-run."""
+        """Finish a main-repo merge left on conflicts: hand leftover files to the AI
+        tool if configured, then commit. Safe to re-run."""
         if self._repo.conflicts():
-            if not self._resolve_main_conflicts():
-                return False
-        elif self._repo.merge_in_progress():
+            return self._resolve_main_conflicts()
+        if self._repo.merge_in_progress():
             logger.info("No conflicts left, committing the merge")
             self._repo.finish_merge()
-        return self._merge_pending_submodules()
+        return True
 
     def _resolve_main_conflicts(self) -> bool:
         ours = self.main_branch or "HEAD"
         theirs = self._repo.merge_source() or "MERGE_HEAD"
         submodules = {module.path: module for module in self._repo.submodules}
-        pending = self._load_pending()
-        remaining: list[str] = []
+        files: list[str] = []
+        stuck: list[str] = []
 
         for ancestor, our_entry, their_entry in self._repo.conflicts():
             path = next(e.path for e in (ancestor, our_entry, their_entry) if e is not None)
-            if path in submodules and our_entry is not None and their_entry is not None:
-                self._repo.stage_blob(path, our_entry.id, our_entry.mode)
-                pending[path] = {"theirs": str(their_entry.id), "their_branch": theirs, "our_branch": ours}
-                logger.info("Submodule %s: keeping our commit %s for the merge; '%s' will be merged "
-                            "into it afterwards", path, str(our_entry.id)[:10], theirs)
-            else:
-                remaining.append(path)
-        self._save_pending(pending)
+            if path not in submodules:
+                files.append(path)
+            elif not self._take_merged_submodule(path, submodules[path], our_entry, their_entry):
+                stuck.append(path)
 
-        if remaining:
-            remaining = self._resolve_with_ai(self._repo, remaining, ours, theirs, list(submodules))
-        if remaining:
+        if stuck:
+            logger.error("Submodule pointer conflicts in %s: the submodule checkout does not contain "
+                         "both sides. Merge them inside the submodule, `git add` it, then run "
+                         "`gittool resolve_conflicts` again.", ", ".join(stuck))
+        if files:
+            files = self._resolve_with_ai(self._repo, files, ours, theirs, list(submodules))
+        if files:
             logger.error("Still conflicted: %s. Resolve by hand and `git add`, then run "
-                         "`gittool resolve_conflicts` again.", ", ".join(remaining))
+                         "`gittool resolve_conflicts` again.", ", ".join(files))
+        if stuck or files:
             return False
         self._repo.finish_merge()
+        self._repo.update_submodules()
         return True
 
-    # ------------------------------------------------ deferred submodules ---
-
-    def _merge_pending_submodules(self) -> bool:
-        pending = self._load_pending()
-        if not pending:
-            return True
-        if self._repo.merge_in_progress():
-            return False
-        submodules = {module.path: module for module in self._repo.submodules}
-        for path, info in list(pending.items()):
-            module = submodules.get(path)
-            if module is None:
-                logger.warning("Submodule %s no longer exists; dropping its pending merge", path)
-                del pending[path]
-                self._save_pending(pending)
-                continue
+    def _take_merged_submodule(self, path: str, module, our_entry, their_entry) -> bool:
+        """Stage the submodule checkout's commit when it contains both sides (e.g. a
+        merge started by plain `git merge` after merging the submodule by hand)."""
+        try:
             sub = GitRepo.from_submodule(module)
-            if not self._merge_into_submodule(path, sub, info):
-                return False
-            if self._repo.staged_id(path) != sub.head_id:
-                self._repo.stage(path)
-                self._repo.commit_index(
-                    f"Update submodule {path}: merge '{info['their_branch']}' into "
-                    f"{sub.current_branch or 'detached HEAD'}")
-            del pending[path]
-            self._save_pending(pending)
-        return True
-
-    def _merge_into_submodule(self, path: str, sub: GitRepo, info: dict) -> bool:
-        their_branch: str = info["their_branch"]
-        if sub.merge_in_progress():  # resuming after a manual or AI round
-            left = sub.conflicted_paths()
-            if left:
-                left = self._resolve_with_ai(sub, left, sub.current_branch or "HEAD", their_branch, [])
-            if left:
-                logger.error("Submodule %s still conflicted: %s", path, ", ".join(left))
-                return False
-            sub.finish_merge()
+        except GitError:
+            return False
+        head = sub.head_id
+        if all(entry is None or (sub.has_commit(entry.id) and sub.contains(head, entry.id))
+               for entry in (our_entry, their_entry)):
+            self._repo.stage_blob(path, head, FileMode.COMMIT)
+            logger.info("Submodule %s: recording its checkout %s, which has both sides", path,
+                        str(head)[:10])
             return True
-
-        dirty = sub.changed_paths()
-        if dirty:
-            logger.error("Submodule %s has uncommitted changes, not merging: %s", path, ", ".join(dirty))
-            return False
-        sub.fetch_all()
-        if sub.is_detached and not sub.attach_head_to_branch(info["our_branch"], self._chooser):
-            logger.warning("Submodule %s: merging on a detached HEAD; put the result on a branch", path)
-
-        target = sub.resolve_branch_tip(their_branch)
-        label = their_branch
-        if target is None:
-            target = Oid(hex=info["theirs"])
-            label = str(target)[:10]
-            logger.warning("Submodule %s: no branch named '%s'; merging the recorded commit %s instead",
-                           path, their_branch, label)
-        if not sub.has_commit(target):
-            logger.error("Submodule %s: commit %s is not available locally", path, str(target)[:10])
-            return False
-
-        into = sub.current_branch or "detached HEAD"
-        logger.info("Submodule %s: merging '%s' into %s", path, label, into)
-        if sub.merge_commit(target, f"Merge branch '{label}' into {into}"):
-            return True
-        left = self._resolve_with_ai(sub, sub.conflicted_paths(), into, label, [])
-        if left:
-            logger.error("Submodule %s still conflicted: %s. Fix it in %s, `git add`, then run "
-                         "`gittool resolve_conflicts` again.", path, ", ".join(left), sub.workdir)
-            return False
-        sub.finish_merge()
-        return True
+        return False
 
     # --------------------------------------------------------------- ai ---
 
@@ -224,7 +236,7 @@ class BigRepo:
             return files
         prompt = ai.conflict_prompt(repo.workdir, ours, theirs, files, submodules)
         ai.run_tool(tool, prompt, repo.workdir)
-        left = repo.conflicted_paths()
+        left = [path for path in repo.conflicted_paths() if path not in submodules]
         if left:
             logger.warning("%s left conflicts in %s", tool, ", ".join(left))
         return left
@@ -241,22 +253,6 @@ class BigRepo:
             return None
         index = self._chooser("Conflicts remain. Resolve them with an AI tool?", tools)
         return tools[index] if index is not None else None
-
-    # ---------------------------------------------------------- pending ---
-
-    def _pending_path(self) -> Path:
-        return self._repo.gitdir / PENDING_FILE
-
-    def _load_pending(self) -> dict[str, dict]:
-        path = self._pending_path()
-        return json.loads(path.read_text()) if path.exists() else {}
-
-    def _save_pending(self, pending: dict[str, dict]) -> None:
-        path = self._pending_path()
-        if pending:
-            path.write_text(json.dumps(pending, indent=2) + "\n")
-        elif path.exists():
-            path.unlink()
 
     # ------------------------------------------------------- create_prs ---
 

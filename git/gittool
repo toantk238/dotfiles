@@ -4,7 +4,7 @@
 ''''exec uv run --quiet --project "$(dirname "$(readlink -f "$0")")" python "$0" "$@" # '''
 
 """gittool: keep a main repo and its submodules on the same branch, verify
-before pushing, and merge with submodule-pointer conflict resolution."""
+before pushing, and merge submodules safely before the main repo."""
 
 import argparse
 import sys
@@ -36,12 +36,13 @@ def build_parser() -> argparse.ArgumentParser:
 
     command("sync", "init submodules and put detached ones on the main repo's branch")
     command("verify_before_push", "fail unless every repo is clean and submodule commits are pushed")
-    merge = command("merge", "merge a branch; conflicting submodules keep ours, then get their "
-                             "matching branch merged in; file conflicts can go to an AI tool")
+    merge = command("merge", "merge a branch, submodules first: every changed submodule must be on a "
+                             "branch and merge the target's recorded commit cleanly, else nothing is "
+                             "merged; then the main repo is merged; file conflicts can go to an AI tool")
     merge.add_argument("-b", "--branch", required=True, help="local or remote branch, e.g. origin/dev")
     ai_options(merge)
-    resolve = command("resolve_conflicts", "resume a merge: commit resolved conflicts, then run the "
-                                           "deferred submodule merges")
+    resolve = command("resolve_conflicts", "resume a main-repo merge stopped on file conflicts and "
+                                           "commit it")
     ai_options(resolve)
     prs = command("create_prs", "open a GitHub PR (via gh) for every submodule whose branch is not "
                                 "merged into its default branch yet")

@@ -203,23 +203,43 @@ class GitRepo:
 
     # ------------------------------------------------------------ merge ---
 
-    def merge_branch(self, name: str) -> bool:
-        """Merge `name` into HEAD. True when done (up to date, fast-forward or merge
-        commit). False when conflicts were left in the index for resolution."""
+    def branch_tip(self, name: str) -> Oid:
+        """Tip of local or remote-tracking branch `name`; ValueError when missing."""
         branch = self.lookup_branch(name)
         if branch is None:
             raise ValueError(f"branch '{name}' not found in {self}")
+        return branch.peel(Commit).id
+
+    def ensure_can_merge(self) -> None:
+        """RuntimeError unless the tree is clean and no merge is in progress."""
         dirty = self.changed_paths()
         if dirty:
             raise RuntimeError(f"{self} has uncommitted changes: {', '.join(dirty)}")
         if self.merge_in_progress():
             raise RuntimeError(f"{self} already has a merge in progress; resolve or abort it first")
 
-        target = branch.peel(Commit).id
-        into = self.current_branch or "detached HEAD"
-        return self.merge_commit(target, f"Merge branch '{name}' into {into}")
+    def gitlink(self, commit: Oid, path: str) -> Oid | None:
+        """Submodule commit recorded at `path` in `commit`'s tree, None if not a submodule there."""
+        try:
+            entry = self._repo[commit].peel(Commit).tree[path]
+        except KeyError:
+            return None
+        return entry.id if entry.filemode == FileMode.COMMIT else None
 
-    def merge_commit(self, target: Oid, message: str) -> bool:
+    def merge_conflicts_with(self, target: Oid) -> list[str]:
+        """Paths that merging `target` into HEAD would leave conflicted (in memory, nothing touched)."""
+        index = self._repo.merge_commits(self.head_id, target)
+        if not index.conflicts:
+            return []
+        return sorted({e.path for entry in index.conflicts for e in entry if e is not None})
+
+    def merge_commit(self, target: Oid, message: str, pinned: dict[str, Oid] | None = None) -> bool:
+        """Merge `target` into HEAD. True when done (up to date, fast-forward or merge
+        commit). False when conflicts were left in the index for resolution.
+
+        `pinned`: submodule path -> commit the result must record (submodule checkouts
+        already merged); staged over whatever the tree merge picked."""
+        pinned = pinned or {}
         analysis, _ = self._repo.merge_analysis(target)
         if analysis & MergeAnalysis.UP_TO_DATE:
             logger.info("%s: already up to date", self)
@@ -232,11 +252,18 @@ class GitRepo:
             else:
                 self._repo.head.set_target(target)
             logger.info("%s: fast-forwarded to %s", self, str(target)[:10])
+            moved = [path for path, oid in pinned.items() if self.gitlink(target, path) != oid]
+            for path in moved:
+                self.stage_blob(path, pinned[path], FileMode.COMMIT)
+            if moved:
+                self.commit_index(f"Update submodules to their merged commits: {', '.join(moved)}")
             self.update_submodules()
             return True
 
         self._repo.merge(target)
         (self.gitdir / "MERGE_MSG").write_text(message + "\n")
+        for path, oid in pinned.items():
+            self.stage_blob(path, oid, FileMode.COMMIT)
         if self.conflicts():
             logger.warning("%s: conflicts in %s", self, ", ".join(self.conflicted_paths()))
             return False
@@ -299,17 +326,6 @@ class GitRepo:
             return None
         candidates = self._dedupe(branches_pointing_at(self._repo, heads[0]))
         return candidates[0].shorthand if candidates else None
-
-    def resolve_branch_tip(self, name: str) -> Oid | None:
-        """Tip of local `name`, else `<remote>/<name>` for any remote, else None."""
-        branch = self.lookup_branch(name)
-        if branch is None:
-            short = name.split("/", 1)[-1] if "/" in name else name
-            for remote in self._repo.remotes:
-                branch = self.lookup_branch(f"{remote.name}/{short}")
-                if branch is not None:
-                    break
-        return branch.peel(Commit).id if branch is not None else None
 
     # -------------------------------------------------------------- prs ---
 
