@@ -15,6 +15,9 @@ from .utils import (Chooser, branches_pointing_at, changed_paths, current_branch
                     local_name, remote_branches_containing)
 
 
+FETCH_JOBS = 8  # `git fetch -j`: parallel remotes / submodules
+
+
 class NotARepository(Exception):
     pass
 
@@ -84,15 +87,8 @@ class GitRepo:
         return list(conflicts) if conflicts else []
 
     def fetch_all(self) -> bool:
-        ok = True
-        for remote in self._repo.remotes:
-            logger.debug("%s: fetching %s", self, remote.name)
-            try:
-                remote.fetch()
-            except GitError as exc:
-                logger.warning("%s: fetch from %s failed: %s", self, remote.name, exc)
-                ok = False
-        return ok
+        """`git fetch --all -j 8`: every remote, in parallel."""
+        return self._fetch("--all")
 
     # ------------------------------------------------------- submodules ---
 
@@ -344,13 +340,70 @@ class GitRepo:
         """True when `oid` is reachable from `tip`."""
         return tip == oid or self._repo.merge_base(tip, oid) == oid
 
-    def fetch(self, remote: str = "origin") -> bool:
-        """`git fetch <remote>` via the CLI, so ssh agents/credential helpers just work."""
+    def has_changes_of(self, tip: Oid, oid: Oid) -> bool:
+        """True when `tip` already holds the code of `oid`: `oid` is reachable from
+        it, or merging `oid` into `tip` would change nothing (squash merges,
+        cherry-picks, rebases)."""
+        if self.contains(tip, oid):
+            return True
         try:
-            self._git("fetch", "--quiet", remote)
+            index = self._repo.merge_commits(tip, oid)
+        except GitError:
+            return False
+        if index.conflicts:
+            return False
+        return index.write_tree(self._repo) == self._repo[tip].peel(Commit).tree_id
+
+    def branch_checkout_tip(self, name: str, remote: str = "origin") -> Oid | None:
+        """The commit `checkout_branch(name)` would land on: `<remote>/<name>` when
+        there is no local branch or the local one is strictly behind it, else the
+        local tip. None when the branch exists nowhere."""
+        local = self._repo.branches.local.get(name)
+        remote_tip = self.remote_tip(name, remote)
+        if local is None:
+            return remote_tip
+        local_tip = local.peel(Commit).id
+        if remote_tip is not None and self.contains(remote_tip, local_tip):
+            return remote_tip
+        return local_tip
+
+    def checkout_branch(self, name: str, remote: str = "origin") -> None:
+        """Check out local branch `name`, creating it from `<remote>/<name>` or
+        fast-forwarding it there first (see `branch_checkout_tip`)."""
+        tip = self.branch_checkout_tip(name, remote)
+        if tip is None:
+            raise ValueError(f"{self}: no branch '{name}' locally or on {remote}")
+        local = self._repo.branches.local.get(name)
+        if local is None:
+            local = self._repo.branches.local.create(name, self._repo[tip].peel(Commit))
+            upstream = self.lookup_branch(f"{remote}/{name}")
+            if upstream is not None:  # always: a missing local branch means tip came from it
+                local.upstream = upstream
+            logger.info("%s: created branch %s tracking %s/%s", self, name, remote, name)
+        elif local.peel(Commit).id != tip:
+            local.set_target(tip, f"gittool: fast-forward {name} to {remote}/{name}")
+            local = self._repo.branches.local[name]
+            logger.info("%s: fast-forwarded %s to %s/%s", self, name, remote, name)
+        self._repo.checkout(local)
+        self.update_submodules()
+        logger.info("%s: now on branch %s at %s", self, name, str(tip)[:10])
+
+    def fetch(self, remote: str = "origin") -> bool:
+        """`git fetch -j 8 <remote>`."""
+        return self._fetch(remote)
+
+    def fetch_with_submodules(self, remote: str = "origin") -> bool:
+        """Fetch this repo and every checked-out submodule in one go, 8 at a time."""
+        return self._fetch("--recurse-submodules=yes", remote)
+
+    def _fetch(self, *args: str) -> bool:
+        """`git fetch -j 8` via the CLI, so ssh agents/credential helpers just work."""
+        logger.debug("%s: git fetch -j %d %s", self, FETCH_JOBS, " ".join(args))
+        try:
+            self._git("fetch", "--quiet", "-j", str(FETCH_JOBS), *args)
             return True
         except subprocess.CalledProcessError as exc:
-            logger.warning("%s: fetch from %s failed: %s", self, remote, exc.stderr.strip())
+            logger.warning("%s: fetch %s failed: %s", self, " ".join(args), exc.stderr.strip())
             return False
 
     def push(self, branch: str, remote: str = "origin") -> None:

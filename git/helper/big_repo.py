@@ -280,8 +280,7 @@ class BigRepo:
             for module in self._repo.submodules]
         if include_main:
             targets.append((".", self._repo, None))
-        for _, repo, _ in targets:
-            repo.fetch()
+        self._repo.fetch_with_submodules()
 
         dep_branches = self._dependency_branches(targets, repos_json)
 
@@ -367,14 +366,10 @@ class BigRepo:
         does not list are matched by their folder/submodule name instead."""
         by_path = {path: (repo, configured) for path, repo, configured in targets if path != "."}
         keys: dict[str, tuple[str, str | None]] = {}  # norm key -> (path, default branch)
-        json_path = repos_json or (self._repo.workdir / REPOS_JSON)
-        if json_path.is_file():
-            for item in json.loads(json_path.read_text()).get("items", []):
-                env = item.get("branch_name_in_env", "")
-                if env.endswith("_BRANCH") and item.get("path") in by_path:
-                    keys[_norm(env[:-len("_BRANCH")])] = (item["path"], item.get("default_branch"))
-        elif repos_json is not None:
-            raise ValueError(f"{repos_json} does not exist")
+        for item in self._repos_json_items(repos_json):
+            env = item.get("branch_name_in_env", "")
+            if env.endswith("_BRANCH") and item.get("path") in by_path:
+                keys[_norm(env[:-len("_BRANCH")])] = (item["path"], item.get("default_branch"))
         for path, (_, configured) in by_path.items():
             for name in (Path(path).name, path):
                 keys.setdefault(_norm(name), (path, configured))
@@ -465,6 +460,70 @@ class BigRepo:
         if len(commits) == 1:
             return commits[0].message.splitlines()[0].strip() or branch
         return branch
+
+    def _repos_json_items(self, repos_json: Path | None) -> list[dict]:
+        """`items` of `repos_json`, else of buildPlugin/root/repos.json when present."""
+        json_path = repos_json or (self._repo.workdir / REPOS_JSON)
+        if json_path.is_file():
+            return json.loads(json_path.read_text()).get("items", [])
+        if repos_json is not None:
+            raise ValueError(f"{repos_json} does not exist")
+        return []
+
+    # ------------------------------------------------- checkout_default ---
+
+    def checkout_default(self, repos_json: Path | None = None, fetch: bool = True,
+                         dry_run: bool = False) -> bool:
+        """Put every submodule on its default branch (repos.json `default_branch`,
+        else origin/HEAD, the .gitmodules branch, main/master), but only when that
+        branch already has the code of the submodule's current revision: HEAD is
+        reachable from it, or merging HEAD into it would change nothing (squash
+        merges). Submodules with local changes, or whose work is not on the
+        default branch yet, are left alone. The main repo is not committed: the
+        moved submodule pointers show up as changes there.
+        Returns False when a submodule could not tell or reach its default branch."""
+        defaults = {item["path"]: item["default_branch"] for item in self._repos_json_items(repos_json)
+                    if item.get("path") and item.get("default_branch")}
+        if fetch:
+            self._repo.fetch_with_submodules()
+        ok = True
+        summary: list[str] = []
+        for module in self._repo.submodules:
+            path = module.path
+            repo = GitRepo.from_submodule(module)
+            outcome, good = self._checkout_default(path, repo, defaults.get(path) or
+                                                   repo.default_branch(module.branch), dry_run)
+            summary.append(f"{path}: {outcome}")
+            ok &= good
+        logger.info("checkout_default summary:\n  %s", "\n  ".join(summary) or "no submodules")
+        return ok
+
+    @staticmethod
+    def _checkout_default(path: str, repo: GitRepo, default: str | None,
+                          dry_run: bool) -> tuple[str, bool]:
+        """Returns (one-line outcome, ok)."""
+        if default is None:
+            logger.error("Submodule %s: cannot tell the default branch; add it to repos.json", path)
+            return "failed, unknown default branch", False
+        tip = repo.branch_checkout_tip(default)
+        if tip is None:
+            logger.error("Submodule %s: branch %s exists neither locally nor on origin", path, default)
+            return f"failed, no branch {default}", False
+        head = repo.head_id
+        if repo.current_branch == default and tip == head:
+            return f"already on {default}", True
+        dirty = repo.changed_paths()
+        if dirty:
+            logger.warning("Submodule %s: uncommitted changes, staying put: %s", path, ", ".join(dirty))
+            return "skipped, uncommitted changes", True
+        where = repo.current_branch or f"detached {str(head)[:10]}"
+        if not repo.has_changes_of(tip, head):
+            logger.warning("Submodule %s: %s has code that %s lacks, staying on it", path, where, default)
+            return f"skipped, {where} not merged into {default}", True
+        if dry_run:
+            return f"would check out {default} ({str(tip)[:10]}) from {where}", True
+        repo.checkout_branch(default)
+        return f"checked out {default} ({str(tip)[:10]}) from {where}", True
 
     # ---------------------------------------------------------- remove ---
 

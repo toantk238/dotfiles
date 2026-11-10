@@ -105,3 +105,14 @@ def test_log_file_goes_to_state_dir_not_cwd(ws: Workspace, tmp_path):
     assert list(tmp_path.glob("*.log")) == []
     assert list(ws.main.glob("*.log")) == []
     assert (state / "gittool" / "gittool.log").is_file()
+
+
+def test_zsh_completion_is_valid_zsh_and_covers_every_action(tmp_path):
+    result = run("completion", "zsh", cwd=tmp_path, state=tmp_path / "state")
+    assert result.returncode == 0
+    script = tmp_path / "_gittool.zsh"
+    script.write_text(result.stdout)
+    subprocess.run(["zsh", "-n", str(script)], check=True)
+    for action in ("sync", "merge", "checkout_default", "create_prs", "completion"):
+        assert f"'{action}:" in result.stdout and f"      {action})" in result.stdout
+    assert "_gittool_branches" in result.stdout and "compdef _gittool gittool" in result.stdout

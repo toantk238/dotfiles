@@ -57,8 +57,18 @@ def build_parser() -> argparse.ArgumentParser:
     prs.add_argument("--draft", action="store_true", help="open the PRs as drafts")
     prs.add_argument("-n", "--dry-run", action="store_true", help="only report what would be opened")
     prs.add_argument("--include-main", action="store_true", help="also handle the main repo itself")
+    default = command("checkout_default", "put every submodule on its default branch (repos.json "
+                                          "default_branch), only if that branch has its current code")
+    default.add_argument("--repos-json", type=Path, help="default branches per submodule path "
+                                                         "(default: buildPlugin/root/repos.json if present)")
+    default.add_argument("--no-fetch", action="store_true", help="use the remote branches as last fetched")
+    default.add_argument("-n", "--dry-run", action="store_true", help="only report what would be checked out")
     remove = command("remove_submodules", "deinit and delete every submodule (destructive)")
     remove.add_argument("-y", "--yes", action="store_true", help="skip the confirmation prompt")
+    completion = sub.add_parser("completion", help="print a shell completion script",
+                                description='print a shell completion script; add '
+                                            '`eval "$(gittool completion zsh)"` to .zshrc after compinit')
+    completion.add_argument("shell", choices=["zsh"])
     return parser
 
 
@@ -79,8 +89,13 @@ def confirm_removal(repo_path: Path) -> bool:
 
 
 def main(argv: list[str] | None = None) -> int:
-    args = build_parser().parse_args(argv)
+    parser = build_parser()
+    args = parser.parse_args(argv)
     logger.debug("args=%s", vars(args))
+    if args.action == "completion":
+        from helper.completion import zsh_script
+        sys.stdout.write(zsh_script(parser))
+        return 0
     path = Path(args.path).resolve()
 
     try:
@@ -98,6 +113,9 @@ def main(argv: list[str] | None = None) -> int:
                                      dry_run=args.dry_run, include_main=args.include_main,
                                      title=args.title, repos_json=args.repos_json,
                                      edit=not args.no_edit)
+        elif args.action == "checkout_default":
+            ok = big_repo.checkout_default(repos_json=args.repos_json, fetch=not args.no_fetch,
+                                           dry_run=args.dry_run)
         elif args.action == "remove_submodules":
             if not args.yes and not confirm_removal(path):
                 return 1

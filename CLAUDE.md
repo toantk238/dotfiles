@@ -22,6 +22,11 @@ gittool merge [path] -b <branch> [--ai TOOL|--no-ai]
 #   in a tmux split / kitty / gnome-terminal / xterm (GITTOOL_TERMINAL=... or inline)
 #   with a prepared prompt; exit the tool and gittool commits. Default: ask when a tty.
 gittool resolve_conflicts [path] [--ai TOOL|--no-ai]   # resume: commit + deferred submodule merges
+gittool checkout_default [path] [--repos-json F] [-n] [--no-fetch]
+#   each submodule -> its default branch (repos.json default_branch, else origin/HEAD...),
+#   only when that branch already has HEAD's code (ancestor, or merge would be a no-op = squash)
+gittool completion zsh   # zsh completion generated from the argparse parser; .git.sh caches
+#   it in ~/.cache/gittool/completion.zsh (regenerated when git/gittool or helper/*.py change)
 gittool remove_submodules [path] --yes   # destructive: deinit + delete all submodules
 # path defaults to cwd. LOG_LEVEL=DEBUG for chatter; file log in ~/.local/state/gittool/
 
