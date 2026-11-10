@@ -146,19 +146,45 @@ class GitRepo:
             logger.warning("%s: detached at %s and no branch points at it; leaving as is",
                            self, str(head)[:10])
             return False
+        chosen = self._pick_branch(candidates, preferred, chooser, head)
+        if chosen is None:
+            logger.warning("%s: left detached at %s", self, str(head)[:10])
+            return False
+        return self._checkout_existing_or_tracking(chosen, head)
 
+    def branch_at(self, oid: Oid, preferred: str | None, chooser: Chooser) -> Branch | None:
+        """A branch whose tip is exactly `oid` that `check_out_at` can land on (a local
+        twin of a remote candidate must be absent or behind `oid`). Picked like
+        `attach_head_to_branch`; None when there is none or the chooser skips."""
+        candidates = [b for b in self._dedupe(branches_pointing_at(self._repo, oid))
+                      if self._can_land_on(b, oid)]
+        if not candidates:
+            return None
+        return self._pick_branch(candidates, preferred, chooser, oid)
+
+    def check_out_at(self, branch: Branch, oid: Oid) -> bool:
+        """Check out `branch` (from `branch_at`) so HEAD ends on a local branch at `oid`."""
+        ok = self._checkout_existing_or_tracking(branch, oid)
+        if ok:
+            self.update_submodules()
+        return ok
+
+    def _pick_branch(self, candidates: list[Branch], preferred: str | None, chooser: Chooser,
+                     oid: Oid) -> Branch | None:
         chosen = next((b for b in candidates if local_name(b) == preferred), None)
         if chosen is None and len(candidates) == 1:
             chosen = candidates[0]
         if chosen is None:
             names = [b.shorthand for b in candidates]
-            index = chooser(f"{self}: several branches point at {str(head)[:10]}", names)
-            if index is None:
-                logger.warning("%s: left detached at %s", self, str(head)[:10])
-                return False
-            chosen = candidates[index]
+            index = chooser(f"{self}: several branches point at {str(oid)[:10]}", names)
+            chosen = candidates[index] if index is not None else None
+        return chosen
 
-        return self._checkout_existing_or_tracking(chosen)
+    def _can_land_on(self, branch: Branch, oid: Oid) -> bool:
+        if not is_remote_branch(branch):
+            return True
+        existing = self._repo.branches.local.get(local_name(branch))
+        return existing is None or self.contains(oid, existing.peel(Commit).id)
 
     @staticmethod
     def _dedupe(branches: list[Branch]) -> list[Branch]:
@@ -170,36 +196,42 @@ class GitRepo:
                 by_name[name] = branch
         return list(by_name.values())
 
-    def _checkout_existing_or_tracking(self, branch: Branch) -> bool:
+    def _checkout_existing_or_tracking(self, branch: Branch, tip: Oid) -> bool:
+        """Check out `branch`, whose tip is `tip`; a remote-tracking one becomes a
+        local branch at `tip` (created, or fast-forwarded when strictly behind)."""
         if not is_remote_branch(branch):
             self._repo.checkout(branch)
             logger.info("%s: now on branch %s", self, branch.shorthand)
             return True
 
         name = local_name(branch)
-        head = self.head_id
         existing = self._repo.branches.local.get(name)
         if existing is not None:
             old_tip = existing.peel(Commit).id
-            if self._repo.merge_base(old_tip, head) != old_tip:
+            if not self.contains(tip, old_tip):
                 logger.warning("%s: local branch %s has commits not in %s (at %s), not touching it",
-                               self, name, str(head)[:10], str(old_tip)[:10])
+                               self, name, str(tip)[:10], str(old_tip)[:10])
                 return False
-            # strictly behind: fast-forward it to HEAD, nothing is lost
-            existing.set_target(head, f"gittool: fast-forward {name} to {branch.shorthand}")
+            # strictly behind: fast-forward it to the tip, nothing is lost
+            existing.set_target(tip, f"gittool: fast-forward {name} to {branch.shorthand}")
             local = self._repo.branches.local[name]
             if local.upstream is None:
                 local.upstream = branch
             self._repo.checkout(local)
             logger.info("%s: fast-forwarded branch %s from %s to %s", self, name, str(old_tip)[:10],
-                        str(head)[:10])
+                        str(tip)[:10])
             return True
 
-        local = self._repo.branches.local.create(name, self._repo[head].peel(Commit))
+        local = self._repo.branches.local.create(name, self._repo[tip].peel(Commit))
         local.upstream = branch
         self._repo.checkout(local)
         logger.info("%s: created branch %s tracking %s", self, name, branch.shorthand)
         return True
+
+    def local_branch_name(self, name: str) -> str:
+        """'dev' for 'origin/dev' when that is a remote-tracking branch, else `name`."""
+        branch = self.lookup_branch(name)
+        return local_name(branch) if branch is not None else name
 
     # ------------------------------------------------------------ merge ---
 

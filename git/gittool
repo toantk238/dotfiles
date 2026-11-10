@@ -36,9 +36,11 @@ def build_parser() -> argparse.ArgumentParser:
 
     command("sync", "init submodules and put detached ones on the main repo's branch")
     command("verify_before_push", "fail unless every repo is clean and submodule commits are pushed")
-    merge = command("merge", "merge a branch, submodules first: every changed submodule must be on a "
-                             "branch and merge the target's recorded commit cleanly, else nothing is "
-                             "merged; then the main repo is merged; file conflicts can go to an AI tool")
+    merge = command("merge", "merge a branch, submodules first: a changed submodule checks out the "
+                             "branch at the target's recorded commit when that commit contains its "
+                             "own, else must be on a branch and merge that commit cleanly, else "
+                             "nothing is merged; then the main repo is merged; file conflicts can go "
+                             "to an AI tool")
     merge.add_argument("-b", "--branch", required=True, help="local or remote branch, e.g. origin/dev")
     ai_options(merge)
     resolve = command("resolve_conflicts", "resume a main-repo merge stopped on file conflicts and "

@@ -6,7 +6,7 @@ import json
 import re
 from pathlib import Path
 
-from pygit2 import GitError, Oid
+from pygit2 import Branch, GitError, Oid
 from pygit2.enums import FileMode
 
 from . import ai, github
@@ -96,12 +96,14 @@ class BigRepo:
         """Merge `branch` into the main repo, submodules first.
 
         Every submodule whose pointer differs between HEAD and `branch` is checked
-        before anything is touched: it must be on a branch, be clean, and merging
-        the commit `branch` records for it into that branch must not conflict. Any
-        failure aborts the whole merge with nothing changed. Then each submodule
-        gets that commit merged in (fast-forward or merge commit), and finally the
-        main repo is merged as usual, recording the merged submodule commits. File
-        conflicts in the main repo go to the AI tool if one is configured.
+        before anything is touched. When the commit `branch` records for it already
+        contains the submodule's checkout and a branch points exactly at that
+        commit, that branch gets checked out. Otherwise the submodule must be on a
+        branch, be clean, and merging the recorded commit into that branch must not
+        conflict. Any failure aborts the whole merge with nothing changed. Then each
+        submodule is checked out / merged (fast-forward or merge commit), and
+        finally the main repo is merged as usual, recording the submodule commits.
+        File conflicts in the main repo go to the AI tool if one is configured.
         Returns True when everything is committed."""
         target = self._repo.branch_tip(branch)
         self._repo.ensure_can_merge()
@@ -113,7 +115,14 @@ class BigRepo:
             return False
 
         pinned: dict[str, Oid] = {}
-        for path, sub, theirs in plan:
+        for path, sub, theirs, checkout in plan:
+            if checkout is not None:
+                logger.info("Submodule %s: checking out %s at %s (recorded on %s)", path,
+                            checkout.shorthand, str(theirs)[:10], branch)
+                if not sub.check_out_at(checkout, theirs):
+                    raise RuntimeError(f"Submodule {path}: could not check out {checkout.shorthand}")
+                pinned[path] = sub.head_id
+                continue
             into = sub.current_branch
             logger.info("Submodule %s: merging %s (recorded on %s) into %s",
                         path, str(theirs)[:10], branch, into)
@@ -129,11 +138,14 @@ class BigRepo:
             return self.resolve_conflicts()
         return True
 
-    def _check_submodules(self, branch: str, target: Oid) -> tuple[list[tuple[str, GitRepo, Oid]], list[str]]:
-        """Returns (submodules to merge as (path, repo, their commit), problems)."""
-        plan: list[tuple[str, GitRepo, Oid]] = []
+    def _check_submodules(self, branch: str, target: Oid
+                          ) -> tuple[list[tuple[str, GitRepo, Oid, Branch | None]], list[str]]:
+        """Returns (plan, problems). Plan items are (path, repo, their commit, branch
+        to check out at it, or None to merge their commit into the current branch)."""
+        plan: list[tuple[str, GitRepo, Oid, Branch | None]] = []
         problems: list[str] = []
         head = self._repo.head_id
+        preferred = self._repo.local_branch_name(branch)
         for module in self._repo.submodules:
             path = module.path
             ours = self._repo.gitlink(head, path)
@@ -145,10 +157,6 @@ class BigRepo:
             except GitError:
                 problems.append(f"{path}: not initialised (run `gittool sync`)")
                 continue
-            if sub.current_branch is None:
-                problems.append(f"{path}: detached at {str(sub.head_id)[:10]}, not on a branch "
-                                "(run `gittool sync` or check one out)")
-                continue
             dirty = sub.changed_paths()
             if dirty:
                 problems.append(f"{path}: uncommitted changes: {', '.join(dirty)}")
@@ -159,6 +167,15 @@ class BigRepo:
                 problems.append(f"{path}: commit {str(theirs)[:10]} recorded on {branch} is not "
                                 "available, even after fetching")
                 continue
+            if sub.contains(theirs, sub.head_id):
+                checkout = sub.branch_at(theirs, preferred, self._chooser)
+                if checkout is not None:
+                    plan.append((path, sub, theirs, checkout))
+                    continue
+            if sub.current_branch is None:
+                problems.append(f"{path}: detached at {str(sub.head_id)[:10]}, not on a branch "
+                                "(run `gittool sync` or check one out)")
+                continue
             if sub.contains(sub.head_id, theirs):
                 logger.info("Submodule %s: %s already contains %s", path, sub.current_branch,
                             str(theirs)[:10])
@@ -168,7 +185,7 @@ class BigRepo:
                 problems.append(f"{path}: merging {str(theirs)[:10]} (recorded on {branch}) into "
                                 f"{sub.current_branch} conflicts in {', '.join(conflicts)}")
                 continue
-            plan.append((path, sub, theirs))
+            plan.append((path, sub, theirs, None))
         return plan, problems
 
     def resolve_conflicts(self) -> bool:

@@ -241,8 +241,8 @@ def test_merge_accepts_remote_tracking_branch_and_updates_submodule_checkout(ws:
     assert big(ws).merge("origin/feature") is True
 
     assert len(parents_of(ws.main)) == 2
-    assert head(ws.sub) == sha, "submodule branch must follow the merged pointer"
-    assert branch_of(ws.sub) == "master"
+    assert head(ws.sub) == sha, "submodule checkout must follow the merged pointer"
+    assert branch_of(ws.sub) == "feature", "their submodule branch is checked out"
     assert git(ws.main, "status", "--porcelain") == ""
 
 
@@ -378,20 +378,62 @@ def test_merge_refuses_on_a_dirty_submodule(ws: Workspace):
     assert head(ws.main) == b1 and head(ws.sub) == s1
 
 
-def test_merge_fast_forwards_the_submodule_branch_when_possible(ws: Workspace):
+def _sub_ahead_on_b2(ws: Workspace, sub_branch: str = "b2") -> tuple[str, str, str]:
+    """main b2 points sub at s2, one commit ahead of the sub's master (s1), published
+    on sub branch <sub_branch>. Leaves main on master. Returns (s1, s2, b2_tip)."""
     s1 = head(ws.sub)
-    s2 = ws.publish_sub_branch("b2", "two.txt", "2\n")
+    s2 = ws.publish_sub_branch(sub_branch, "two.txt", "2\n")
     git(ws.main, "checkout", "-q", "-b", "b2")
     ws.point_sub_at(s2)
     git(ws.main, "commit", "-q", "-m", "main: sub -> b2")
     b2 = head(ws.main)
     git(ws.main, "checkout", "-q", "master")
+    return s1, s2, b2
+
+
+def test_merge_checks_out_the_submodule_branch_at_their_commit_when_it_contains_ours(ws: Workspace):
+    s1, s2, b2 = _sub_ahead_on_b2(ws)
     git(ws.sub, "checkout", "-q", "master")
-    assert head(ws.sub) == s1
 
     assert big(ws).merge("b2") is True
 
     assert head(ws.main) == b2, "main fast-forwards too"
+    assert head(ws.sub) == s2 and branch_of(ws.sub) == "b2"
+    assert upstream_of(ws.sub, "b2") == "origin/b2"
+    assert git(ws.sub, "rev-parse", "master") == s1, "our submodule branch is not moved"
+    assert git(ws.main, "status", "--porcelain") == ""
+
+
+def test_merge_checks_out_their_branch_even_from_a_detached_submodule(ws: Workspace):
+    s1, s2, b2 = _sub_ahead_on_b2(ws)
+    git(ws.sub, "checkout", "-q", "--detach", s1)
+    assert git(ws.main, "status", "--porcelain") == ""
+
+    assert big(ws).merge("b2") is True
+
+    assert head(ws.sub) == s2 and branch_of(ws.sub) == "b2"
+    assert git(ws.main, "status", "--porcelain") == ""
+
+
+def test_merge_prefers_the_submodule_branch_named_like_the_merged_one(ws: Workspace):
+    s1, s2, b2 = _sub_ahead_on_b2(ws)
+    git(ws.sub_dev, "push", "-q", "origin", "b2:other")
+    git(ws.sub, "checkout", "-q", "master")
+
+    assert big(ws).merge("b2") is True  # no_prompt: two candidates must not ask
+
+    assert branch_of(ws.sub) == "b2"
+
+
+def test_merge_fast_forwards_the_current_submodule_branch_when_no_branch_is_at_their_commit(
+        ws: Workspace):
+    s1, s2, b2 = _sub_ahead_on_b2(ws)
+    ws.publish_sub_branch("b2", "three.txt", "3\n", start="b2")  # b2 moved past s2
+    git(ws.sub, "fetch", "-q", "origin")
+    git(ws.sub, "checkout", "-q", "master")
+
+    assert big(ws).merge("b2") is True
+
     assert head(ws.sub) == s2 and branch_of(ws.sub) == "master"
     assert git(ws.main, "status", "--porcelain") == ""
 
