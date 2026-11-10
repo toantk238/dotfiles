@@ -77,6 +77,9 @@
 
 [safe]
 	directory = *
+	directory = /mnt/Data/Github/runners/android-1/_work/appointment-droid/appointment-droid
+	directory = /mnt/Data/Github/runners/android-1/_work/appointment-droid/appointment-droid
+	directory = /mnt/Data/Github/runners/android-1/_work/appointment-droid/appointment-droid
 
 [pull]
 	rebase = true
