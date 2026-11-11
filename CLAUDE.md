@@ -68,7 +68,7 @@ uv add --project git <pkg>
 
 ### Configuration Structure
 - **`.zshrc`**: Main entry point that sources all other configurations
-- **Individual `.zsh` files**: Modular configurations for specific tools (e.g., `.pyenv.zsh`, `.nvm.zsh`, `.git.zsh`)
+- **Individual `.zsh` files**: Modular configurations for specific tools (e.g., `.mise.sh`, `.nvm.sh`, `.git.sh`)
 - **`nvim/`**: Complete Neovim configuration with Vim Plug and CoC.nvim
 - **`scripts/`**: Utility scripts for various development tasks
 
@@ -86,7 +86,7 @@ uv add --project git <pkg>
 
 ### Key Design Patterns
 1. **Modular Shell Configuration**: Each tool has its own `.zsh` file that's conditionally sourced
-2. **Environment Management**: Uses mise for node/go/lua/ruby (falls back to nvm/goenv/luaenv when mise is absent; no rvm fallback) and pyenv for python (pyenv-virtualenv envs)
+2. **Environment Management**: Uses mise for node/go/lua/ruby (falls back to nvm/goenv/luaenv when mise is absent; no rvm fallback); uv for python (interpreters, venvs, tools; no pyenv)
 3. **Tool Integration**: Heavy use of modern CLI tools (fzf, ripgrep, eza, delta) with custom configurations
 4. **Script Organization**: Utility scripts grouped by functionality (Android, system, development)
 

@@ -208,8 +208,8 @@ fi
 [ -f $HOME/.config/broot/launcher/bash/br ] && source $HOME/.config/broot/launcher/bash/br
 [ -f $HOME/.cargo/env ] && source $HOME/.cargo/env
 
-# Version managers: mise handles node/go/lua/ruby (reads .nvmrc/.tool-versions),
-# pyenv stays for python because of pyenv-virtualenv envs.
+# Version managers: mise handles node/go/lua/ruby (reads .nvmrc/.tool-versions);
+# python is managed by uv.
 # Falls back to the legacy per-language managers when mise is not installed.
 if exists mise; then
   source "$dot_dir/.mise.sh"
@@ -218,7 +218,6 @@ else
   source "$dot_dir/.goenv.sh"
   source "$dot_dir/.nvm.sh"
 fi
-source "$dot_dir/.pyenv.sh"
 source "$dot_dir/.kompose.sh"
 source "$dot_dir/.kubectl.sh"
 source "$dot_dir/.atuin.sh"

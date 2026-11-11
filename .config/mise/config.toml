@@ -1,5 +1,5 @@
 # Global mise config (linked to ~/.config/mise/config.toml by install.sh)
-# Python is intentionally left to pyenv (pyenv-virtualenv envs).
+# Python is left to uv (uv python / uv venv / uv tool); mise ignores .python-version.
 
 [tools]
 node = "24"

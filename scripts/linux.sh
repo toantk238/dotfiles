@@ -24,7 +24,7 @@ apps=(
 
  # Development
  neovim 
- mise pyenv pyenv-virtualenv python-pip uv
+ mise python-pip uv
 
  # Git
  git-delta lazygit forgit git-lfs github-cli
