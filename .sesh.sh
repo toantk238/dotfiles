@@ -20,16 +20,15 @@ _sesh_pick() {
   print -r -- "${selected#*$tab}"
 }
 
+# Runs inside zle, where stdin isn't the terminal: feed picker/attach from stdout
+# (the real pty). Not `exec` (rewires the shell itself), not </dev/tty (tmux
+# refuses it) and not <$TTY (tmux attaches but never draws). Redraw the prompt
+# *after* tmux returns, else a detach leaves a dead line until Enter is pressed.
 function sesh-sessions() {
-  {
-    exec </dev/tty
-    exec <&1
-    local session
-    session=$(_sesh_pick)
-    zle reset-prompt >/dev/null 2>&1 || true
-    [[ -z "$session" ]] && return
-    sesh connect "$session"
-  }
+  local session
+  session=$(_sesh_pick <&1)
+  [[ -n "$session" ]] && sesh connect "$session" <&1
+  zle reset-prompt
 }
 
 zle -N sesh-sessions
