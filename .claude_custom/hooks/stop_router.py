@@ -90,6 +90,19 @@ def check_static_rules(last_text: str) -> str | None:
     return None
 
 
+# The STEP A answer for a pre-approved push: a normal push only, rebase preferred when behind.
+PUSH_RULES = (
+    "Yes, go ahead. Use a normal push to the branch you are working on (or the one I named). "
+    "Never force push (no --force, --force-with-lease or +refspec) and never rewrite commits "
+    "that are already on the remote. If the push is rejected because the branch is behind its "
+    "remote, fetch first. Prefer rebasing your unpushed local commits onto the remote branch "
+    "(git pull --rebase) when the incoming changes are small and rebase cleanly; merge the "
+    "remote branch instead when the divergence is large, conflicts are not trivial, or the "
+    "rebase would touch pushed commits. Re-run the relevant checks after the rebase/merge, then "
+    "push normally. If the only way forward is a force push, stop and ask me."
+)
+
+
 STOP_PROMPT_TEMPLATE = """You are an autonomous decision agent for a developer's coding assistant.
 Claude (the assistant) has stopped and is waiting for input.
 
@@ -111,7 +124,8 @@ STEP A — PRE-APPROVED SAFE ACTIONS (check this first).
 The human has ALREADY said YES, in advance, to these actions in every session. Treat them as
 requested by the user, even when the latest message did not mention them:
   a) Committing and pushing the current work to its target branch (the branch Claude is
-     working on, or the branch the user named) with a normal, non-force push.
+     working on, or the branch the user named) with a normal, non-force push. This includes
+     first updating a branch that is behind its remote (rebase unpushed commits, or merge).
   b) Building the app for Firebase and publishing that build to testers through Firebase
      App Distribution. Claude often says this loosely, without "App Distribution": "Firebase
      build", "upload/publish/send it to Firebase", "distribute to testers", "share the APK
@@ -130,7 +144,11 @@ Is Claude's closing question or offer ONLY about pre-approved safe actions or ac
 human typed
 (e.g. "Want me to push this?", "Should I upload it to Firebase?", "Want a Firebase build?",
 "Shall I push and send the build to testers?")?
-  → YES: ACTION = PROCEED. Do not ask the human; the approval already exists.
+  → YES, and the offer includes pushing git work (in any wording: "push it", "sync to origin",
+    "ship the branch to the remote", ...): ACTION = ANSWER, with exactly this ANSWER, copied
+    word for word on one line:
+    {push_rules}
+  → YES, without a push: ACTION = PROCEED. Do not ask the human; the approval already exists.
   → NO: go to STEP B
 
 STEP B — Is Claude blocked on something only the human can do?
@@ -187,7 +205,8 @@ Can you answer with reasonable confidence using the original request and common 
 
 For unfinished requested work, when in doubt between PROCEED and HUMAN_NEEDED, prefer PROCEED.
 For finished work (STEP 0), choose HUMAN_NEEDED — never invent a next task.
-STEP A comes first: an offer of only pre-approved safe actions is always PROCEED.
+STEP A comes first: an offer of only pre-approved safe actions is always PROCEED (or the push
+ANSWER above when it includes a push).
 Use ANSWER only to supply an actual answer Claude asked for, never to comment on Claude's message.
 
 Also classify the PURPOSE of Claude's last message, independently of the ACTION above:
@@ -204,7 +223,7 @@ PURPOSE: <QUESTION | REPORT | OTHER>
 ANSWER: <your concise answer if ACTION is ANSWER, reason if ACTION is HUMAN_NEEDED or PROCEED>
 
 With ACTION: ANSWER, the ANSWER line is sent to Claude as the human's own reply ("Use
-Postgres", "Option B"). Never put commentary about Claude's message there; if all you have
+Postgres", "Option B", the push answer from STEP A). Never put commentary about Claude's message there; if all you have
 is a reason, the ACTION is HUMAN_NEEDED.
 """
 
@@ -294,6 +313,7 @@ def build_prompt(last_text: str, original_request: str, latest_request: str,
     # Keep the tail of the last message: the closing question/offer is what matters.
     turns = "\n".join(f"- [{ts}] {text[:turn_limit]}" for ts, text in recent_turns or [])
     return STOP_PROMPT_TEMPLATE.format(
+        push_rules=PUSH_RULES,
         original_request=original_request[:original_limit],
         latest_request=(latest_request or original_request)[:original_limit],
         recent_turns=turns or "(none)",
@@ -406,7 +426,7 @@ def handle_stop(last_text: str, original_request: str, latest_request: str = "",
         if decision.action == "PROCEED":
             context = 'Your recommendation looks good. I agree. Please continue accordingly.'
         elif decision.action == "ANSWER" and decision.answer:
-            context = f'{decision.answer}. Please continue accordingly.'
+            context = f'{decision.answer.rstrip(".")}. Please continue accordingly.'
         else:
             logger.info(f"Passing to human (action={decision.action}) reason={decision.answer!r}")
             sys.exit(0)

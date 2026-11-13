@@ -186,7 +186,7 @@ def test_handle_stop_answer(capsys):
             stop_router.handle_stop("Should I?", "build a tool")
     assert exc.value.code == 2
     out = capsys.readouterr().err.strip()
-    assert out == "Yes, do it.. Please continue accordingly."
+    assert out == "Yes, do it. Please continue accordingly."
 
 
 def test_handle_stop_human_needed():
@@ -597,6 +597,24 @@ def test_main_static_rule_exits_2_without_llm(tmp_path, capsys):
     mock_llm.assert_not_called()
     out = capsys.readouterr().err.strip()
     assert "Subagent-Driven" in out
+
+
+# ── push rules (STEP A answer) ───────────────────────────────────────────────
+
+def test_prompt_carries_push_rules_verbatim():
+    prompt = stop_router.build_prompt("Push it?", "fix the bug", "")
+    assert stop_router.PUSH_RULES in prompt
+    assert "Never force push" in prompt
+
+
+def test_handle_stop_push_answer_reaches_claude(capsys):
+    output = ("ACTION: ANSWER\nPURPOSE: QUESTION\nANSWER: " + stop_router.PUSH_RULES)
+    with patch("stop_router.call_claude", return_value=output):
+        with pytest.raises(SystemExit) as exc:
+            stop_router.handle_stop("Ship the branch up to origin?", "build a tool")
+    assert exc.value.code == 2
+    out = capsys.readouterr().err.strip()
+    assert out == stop_router.PUSH_RULES.rstrip(".") + ". Please continue accordingly."
 
 
 # ── has_incomplete_tasks ─────────────────────────────────────────────────────

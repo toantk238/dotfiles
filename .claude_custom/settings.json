@@ -30,7 +30,7 @@
     "disableBypassPermissionsMode": "disable",
     "additionalDirectories": []
   },
-  "model": "best",
+  "model": "fable",
   "enableAllProjectMcpServers": true,
   "enabledMcpjsonServers": [
     "sequential-thinking",
