@@ -222,6 +222,7 @@ source "$dot_dir/.kompose.sh"
 source "$dot_dir/.kubectl.sh"
 source "$dot_dir/.atuin.sh"
 source "$dot_dir/.cargo.sh"
+source "$dot_dir/.pnpm.sh"
 
 # autoload -U compinit && compinit
 
