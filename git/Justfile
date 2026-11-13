@@ -1,0 +1,23 @@
+# gittool tasks. Everyday use needs no build: `gittool` runs itself via uv.
+
+[private]
+default:
+    @just --list
+
+# Run the pytest suite
+test *args:
+    uv run pytest {{args}}
+
+# _cffi_backend: pygit2 hidden import that PyInstaller misses.
+
+# Build a standalone one-file binary into dist/gittool (this OS/arch only)
+build:
+    uv run --with pyinstaller pyinstaller --noconfirm --onefile --name gittool \
+        --paths . --hidden-import _cffi_backend --collect-all pygit2 \
+        --distpath dist --workpath build --specpath build gittool
+    ./dist/gittool --help >/dev/null
+    @echo "built: $(realpath dist/gittool)"
+
+# Remove build outputs
+clean:
+    rm -rf build dist
