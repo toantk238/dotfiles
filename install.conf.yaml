@@ -30,6 +30,7 @@
     ~/.config/zed: .config/zed
     ~/.config/zsh: .config/zsh
 
+    ~/.claude/agents: .claude_custom/agents
     ~/.claude/hooks: .claude_custom/hooks
     ~/.claude/settings.json: .claude_custom/settings.json
     ~/.claude/skills/justfile-param-completion: .claude_custom/skills/justfile-param-completion

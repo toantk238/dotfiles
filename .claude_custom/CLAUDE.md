@@ -11,6 +11,10 @@ Claude Code's own configuration, symlinked into `~/.claude` by `install.sh`
 - `settings.local.json`, `.local.mcp.json`: machine-local, not shared.
 - `hooks/`: Python hooks run from `hooks/.venv` (see `hooks/README.md`).
 - `skills/`: personal skills, each symlinked into `~/.claude/skills/`.
+- `agents/`: subagents (whole dir symlinked to `~/.claude/agents`), sized to
+  the roles superpowers dispatches: `implementer` (sonnet), `task-reviewer`
+  (sonnet), `code-reviewer` (opus), `debugger` (opus), `code-scout` (haiku),
+  `verifier` (haiku). Reviewers/scout/verifier are read-only.
 - `install-mcp.py`: registers the MCP servers.
 
 ## Hooks
