@@ -21,3 +21,22 @@ fi
 ssh-reload() {
   eval "$(ssh-agent)" && ssh-add -D
 }
+
+# Close cached SSH multiplex masters (ControlMaster/ControlPersist in .ssh/config).
+# A master keeps the identity it first logged in with, so if one was opened with
+# the wrong key every later git push reuses it ("Write access to repository not
+# granted"). No args: close every master in ~/.ssh/cm-*; else only the given hosts.
+# Then prints which GitHub account a fresh connection authenticates as.
+# `command ssh` skips the kitty kitten alias, which refuses non-interactive use.
+ssh-mux-reset() {
+  local sock host
+  if (( $# )); then
+    for host in "$@"; do command ssh -O exit "$host"; done
+  else
+    for sock in ~/.ssh/cm-*(N=); do
+      echo "closing ${sock:t}"
+      command ssh -o ControlPath="$sock" -O exit _ 2>&1
+    done
+  fi
+  command ssh -T git@github.com 2>&1 | grep -o 'Hi [^!]*!'
+}
