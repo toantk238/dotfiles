@@ -69,5 +69,9 @@
       description: oh-my-tmux
     - command: scripts/install-code-graphs.sh
       description: codegraph + code-review-graph (Claude Code)
+    - command: zsh -fc 'source ./.claude-profile.sh && claude-profile setup --all'
+      description: re-apply .claude_custom to custom Claude profiles (ccp setup --all)
+      stdout: true
+      stderr: true
     - command: '[ "$(uname)" != Linux ] || gnome/apply.sh'
       description: GNOME keybindings

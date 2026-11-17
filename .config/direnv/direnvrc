@@ -25,3 +25,16 @@ layout_uv() {
 layout_gomod() {
   export GOMODCACHE="$PWD/pkg/mod"
 }
+
+# `use claude_profile <name>` in .envrc — claude/c in this tree run as that
+# Claude Code profile (see .claude-profile.sh). CLAUDE_CONFIG_DIR is exported
+# too, so `command claude` and editors launched from here follow it.
+use_claude_profile() {
+  export CLAUDE_PROFILE=$1
+  if [[ $1 == default ]]; then
+    unset CLAUDE_CONFIG_DIR
+  else
+    export CLAUDE_CONFIG_DIR="${CLAUDE_PROFILE_ROOT:-$HOME/.claude-profiles}/$1"
+    dotenv_if_exists "$CLAUDE_CONFIG_DIR/profile.env"
+  fi
+}

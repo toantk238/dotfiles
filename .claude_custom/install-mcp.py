@@ -11,7 +11,13 @@ from pathlib import Path
 SCRIPT_DIR = Path(__file__).parent.resolve()
 LOG_FILE = SCRIPT_DIR / (Path(__file__).stem + ".log")
 SOURCE_FILE = SCRIPT_DIR / ".local.mcp.json"
-TARGET_FILE = Path.home() / ".claude.json"
+# Claude Code keeps .claude.json inside CLAUDE_CONFIG_DIR when that is set
+# (claude-profile setup uses this to target a profile).
+TARGET_FILE = (
+    Path(os.environ["CLAUDE_CONFIG_DIR"]) / ".claude.json"
+    if os.environ.get("CLAUDE_CONFIG_DIR")
+    else Path.home() / ".claude.json"
+)
 
 GREEN = "\033[0;32m"
 YELLOW = "\033[1;33m"

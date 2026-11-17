@@ -192,6 +192,7 @@ source "$dot_dir/.gh.sh"
 source "$dot_dir/.yazi.sh"
 source "$dot_dir/.sesh.sh"
 source "$dot_dir/.claude.sh"
+source "$dot_dir/.claude-profile.sh"
 
 export PATH=$DOT_DIR/git:$DOT_DIR/scripts/bin:$PATH
 

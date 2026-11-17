@@ -7,7 +7,23 @@ claude_hooks_log() {
 }
 
 claude() {
-    local arg sub=0
+    local arg sub=0 pdir
+    local -a penv
+    # Profile (.claude-profile.sh): $CLAUDE_PROFILE, usually set by direnv,
+    # picks the config dir for this run; local -x scopes it to this call.
+    if [[ -n "$CLAUDE_PROFILE" ]] && (( $+functions[_claude_profile_dir] )); then
+        pdir="$(_claude_profile_dir)" || return
+        local -x CLAUDE_CONFIG_DIR
+        if [[ -n "$pdir" ]]; then
+            CLAUDE_CONFIG_DIR="$pdir"
+            # Per-profile env (KEY=VALUE lines), e.g.
+            # ENABLE_CLAUDEAI_MCP_SERVERS=false to drop claude.ai connectors.
+            [[ -f "$pdir/profile.env" ]] &&
+                penv=(${(f)"$(grep -Ev '^[[:space:]]*(#|$)' "$pdir/profile.env")"})
+        else
+            unset CLAUDE_CONFIG_DIR
+        fi
+    fi
     case "$1" in
         agents|mcp|config|setup-token|update|doctor|install|migrate-installer)
             sub=1 ;;
@@ -19,7 +35,7 @@ claude() {
     done
 
     if (( sub )) || [[ -z "$TMUX" ]]; then
-        command claude "$@"
+        command env "${penv[@]}" claude "$@"
         return
     fi
 
@@ -42,13 +58,14 @@ claude() {
         "" | main | master | trunk) ;;
         *) label="$label/$branch" ;;
     esac
+    [[ -n "$CLAUDE_PROFILE" ]] && label="[$CLAUDE_PROFILE] $label"
     [[ -n "$SSH_CONNECTION" ]] && label="${HOST%%.*}:$label"
 
     prev="$(tmux display-message -p '#{automatic-rename}' 2>/dev/null)"
     prev_name="$(tmux display-message -p '#{window_name}' 2>/dev/null)"
     tmux set-window-option automatic-rename off >/dev/null 2>&1
     tmux rename-window "🤖 $label" >/dev/null 2>&1
-    command claude "$@"
+    command env "${penv[@]}" claude "$@"
     ret=$?
     # Restore on exit: if the window had a manual name (automatic-rename was
     # off), put that name back; otherwise re-enable tmux's auto-renaming.
