@@ -19,6 +19,7 @@ import hashlib
 import json
 import os
 import re
+import shlex
 import sys
 
 from common import HookInput, get_recent_user_turns
@@ -265,14 +266,55 @@ def block_decision(tool_name: str, tool_input: dict) -> str | None:
     return None
 
 
+# Something *inside* a worktrees dir (git worktrees, .claude/worktrees agents) —
+# disposable checkouts, so removing them needs no prompt. Not the root itself.
+_WORKTREE_TARGET_RE = re.compile(r"/\.?worktrees/[^/]+")
+_SEGMENT_SPLIT_RE = re.compile(r"&&|\|\||[;|&\n]")
+
+
+def _rm_rf_targets(segment: str) -> list[str] | None:
+    """Targets of an `rm` with both -r and -f in this segment, else None."""
+    try:
+        tokens = shlex.split(segment)
+    except ValueError:
+        tokens = segment.split()
+    if not tokens or os.path.basename(tokens[0]) != "rm":
+        return None
+    flags = "".join(t[1:] for t in tokens[1:] if t.startswith("-") and not t.startswith("--"))
+    long_flags = {t for t in tokens[1:] if t.startswith("--")}
+    recursive = "r" in flags or "R" in flags or "--recursive" in long_flags
+    force = "f" in flags or "--force" in long_flags
+    if not (recursive and force):
+        return None
+    return [t for t in tokens[1:] if not t.startswith("-")]
+
+
+def _is_worktree_target(target: str) -> bool:
+    return ".." not in target.split("/") and bool(_WORKTREE_TARGET_RE.search(target))
+
+
 def ask_reason(tool_name: str, tool_input: dict) -> str | None:
-    """Reason to send the call to the user's permission prompt, or None."""
+    """Reason to send the call to the user's permission prompt, or None.
+
+    `rm -rf` of an absolute/home path asks, unless every risky target lives
+    inside a worktrees directory.
+    """
     if tool_name != "Bash":
         return None
     command = tool_input.get("command", "") or ""
-    for pattern, reason in _ASK_BASH_PATTERNS:
-        if re.search(pattern, command):
-            return reason
+    pattern, reason = _ASK_BASH_PATTERNS[0]
+    for segment in _SEGMENT_SPLIT_RE.split(command):
+        segment = segment.strip()
+        targets = _rm_rf_targets(segment)
+        if targets is None:
+            # Shapes the parser skips (`sudo rm -rf ~/x`, subshells): plain regex.
+            if re.search(pattern, segment):
+                return reason
+            continue
+        for target in targets:
+            # Relative paths and /tmp/* are safe; so is anything inside a worktree.
+            if re.search(pattern, f"rm -rf {target}") and not _is_worktree_target(target):
+                return reason
     return None
 
 

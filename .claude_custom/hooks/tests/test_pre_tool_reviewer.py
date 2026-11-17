@@ -67,6 +67,31 @@ def test_rm_rf_outside_safe_dirs_asks_the_user_instead_of_blocking(command):
     assert "outside safe directories" in verdict.reason
 
 
+@pytest.mark.parametrize("command", [
+    "rm -rf /mnt/Data/Workspace/proj/.worktrees/feature-x",
+    "rm -rf /home/me/proj/.claude/worktrees/agent-123",
+    "rm -rf ~/proj/worktrees/fix/",
+    "cd /x && rm -rf /mnt/Data/proj/.worktrees/a /mnt/Data/proj/.worktrees/b",
+    'rm -rf "/mnt/Data/My Proj/.worktrees/a"',
+    "rm -rf /tmp/claude-1000/scratch",
+])
+def test_rm_rf_inside_worktree_dirs_is_allowed(command):
+    verdict = pre_tool_reviewer.review("Bash", {"command": command})
+    assert verdict.approved is True, command
+
+
+@pytest.mark.parametrize("command", [
+    # The worktrees root itself, or a mix with an unsafe target, still asks.
+    "rm -rf /mnt/Data/proj/.worktrees",
+    "rm -rf /mnt/Data/proj/.worktrees/a /usr/lib",
+    "rm -rf /mnt/Data/proj/.worktrees/../src",
+    "rm -rf /mnt/Data/proj/.worktrees/a && rm -rf ~/stuff",
+])
+def test_rm_rf_worktree_exemption_is_narrow(command):
+    verdict = pre_tool_reviewer.review("Bash", {"command": command})
+    assert verdict.approved is False and verdict.ask is True, command
+
+
 def test_main_emits_ask_permission_decision(monkeypatch, capsys):
     monkeypatch.setattr(pre_tool_reviewer.HookInput, "from_stdin", classmethod(
         lambda cls: cls({"tool_name": "Bash", "tool_input": {"command": "rm -rf ~/scratch"}})))
