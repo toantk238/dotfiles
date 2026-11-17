@@ -3,6 +3,9 @@
 # field so the marker never reaches `sesh preview` or `sesh connect`.
 _sesh_pick() {
   local tab=$'\t' selected
+  # Inside tmux line 1 is the session we're in: keep it on top, start on line 2.
+  local -a extra=()
+  [[ -n "$TMUX" ]] && extra=(--bind 'load:pos(2)')
   selected=$(sesh list -d --format "{source}${tab}{name}" |
     awk -F'\t' -v OFS='\t' '{ print ($1 == "tmux" ? "\033[32m●\033[0m" : " "), $2 }' |
     fzf \
@@ -16,7 +19,8 @@ _sesh_pick() {
       --prompt '⚡ ' \
       --header '● running | Enter to connect | Esc to cancel' \
       --preview 'sesh preview {2}' \
-      --preview-window right:55%) || return
+      --preview-window right:55% \
+      "${extra[@]}") || return
   print -r -- "${selected#*$tab}"
 }
 
